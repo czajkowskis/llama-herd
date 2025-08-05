@@ -5,11 +5,36 @@ export interface Agent {
   name: string;
   prompt: string;
   color: string;
+  model: string;
 }
 
 export interface Task {
   id: string;
   prompt: string;
+}
+
+export interface ConversationAgent {
+  id: string;
+  name: string;
+  color: string;
+  originalName?: string;
+  model: string;
+}
+
+export interface Message {
+  id: string;
+  agentId: string;
+  content: string;
+  timestamp: string;
+  model?: string;
+}
+
+export interface Conversation {
+  id: string;
+  title: string;
+  agents: ConversationAgent[];
+  messages: Message[];
+  createdAt: string;
 }
 
 export interface GenerateResponse {

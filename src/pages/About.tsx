@@ -1,5 +1,5 @@
 import React from 'react';
-import { Icon } from '../components/Icon';
+import { Icon } from '../components/ui/Icon';
 
 // This page component displays information about the application.
 export const About: React.FC = () => {

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import './App.css';
-import { Sidebar } from './components/Sidebar';
+import { Sidebar } from './components/common/Sidebar';
 import { NewExperiment } from './pages/NewExperiment';
+import { ConversationViewer } from './pages/ConversationViewer';
 import { About } from './pages/About';
 import { Settings } from './pages/Settings';
 
 const App: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<'newExperiment' | 'history' | 'explore' | 'settings' | 'about'>('newExperiment');
+  const [currentPage, setCurrentPage] = useState<'newExperiment' | 'history' | 'explore' | 'conversations' | 'settings' | 'about'>('newExperiment');
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
   const renderContent = () => {
@@ -27,6 +28,8 @@ const App: React.FC = () => {
             <p>Discover and share experiments from the community.</p>
           </div>
         );
+      case 'conversations':
+        return <ConversationViewer />;
       case 'settings':
         return <Settings />;
       case 'about':
@@ -37,7 +40,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="App min-h-screen bg-gray-900 text-white font-inter flex">
+    <div className="App h-screen bg-gray-900 text-white font-inter flex overflow-hidden">
       {/* The Sidebar is now a direct child of the flex container to ensure it takes full height. */}
       {/* The onMouseEnter and onMouseLeave events are now applied directly to the component. */}
       <Sidebar
@@ -49,7 +52,7 @@ const App: React.FC = () => {
       />
       
       {/* Main Content Area */}
-      <main className="flex-grow p-6">
+      <main className="flex-grow p-6 overflow-y-auto">
         <header className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold text-white">LLaMa-Herd</h1>
           {/* Placeholder for user profile/notifications */}
@@ -57,7 +60,7 @@ const App: React.FC = () => {
             {/* <Icon className="text-2xl"><svg>...</svg></Icon> */}
           </div>
         </header>
-        <div className="bg-gray-900 rounded-3xl p-4 min-h-[calc(100vh-120px)] shadow-inner">
+        <div className="bg-gray-900 rounded-3xl p-4 shadow-inner">
           {renderContent()}
         </div>
       </main>

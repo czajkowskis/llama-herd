@@ -1,6 +1,66 @@
 # LLaMa-Herd
 
-LLaMa-Herd is a web application built with React, providing a user interface for managing and experimenting with multiple agents via a local Ollama server and AutoGen integration. The application facilitates the setup and execution of conversational workflows involving a team of collaborative AI agents.
+A React application for managing multi-agent conversations and experiments.
+
+## Conversation JSON Format
+
+The application expects conversation files to be in JSON format with the following structure:
+
+```json
+{
+  "title": "Conversation Title",
+  "messages": [
+    {
+      "agent": {
+        "name": "Agent Name",
+        "model": "llama2:7b"
+      },
+      "content": "Agent message content",
+      "timestamp": "2024-01-01T12:00:00.000Z"
+    },
+    {
+      "agent": {
+        "name": "Another Agent",
+        "model": "mistral:7b"
+      },
+      "content": "Another agent's message",
+      "timestamp": "2024-01-01T12:01:00.000Z"
+    }
+  ]
+}
+```
+
+### Key Features:
+
+- **Agent Configuration**: Each agent can have a unique name and color
+- **Model Information**: The model used by each agent is displayed in the chat
+- **Multiple Conversations**: Upload and manage multiple conversation files
+- **Inline Editing**: Edit conversation titles and agent names directly
+- **Color Management**: Unique color assignment with custom color picker
+
+### Supported JSON Structures:
+
+1. **Standard Format** (recommended):
+   ```json
+   {
+     "agent": {
+       "name": "Agent Name",
+       "model": "llama2:7b"
+     },
+     "content": "Message content"
+   }
+   ```
+
+2. **Alternative Format**:
+   ```json
+   {
+     "agent": "Agent Name",
+     "model": "llama2:7b",
+     "message": "Message content"
+   }
+   ```
+
+The application will automatically extract model information and display it in both the agent configuration window and the chat visualization.
 
 ## Core Functionality
 
