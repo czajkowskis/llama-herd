@@ -1,10 +1,10 @@
 import React from 'react';
-import { Icon } from './Icon';
+import { Icon } from '../ui/Icon';
 
 // This component represents the main navigation sidebar.
 interface SidebarProps {
-  currentPage: 'newExperiment' | 'history' | 'explore' | 'settings' | 'about';
-  setCurrentPage: (page: 'newExperiment' | 'history' | 'explore' | 'settings' | 'about') => void;
+  currentPage: 'newExperiment' | 'history' | 'explore' | 'conversations' | 'settings' | 'about';
+  setCurrentPage: (page: 'newExperiment' | 'history' | 'explore' | 'conversations' | 'settings' | 'about') => void;
   isExpanded: boolean;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
@@ -21,7 +21,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, i
     <aside
       className={`
         ${isExpanded ? 'w-64 px-4' : 'w-20 px-4 items-center'}
-        min-h-screen bg-gray-800 flex flex-col py-6 shadow-2xl transition-all duration-300 ease-in-out
+        h-screen bg-gray-800 flex flex-col py-6 shadow-2xl transition-all duration-300 ease-in-out
       `}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
@@ -38,6 +38,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, i
         <button onClick={() => setCurrentPage('explore')} className={linkClass('explore')} title="Explore">
           <Icon className="text-xl shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-compass"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></Icon>
           <span className={`font-medium whitespace-nowrap transition-all duration-300 overflow-hidden ${isExpanded ? 'max-w-xs opacity-100' : 'max-w-0 opacity-0'}`}>Explore</span>
+        </button>
+        <button onClick={() => setCurrentPage('conversations')} className={linkClass('conversations')} title="Conversations">
+          <Icon className="text-xl shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-message-circle"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></Icon>
+          <span className={`font-medium whitespace-nowrap transition-all duration-300 overflow-hidden ${isExpanded ? 'max-w-xs opacity-100' : 'max-w-0 opacity-0'}`}>Conversations</span>
         </button>
       </nav>
       <div className={`mt-auto flex flex-col space-y-6`}>
