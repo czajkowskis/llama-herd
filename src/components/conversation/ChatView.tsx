@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Icon } from '../ui/Icon';
 import { Button } from '../ui/Button';
 import { Conversation, ConversationAgent } from '../../types/index.d';
@@ -66,13 +67,59 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   </div>
                 </div>
                 <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-1">
+                  <div className="flex items-center mb-1">
                     <span className="font-semibold text-white">{agent.name}</span>
-                    <span className="text-xs text-gray-400">{formatTimestamp(message.timestamp)}</span>
-                    <span className="text-xs text-gray-500">• {agent.model}</span>
+                    <span className="text-xs text-gray-400 ml-2">{formatTimestamp(message.timestamp)}</span>
+                    <span className="text-xs text-gray-500 ml-2">• {agent.model}</span>
                   </div>
-                  <div className="bg-gray-800 rounded-lg p-3">
-                    <p className="text-gray-200 whitespace-pre-wrap">{message.content}</p>
+                  <div className="bg-gray-800 rounded-lg p-3 text-gray-200">
+                    <ReactMarkdown
+                      components={{
+                        h1: (props: any) => (
+                          <h1 className="text-xl font-semibold text-white mt-2 mb-2" {...props} />
+                        ),
+                        h2: (props: any) => (
+                          <h2 className="text-lg font-semibold text-white mt-2 mb-2" {...props} />
+                        ),
+                        h3: (props: any) => (
+                          <h3 className="text-base font-semibold text-white mt-2 mb-2" {...props} />
+                        ),
+                        p: (props: any) => (
+                          <p className="mb-2" {...props} />
+                        ),
+                        ul: (props: any) => (
+                          <ul className="list-disc ml-6 mb-2" {...props} />
+                        ),
+                        ol: (props: any) => (
+                          <ol className="list-decimal ml-6 mb-2" {...props} />
+                        ),
+                        li: (props: any) => (
+                          <li className="mb-1" {...props} />
+                        ),
+                        a: (props: any) => (
+                          <a className="text-blue-400 underline" target="_blank" rel="noreferrer" {...props} />
+                        ),
+                        hr: (props: any) => (
+                          <hr className="border-gray-700 my-3" {...props} />
+                        ),
+                        code: ({ node, inline, className, children, ...props }: any) => {
+                          if (inline) {
+                            return (
+                              <code className="bg-gray-900 rounded px-1 py-0.5 text-sm" {...props}>
+                                {children}
+                              </code>
+                            );
+                          }
+                          return (
+                            <pre className="bg-gray-900 rounded-md p-3 overflow-x-auto text-sm">
+                              <code className={className} {...props}>{children}</code>
+                            </pre>
+                          );
+                        },
+                      }}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
                   </div>
                 </div>
               </div>
