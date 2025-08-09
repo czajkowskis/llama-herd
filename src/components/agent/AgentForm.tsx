@@ -35,6 +35,7 @@ export const AgentForm: React.FC<AgentFormProps> = ({
   const [agentPrompt, setAgentPrompt] = useState<string>('');
   const [agentColor, setAgentColor] = useState<string>('#EF4444');
   const [agentModel, setAgentModel] = useState<string>('');
+  const [agentTemperature, setAgentTemperature] = useState<number>(0.7);
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
   const [colorError, setColorError] = useState<string>('');
   const [nameError, setNameError] = useState<string>('');
@@ -46,11 +47,13 @@ export const AgentForm: React.FC<AgentFormProps> = ({
       setAgentPrompt(editingAgent.prompt);
       setAgentColor(editingAgent.color);
       setAgentModel(editingAgent.model);
+      setAgentTemperature(editingAgent.temperature ?? 0.7);
     } else {
       setAgentName('');
       setAgentPrompt('');
       setAgentColor('#EF4444');
       setAgentModel('');
+      setAgentTemperature(0.7);
     }
     setColorError('');
     setNameError('');
@@ -94,7 +97,8 @@ export const AgentForm: React.FC<AgentFormProps> = ({
       name: agentName.trim(),
       prompt: agentPrompt.trim(),
       color: agentColor,
-      model: agentModel
+      model: agentModel,
+      temperature: agentTemperature
     });
   };
 
@@ -148,6 +152,7 @@ export const AgentForm: React.FC<AgentFormProps> = ({
             agentId={editingAgent?.id || ''}
             currentColor={agentColor}
             onColorSelect={handleColorSelect}
+            onClose={() => setShowColorPicker(false)}
             isColorUsed={isColorUsed}
             getAvailableColorsCount={getAvailableColorsCount}
           />
@@ -188,6 +193,20 @@ export const AgentForm: React.FC<AgentFormProps> = ({
       </div>
 
       <ErrorDisplay colorError={colorError} nameError={nameError} />
+
+      <h3 className="text-lg font-medium text-gray-200">Temperature</h3>
+      <div className="space-y-2">
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.05}
+          value={agentTemperature}
+          onChange={(e) => setAgentTemperature(parseFloat(e.target.value))}
+          className="w-full"
+        />
+        <div className="text-sm text-gray-300">{agentTemperature.toFixed(2)}</div>
+      </div>
 
       <h3 className="text-lg font-medium text-gray-200">Prompt</h3>
       <Textarea
