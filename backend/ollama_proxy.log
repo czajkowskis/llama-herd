@@ -1,0 +1,12 @@
+nohup: ignoring input
+INFO:__main__:Starting Ollama Proxy Server on port 8080
+INFO:__main__:This server translates OpenAI API calls to Ollama API calls
+INFO:     Started server process [189585]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+INFO:     127.0.0.1:36438 - "GET /v1/models HTTP/1.1" 200 OK
+/home/szymon/llama-herd/backend/ollama_proxy.py:80: PydanticDeprecatedSince20: The `dict` method is deprecated; use `model_dump` instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.11/migration/
+  "messages": [msg.dict() for msg in request.messages],
+INFO:__main__:Proxying request to Ollama: gemma3:4b
+INFO:     127.0.0.1:48584 - "POST /v1/chat/completions HTTP/1.1" 200 OK
