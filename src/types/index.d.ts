@@ -6,11 +6,14 @@ export interface Agent {
   prompt: string;
   color: string;
   model: string;
+  temperature?: number;
 }
 
 export interface Task {
   id: string;
   prompt: string;
+  datasetItems?: { task: string; answer: string }[];
+  expectedSolutionRegex?: string;
 }
 
 export interface ConversationAgent {
@@ -35,6 +38,16 @@ export interface Conversation {
   agents: ConversationAgent[];
   messages: Message[];
   createdAt: string;
+}
+
+export interface ExperimentStatusResponse {
+  experiment_id: string;
+  status: string;
+  conversation: Conversation; // current conversation stream
+  conversations?: Conversation[]; // completed runs/items
+  iterations?: number;
+  current_iteration?: number;
+  error?: string;
 }
 
 export interface GenerateResponse {

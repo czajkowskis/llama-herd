@@ -22,9 +22,11 @@ export const TaskImportForm: React.FC<TaskImportFormProps> = ({ onTaskImport }) 
             const parsedTask = JSON.parse(content);
             if (Array.isArray(parsedTask) && parsedTask.every(t => t.task && t.answer)) {
               const taskId = `imported-task-${Date.now()}`;
-              const newTask = {
+              const newTask: Task = {
                 id: taskId,
                 prompt: `Imported task with ${parsedTask.length} items.`,
+                datasetItems: parsedTask,
+                expectedSolutionRegex: expectedSolutionRegex || undefined,
               };
               
               const confirmed = window.confirm(

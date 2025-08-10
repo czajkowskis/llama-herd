@@ -3,8 +3,8 @@ import { Icon } from '../ui/Icon';
 
 // This component represents the main navigation sidebar.
 interface SidebarProps {
-  currentPage: 'newExperiment' | 'history' | 'explore' | 'conversations' | 'settings' | 'about';
-  setCurrentPage: (page: 'newExperiment' | 'history' | 'explore' | 'conversations' | 'settings' | 'about') => void;
+  currentPage: 'newExperiment' | 'history' | 'explore' | 'conversations' | 'settings' | 'about' | 'liveExperiment';
+  setCurrentPage: (page: 'newExperiment' | 'history' | 'explore' | 'conversations' | 'settings' | 'about' | 'liveExperiment') => void;
   isExpanded: boolean;
   onMouseEnter: () => void;
   onMouseLeave: () => void;

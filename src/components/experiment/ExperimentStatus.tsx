@@ -8,6 +8,8 @@ interface ExperimentStatusProps {
   agents: Agent[];
   onStartExperiment: () => void;
   getExperimentStatusMessage: () => string;
+  isStartingExperiment?: boolean;
+  experimentError?: string | null;
 }
 
 export const ExperimentStatus: React.FC<ExperimentStatusProps> = ({
@@ -15,7 +17,9 @@ export const ExperimentStatus: React.FC<ExperimentStatusProps> = ({
   currentTask,
   agents,
   onStartExperiment,
-  getExperimentStatusMessage
+  getExperimentStatusMessage,
+  isStartingExperiment = false,
+  experimentError = null
 }) => {
   return (
     <div className={`p-6 rounded-2xl shadow-xl animate-fade-in-up ${
@@ -37,17 +41,24 @@ export const ExperimentStatus: React.FC<ExperimentStatusProps> = ({
             }
           </p>
         </div>
-        <Button 
-          onClick={onStartExperiment}
-          className={`px-8 py-3 transition-all duration-200 ${
-            isExperimentReady 
-              ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105' 
-              : 'bg-gray-600 hover:bg-gray-700 text-gray-300 cursor-not-allowed'
-          }`}
-          disabled={!isExperimentReady}
-        >
-          Start Experiment
-        </Button>
+        <div className="flex flex-col items-end space-y-2">
+          {experimentError && (
+            <div className="text-red-400 text-sm bg-red-900/20 border border-red-500/50 rounded px-3 py-1">
+              {experimentError}
+            </div>
+          )}
+          <Button 
+            onClick={onStartExperiment}
+            className={`px-8 py-3 transition-all duration-200 ${
+              isExperimentReady 
+                ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105' 
+                : 'bg-gray-600 hover:bg-gray-700 text-gray-300 cursor-not-allowed'
+            }`}
+            disabled={!isExperimentReady || isStartingExperiment}
+          >
+            {isStartingExperiment ? 'Starting...' : 'Start Experiment'}
+          </Button>
+        </div>
       </div>
     </div>
   );

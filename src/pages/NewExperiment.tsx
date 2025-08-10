@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Agent, Task } from '../types/index.d';
 import { ollamaService } from '../services/ollamaService';
+import { experimentService } from '../services/experimentService';
+import { storageService } from '../services/storageService';
 import { TaskCreationSection } from '../components/experiment/TaskCreationSection';
 import { AgentCreationSection } from '../components/experiment/AgentCreationSection';
 import { ExperimentStatus } from '../components/experiment/ExperimentStatus';
 
+interface NewExperimentProps {
+  onExperimentStart: (experimentId: string) => void;
+}
+
 // This page component manages the creation of new experiments.
-export const NewExperiment: React.FC = () => {
+export const NewExperiment: React.FC<NewExperimentProps> = ({ onExperimentStart }) => {
   const [taskCreationStep, setTaskCreationStep] = useState<'initial' | 'create' | 'import'>('initial');
   const [agentCreationStep, setAgentCreationStep] = useState<'list' | 'create' | 'edit'>('list');
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
@@ -16,6 +22,10 @@ export const NewExperiment: React.FC = () => {
   const [isLoadingOllamaModels, setIsLoadingOllamaModels] = useState<boolean>(false);
   const [ollamaError, setOllamaError] = useState<string | null>(null);
   const [isExperimentReady, setIsExperimentReady] = useState<boolean>(false);
+  const [currentExperimentId, setCurrentExperimentId] = useState<string | null>(null);
+  const [isStartingExperiment, setIsStartingExperiment] = useState<boolean>(false);
+  const [experimentError, setExperimentError] = useState<string | null>(null);
+  const [iterations, setIterations] = useState<number>(1);
 
   // Fetch Ollama models on component mount
   useEffect(() => {
@@ -66,10 +76,33 @@ export const NewExperiment: React.FC = () => {
     return 'Ready to start experiment.';
   };
 
-  const handleStartExperiment = () => {
-    if (isExperimentReady) {
-      // Handle experiment start logic
-      console.log('Starting experiment with:', { currentTask, agents });
+  const handleStartExperiment = async () => {
+    if (isExperimentReady && currentTask) {
+      setIsStartingExperiment(true);
+      setExperimentError(null);
+      
+      try {
+        const response = await experimentService.startExperiment(currentTask, agents, Math.max(1, iterations));
+        
+        // Save experiment to local storage
+        const storedExperiment = {
+          id: response.experiment_id,
+          title: `Experiment: ${currentTask.prompt.substring(0, 50)}${currentTask.prompt.length > 50 ? '...' : ''}`,
+          task: currentTask,
+          agents: agents,
+          status: 'running',
+          createdAt: new Date().toISOString(),
+          iterations: Math.max(1, iterations),
+          currentIteration: 0
+        };
+        storageService.saveExperiment(storedExperiment);
+        
+        onExperimentStart(response.experiment_id);
+      } catch (err: any) {
+        setExperimentError(err.message || 'Failed to start experiment');
+      } finally {
+        setIsStartingExperiment(false);
+      }
     }
   };
 
@@ -127,6 +160,8 @@ export const NewExperiment: React.FC = () => {
     setEditingAgent(null);
   };
 
+  // Removed unused function
+
   return (
     <div className="p-8 space-y-8 animate-fade-in">
       <TaskCreationSection
@@ -137,6 +172,8 @@ export const NewExperiment: React.FC = () => {
         onTaskDelete={handleTaskDelete}
         onTaskCreate={handleTaskCreate}
         onTaskImport={handleTaskImport}
+        iterations={iterations}
+        onIterationsChange={setIterations}
       />
       
       <AgentCreationSection
@@ -162,6 +199,8 @@ export const NewExperiment: React.FC = () => {
         agents={agents}
         onStartExperiment={handleStartExperiment}
         getExperimentStatusMessage={getExperimentStatusMessage}
+        isStartingExperiment={isStartingExperiment}
+        experimentError={experimentError}
       />
     </div>
   );

@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import { Icon } from '../ui/Icon';
 import { Button } from '../ui/Button';
 import { Conversation, ConversationAgent } from '../../types/index.d';
+import { ExportPanel } from './ExportPanel';
 
 interface ChatViewProps {
   conversation: Conversation;
@@ -20,6 +21,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   formatTimestamp
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showExportPanel, setShowExportPanel] = useState(false);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -39,6 +41,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
             <h2 className="text-xl font-semibold text-white">{conversation.title}</h2>
           </div>
           <div className="flex space-x-3">
+            <Button 
+              onClick={() => setShowExportPanel(true)}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              <Icon className="mr-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7,10 12,15 17,10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              </Icon>
+              Export
+            </Button>
             <Button 
               onClick={onBackToList}
               className="bg-gray-600 hover:bg-gray-700"
@@ -128,6 +143,17 @@ export const ChatView: React.FC<ChatViewProps> = ({
           <div ref={messagesEndRef} />
         </div>
       </div>
+      
+      {/* Export Panel */}
+      {showExportPanel && (
+        <ExportPanel
+          messages={conversation.messages}
+          agents={conversation.agents}
+          getAgentById={getAgentById}
+          formatTimestamp={formatTimestamp}
+          onClose={() => setShowExportPanel(false)}
+        />
+      )}
     </div>
   );
 }; 
