@@ -146,6 +146,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                   agentId={agent.id}
                   currentColor={agent.color}
                   onColorSelect={onColorSelect}
+                  onClose={() => onColorPickerToggle(agent.id)}
                   isColorUsed={isColorUsed}
                   getAvailableColorsCount={getAvailableColorsCount}
                 />

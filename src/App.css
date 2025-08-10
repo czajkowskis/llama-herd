@@ -99,6 +99,93 @@ button:hover {
   color: #C4B5FD !important;
 }
 
+/* Export Panel Styles */
+.conversation-export {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.6;
+}
+
+.conversation-export .message {
+  margin-bottom: 16px;
+  padding: 16px;
+}
+
+.conversation-export .message-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.conversation-export .agent-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.conversation-export .agent-name {
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.conversation-export .timestamp {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.conversation-export .model-info {
+  font-size: 12px;
+  opacity: 0.6;
+  margin-left: 8px;
+}
+
+.conversation-export .message-content {
+  line-height: 1.6;
+}
+
+.conversation-export .message-content h1,
+.conversation-export .message-content h2,
+.conversation-export .message-content h3 {
+  margin-top: 16px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.conversation-export .message-content p {
+  margin-bottom: 8px;
+}
+
+.conversation-export .message-content ul,
+.conversation-export .message-content ol {
+  margin-bottom: 8px;
+  padding-left: 20px;
+}
+
+.conversation-export .message-content code {
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.conversation-export .message-content pre {
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.conversation-export .message-content a {
+  color: #60a5fa;
+  text-decoration: underline;
+}
+
 .bg-purple-600 {
   background-color: #9333EA !important;
 }

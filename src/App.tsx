@@ -5,22 +5,23 @@ import { NewExperiment } from './pages/NewExperiment';
 import { ConversationViewer } from './pages/ConversationViewer';
 import { About } from './pages/About';
 import { Settings } from './pages/Settings';
+import { LiveExperimentView } from './components/experiment/LiveExperimentView';
+import { History } from './pages/History';
 
 const App: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<'newExperiment' | 'history' | 'explore' | 'conversations' | 'settings' | 'about'>('newExperiment');
+  const [currentPage, setCurrentPage] = useState<'newExperiment' | 'history' | 'explore' | 'conversations' | 'settings' | 'about' | 'liveExperiment'>('newExperiment');
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+  const [currentExperimentId, setCurrentExperimentId] = useState<string | null>(null);
 
   const renderContent = () => {
     switch (currentPage) {
       case 'newExperiment':
-        return <NewExperiment />;
+        return <NewExperiment onExperimentStart={(experimentId) => {
+          setCurrentExperimentId(experimentId);
+          setCurrentPage('liveExperiment');
+        }} />;
       case 'history':
-        return (
-          <div className="p-8 text-center text-gray-400 animate-fade-in">
-            <h2 className="text-2xl font-semibold mb-4">Experiment History</h2>
-            <p>Your past experiments will appear here.</p>
-          </div>
-        );
+        return <History />;
       case 'explore':
         return (
           <div className="p-8 text-center text-gray-400 animate-fade-in">
@@ -30,6 +31,16 @@ const App: React.FC = () => {
         );
       case 'conversations':
         return <ConversationViewer />;
+      case 'liveExperiment':
+        return currentExperimentId ? (
+          <LiveExperimentView
+            experimentId={currentExperimentId}
+            onBack={() => {
+              setCurrentExperimentId(null);
+              setCurrentPage('newExperiment');
+            }}
+          />
+        ) : null;
       case 'settings':
         return <Settings />;
       case 'about':

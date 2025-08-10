@@ -7,6 +7,8 @@ import { UploadInterface } from '../components/common/UploadInterface';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Icon } from '../components/ui/Icon';
+import { storageService } from '../services/storageService';
+import { backendStorageService } from '../services/backendStorageService';
 
 // Available colors for agents
 const AGENT_COLORS = [
@@ -33,6 +35,25 @@ export const ConversationViewer: React.FC = () => {
   const [nameError, setNameError] = useState<string>('');
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
   const [editingAgentId, setEditingAgentId] = useState<string>('');
+
+  // Load conversations from local storage on mount
+  useEffect(() => {
+    const storedConversations = storageService.getConversations();
+    console.log('ConversationViewer: All stored conversations:', storedConversations);
+    
+    const importedConversations: Conversation[] = storedConversations
+      .filter(c => c.source === 'import')
+      .map(c => ({
+        id: c.id,
+        title: c.title,
+        agents: c.agents,
+        messages: c.messages,
+        createdAt: c.createdAt
+      }));
+    
+    console.log('ConversationViewer: Filtered imported conversations:', importedConversations);
+    setConversations(importedConversations);
+  }, []);
 
   const currentConversation = currentConversationIndex >= 0 ? conversations[currentConversationIndex] : null;
 
@@ -226,7 +247,7 @@ export const ConversationViewer: React.FC = () => {
     }
   };
 
-  const handleConfirmConfiguration = () => {
+  const handleConfirmConfiguration = async () => {
     // Check for duplicate colors or names
     const hasDuplicateColors = agents.some((agent, index) => 
       agents.some((otherAgent, otherIndex) => 
@@ -261,6 +282,35 @@ export const ConversationViewer: React.FC = () => {
 
     // Add to conversations list
     setConversations(prev => [...prev, updatedConversation]);
+    
+    // Save to both localStorage and backend storage
+    const storedConversation = {
+      id: updatedConversation.id,
+      title: updatedConversation.title,
+      agents: updatedConversation.agents,
+      messages: updatedConversation.messages,
+      createdAt: updatedConversation.createdAt,
+      importedAt: new Date().toISOString(),
+      source: 'import' as const,
+    };
+    console.log('ConversationViewer: Saving conversation to localStorage:', storedConversation);
+    storageService.saveConversation(storedConversation);
+    
+    // Also save to backend storage (data folder)
+    console.log('ConversationViewer: Saving conversation to backend storage:', storedConversation);
+    console.log('ConversationViewer: Using backendStorageService.saveConversation...');
+    try {
+      const backendSuccess = await backendStorageService.saveConversation(storedConversation);
+      console.log('ConversationViewer: Backend save result:', backendSuccess);
+      if (backendSuccess) {
+        console.log('ConversationViewer: Successfully saved to backend storage');
+      } else {
+        console.error('ConversationViewer: Failed to save to backend storage');
+      }
+    } catch (error) {
+      console.error('ConversationViewer: Error saving to backend storage:', error);
+      console.error('ConversationViewer: Error details:', error);
+    }
 
     // Move to next pending conversation or finish
     if (pendingConversationIndex < pendingConversations.length - 1) {
@@ -287,8 +337,25 @@ export const ConversationViewer: React.FC = () => {
     setIsConfiguring(false);
   };
 
-  const handleDeleteConversation = (index: number) => {
+  const handleDeleteConversation = async (index: number) => {
     if (window.confirm('Are you sure you want to delete this conversation?')) {
+      const conversationToDelete = conversations[index];
+      
+      // Remove from localStorage
+      storageService.deleteConversation(conversationToDelete.id);
+      
+      // Also delete from backend storage
+      try {
+        const backendSuccess = await backendStorageService.deleteConversation(conversationToDelete.id);
+        if (backendSuccess) {
+          console.log('ConversationViewer: Successfully deleted from backend storage');
+        } else {
+          console.error('ConversationViewer: Failed to delete from backend storage');
+        }
+      } catch (error) {
+        console.error('ConversationViewer: Error deleting from backend storage:', error);
+      }
+      
       setConversations(prev => prev.filter((_, i) => i !== index));
       
       // If we're deleting the current conversation, select the next one or go back to list
@@ -313,11 +380,41 @@ export const ConversationViewer: React.FC = () => {
     setEditingTitle(conversations[index].title);
   };
 
-  const handleSaveTitle = () => {
+  const handleSaveTitle = async () => {
     if (editingTitle.trim()) {
-      setConversations(prev => prev.map((conv, index) => 
+      const updatedConversations = conversations.map((conv, index) => 
         index === editingTitleIndex ? { ...conv, title: editingTitle.trim() } : conv
-      ));
+      );
+      
+      // Update local state
+      setConversations(updatedConversations);
+      
+      // Save updated conversation to both localStorage and backend storage
+      const updatedConversation = updatedConversations[editingTitleIndex];
+      if (updatedConversation) {
+        const storedConversation = {
+          id: updatedConversation.id,
+          title: updatedConversation.title,
+          agents: updatedConversation.agents,
+          messages: updatedConversation.messages,
+          createdAt: updatedConversation.createdAt,
+          importedAt: new Date().toISOString(),
+          source: 'import' as const,
+        };
+        storageService.saveConversation(storedConversation);
+        
+        // Also save to backend storage
+        try {
+          const backendSuccess = await backendStorageService.saveConversation(storedConversation);
+          if (backendSuccess) {
+            console.log('ConversationViewer: Successfully updated title in backend storage');
+          } else {
+            console.error('ConversationViewer: Failed to update title in backend storage');
+          }
+        } catch (error) {
+          console.error('ConversationViewer: Error updating title in backend storage:', error);
+        }
+      }
     }
     setEditingTitleIndex(-1);
     setEditingTitle('');
