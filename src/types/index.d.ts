@@ -38,6 +38,7 @@ export interface Conversation {
   agents: ConversationAgent[];
   messages: Message[];
   createdAt: string;
+  experiment_id?: string;
 }
 
 export interface ExperimentStatusResponse {
@@ -49,6 +50,8 @@ export interface ExperimentStatusResponse {
   current_iteration?: number;
   error?: string;
 }
+
+
 
 export interface GenerateResponse {
   model: string;

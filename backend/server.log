@@ -8,57 +8,14 @@ nohup: ignoring input
 
 INFO:     Will watch for changes in these directories: ['/home/szymon/llama-herd/backend']
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [189655] using StatReload
-INFO:     Started server process [189661]
+INFO:     Started reloader process [20065] using StatReload
+INFO:     Started server process [20069]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     127.0.0.1:48340 - "GET /docs HTTP/1.1" 200 OK
-WARNING:  StatReload detected changes in 'app/services/autogen_service.py'. Reloading...
+INFO:     127.0.0.1:49562 - "GET /api/experiments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51836 - "GET /api/experiments HTTP/1.1" 200 OK
 INFO:     Shutting down
 INFO:     Waiting for application shutdown.
 INFO:     Application shutdown complete.
-INFO:     Finished server process [189661]
-INFO:     Started server process [190237]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:app.utils.logging:Created experiment 611aefb0-d91e-42b2-b2c2-46e8c0e13c7d with 1 agents
-INFO:app.utils.logging:Starting experiment 611aefb0-d91e-42b2-b2c2-46e8c0e13c7d in background thread
-INFO:app.utils.logging:Starting experiment 611aefb0-d91e-42b2-b2c2-46e8c0e13c7d with 1 agents
-INFO:app.utils.logging:Background thread started for experiment 611aefb0-d91e-42b2-b2c2-46e8c0e13c7d
-INFO:     127.0.0.1:49318 - "POST /api/experiments/start HTTP/1.1" 200 OK
-INFO:app.utils.logging:Experiment 611aefb0-d91e-42b2-b2c2-46e8c0e13c7d found, starting iterations
-INFO:app.utils.logging:Experiment 611aefb0-d91e-42b2-b2c2-46e8c0e13c7d: 1 iterations, dataset items: 0
-INFO:app.utils.logging:Running manual iterations for experiment 611aefb0-d91e-42b2-b2c2-46e8c0e13c7d
-INFO:     127.0.0.1:49318 - "GET /api/experiments/611aefb0-d91e-42b2-b2c2-46e8c0e13c7d HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49344 - "WebSocket /ws/experiments/611aefb0-d91e-42b2-b2c2-46e8c0e13c7d" [accepted]
-INFO:     connection open
-INFO:     127.0.0.1:49334 - "GET /api/experiments/611aefb0-d91e-42b2-b2c2-46e8c0e13c7d HTTP/1.1" 200 OK
-INFO:app.utils.logging:Created AutoGen agent: Comedian
-INFO:app.utils.logging:Single agent detected, using direct communication
-user_proxy (to Comedian):
-
-Tell me a joke
-
---------------------------------------------------------------------------------
-INFO:httpx:HTTP Request: POST http://localhost:8080/v1/chat/completions "HTTP/1.1 200 OK"
-[autogen.oai.client: 08-10 21:14:04] {714} WARNING - Model gemma3:4b is not found. The cost will be 0. In your config_list, add field {"price" : [prompt_price_per_1k, completion_token_price_per_1k]} for customized pricing.
-WARNING:autogen.oai.client:Model gemma3:4b is not found. The cost will be 0. In your config_list, add field {"price" : [prompt_price_per_1k, completion_token_price_per_1k]} for customized pricing.
-Comedian (to user_proxy):
-
-Okay, okay, settle down folks! Let me tell you this one:
-
-Why don't scientists trust atoms? 
-
-... Because they make up everything! 
-
-(Pause for laughter... hopefully!)
-
----
-
-Want to hear another one, or would you like me to try a different kind of joke?  I can do puns, observational humor, or even a little bit of self-deprecating comedy. Just let me know! 😄
-
---------------------------------------------------------------------------------
-
->>>>>>>> TERMINATING RUN (03b14857-58df-4dd7-939a-d370ca466e63): Maximum number of consecutive auto-replies reached
-INFO:app.utils.logging:Single agent conversation completed with 3 messages
-INFO:app.utils.logging:Experiment 611aefb0-d91e-42b2-b2c2-46e8c0e13c7d iterations completed, marking as completed
+INFO:     Finished server process [20069]
+INFO:     Stopping reloader process [20065]

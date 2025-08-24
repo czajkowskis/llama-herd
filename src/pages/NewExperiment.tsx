@@ -26,6 +26,7 @@ export const NewExperiment: React.FC<NewExperimentProps> = ({ onExperimentStart 
   const [isStartingExperiment, setIsStartingExperiment] = useState<boolean>(false);
   const [experimentError, setExperimentError] = useState<string | null>(null);
   const [iterations, setIterations] = useState<number>(1);
+  const [experimentName, setExperimentName] = useState<string>('');
 
   // Fetch Ollama models on component mount
   useEffect(() => {
@@ -46,8 +47,8 @@ export const NewExperiment: React.FC<NewExperimentProps> = ({ onExperimentStart 
 
   // Update experiment ready state when task or agents change
   useEffect(() => {
-    setIsExperimentReady(currentTask !== null && agents.length > 0);
-  }, [currentTask, agents]);
+    setIsExperimentReady(currentTask !== null && agents.length > 0 && experimentName.trim().length > 0);
+  }, [currentTask, agents, experimentName]);
 
   const isColorUsed = (color: string, excludeAgentId?: string) => {
     return agents.some(agent => 
@@ -72,6 +73,8 @@ export const NewExperiment: React.FC<NewExperimentProps> = ({ onExperimentStart 
       return 'Create a task to start the experiment.';
     } else if (agents.length === 0) {
       return 'Add at least one agent to start the experiment.';
+    } else if (!experimentName.trim()) {
+      return 'Give your experiment a name to start.';
     }
     return 'Ready to start experiment.';
   };
@@ -87,7 +90,7 @@ export const NewExperiment: React.FC<NewExperimentProps> = ({ onExperimentStart 
         // Save experiment to local storage
         const storedExperiment = {
           id: response.experiment_id,
-          title: `Experiment: ${currentTask.prompt.substring(0, 50)}${currentTask.prompt.length > 50 ? '...' : ''}`,
+          title: experimentName.trim() || `Experiment: ${currentTask.prompt.substring(0, 50)}${currentTask.prompt.length > 50 ? '...' : ''}`,
           task: currentTask,
           agents: agents,
           status: 'running',
@@ -112,16 +115,25 @@ export const NewExperiment: React.FC<NewExperimentProps> = ({ onExperimentStart 
 
   const handleTaskDelete = () => {
     setCurrentTask(null);
+    setExperimentName('');
   };
 
   const handleTaskCreate = (task: Task) => {
     setCurrentTask(task);
     setTaskCreationStep('initial');
+    // Set a default experiment name based on the task
+    if (!experimentName.trim()) {
+      setExperimentName(`Experiment: ${task.prompt.substring(0, 50)}${task.prompt.length > 50 ? '...' : ''}`);
+    }
   };
 
   const handleTaskImport = (task: Task) => {
     setCurrentTask(task);
     setTaskCreationStep('initial');
+    // Set a default experiment name based on the task
+    if (!experimentName.trim()) {
+      setExperimentName(`Experiment: ${task.prompt.substring(0, 50)}${task.prompt.length > 50 ? '...' : ''}`);
+    }
   };
 
   const handleSaveAgent = (agentData: Omit<Agent, 'id'>) => {
@@ -202,6 +214,29 @@ export const NewExperiment: React.FC<NewExperimentProps> = ({ onExperimentStart 
         isStartingExperiment={isStartingExperiment}
         experimentError={experimentError}
       />
+      
+      {/* Experiment Naming Section */}
+      {isExperimentReady && (
+        <div className="bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-600">
+          <h3 className="text-lg font-semibold text-white mb-4">Name Your Experiment</h3>
+          <div className="flex items-center space-x-4">
+            <input
+              type="text"
+              value={experimentName}
+              onChange={(e) => setExperimentName(e.target.value.slice(0, 100))}
+              placeholder="Enter experiment name..."
+              maxLength={100}
+              className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400"
+            />
+            <span className="text-sm text-gray-400">
+              {experimentName.length}/100
+            </span>
+          </div>
+          <p className="text-sm text-gray-400 mt-2">
+            Give your experiment a descriptive name to easily identify it later.
+          </p>
+        </div>
+      )}
     </div>
   );
 };

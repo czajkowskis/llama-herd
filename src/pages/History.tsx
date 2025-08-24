@@ -4,14 +4,17 @@ import { Button } from '../components/ui/Button';
 import { backendStorageService, StoredExperiment, StoredConversation } from '../services/backendStorageService';
 import { storageService } from '../services/storageService';
 import { experimentService } from '../services/experimentService';
+import { ExperimentConversationViewer } from '../components/conversation/ExperimentConversationViewer';
 
 export const History: React.FC = () => {
   const [experiments, setExperiments] = useState<StoredExperiment[]>([]);
   const [conversations, setConversations] = useState<StoredConversation[]>([]);
-  const [selectedItem, setSelectedItem] = useState<{ type: 'experiment' | 'conversation'; id: string } | null>(null);
+  const [selectedItem, setSelectedItem] = useState<{ type: 'experiment' | 'conversation'; id: string; source?: 'import' | 'experiment' } | null>(null);
   const [viewingExperimentConversations, setViewingExperimentConversations] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'experiments' | 'conversations'>('experiments');
   const [loading, setLoading] = useState(true);
+  const [editingExperimentId, setEditingExperimentId] = useState<string | null>(null);
+  const [editingExperimentName, setEditingExperimentName] = useState<string>('');
 
   useEffect(() => {
     loadHistory();
@@ -59,8 +62,8 @@ export const History: React.FC = () => {
     setSelectedItem(null);
   };
 
-  const handleViewConversation = (conversation: StoredConversation) => {
-    setSelectedItem({ type: 'conversation', id: conversation.id });
+  const handleViewConversation = (conversation: StoredConversation, source: 'import' | 'experiment' = 'import') => {
+    setSelectedItem({ type: 'conversation', id: conversation.id, source });
     setViewingExperimentConversations(null);
   };
 
@@ -84,11 +87,57 @@ export const History: React.FC = () => {
     }
   };
 
-  const handleDeleteConversation = async (conversationId: string) => {
+  const handleStartEditExperimentName = (experiment: StoredExperiment) => {
+    setEditingExperimentId(experiment.id);
+    setEditingExperimentName(experiment.title);
+  };
+
+  const handleSaveExperimentName = async () => {
+    if (editingExperimentName.trim() && editingExperimentId) {
+      try {
+        const updatedExperiments = experiments.map(exp => 
+          exp.id === editingExperimentId 
+            ? { ...exp, title: editingExperimentName.trim() }
+            : exp
+        );
+        setExperiments(updatedExperiments);
+        
+        // Save updated experiment to backend storage
+        const updatedExperiment = updatedExperiments.find(exp => exp.id === editingExperimentId);
+        if (updatedExperiment) {
+          await backendStorageService.saveExperiment(updatedExperiment);
+        }
+      } catch (error) {
+        console.error('Failed to save experiment name:', error);
+      }
+    }
+    setEditingExperimentId(null);
+    setEditingExperimentName('');
+  };
+
+  const handleCancelEditExperimentName = () => {
+    setEditingExperimentId(null);
+    setEditingExperimentName('');
+  };
+
+  const handleExperimentNameKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSaveExperimentName();
+    } else if (e.key === 'Escape') {
+      handleCancelEditExperimentName();
+    }
+  };
+
+  const handleDeleteConversation = async (conversationId: string, source?: 'import' | 'experiment') => {
     if (window.confirm('Are you sure you want to delete this conversation?')) {
       try {
-        // Delete from localStorage since that's where imported conversations are stored
-        storageService.deleteConversation(conversationId);
+        if (source === 'experiment') {
+          // Delete from backend storage for experiment conversations
+          await backendStorageService.deleteConversation(conversationId);
+        } else {
+          // Delete from localStorage for imported conversations
+          storageService.deleteConversation(conversationId);
+        }
         await loadHistory();
       } catch (error) {
         console.error('Failed to delete conversation:', error);
@@ -119,35 +168,60 @@ export const History: React.FC = () => {
 
   // Show selected conversation
   if (selectedItem) {
-    const conversation = conversations.find(c => c.id === selectedItem.id);
-    if (!conversation) return null;
-
-    return (
-      <div className="p-8 animate-fade-in">
-        <div className="bg-gray-800 p-6 rounded-2xl shadow-xl">
-          <div className="flex items-center justify-between mb-6">
-            <Button onClick={handleBackToList} className="bg-gray-600 hover:bg-gray-700">
-              ← Back to History
-            </Button>
-          </div>
-          <div className="flex-1 overflow-hidden">
-            <ChatView
-              conversation={{
-                id: conversation.id,
-                title: conversation.title,
-                agents: conversation.agents,
-                messages: conversation.messages,
-                createdAt: conversation.createdAt
-              }}
-              onBackToList={handleBackToList}
-              getAgentById={(agentId) => conversation.agents.find(a => a.id === agentId)}
-              getContrastColor={(color) => '#ffffff'}
-              formatTimestamp={(timestamp) => new Date(timestamp).toLocaleTimeString()}
-            />
+    let conversation: StoredConversation | null = null;
+    
+    if (selectedItem.source === 'experiment') {
+      // For experiment conversations, we need to fetch from backend
+      // This will be handled by a new component that fetches the conversation
+      return (
+        <div className="p-8 animate-fade-in">
+          <div className="bg-gray-800 p-6 rounded-2xl shadow-xl">
+            <div className="flex items-center justify-between mb-6">
+              <Button onClick={handleBackToList} className="bg-gray-600 hover:bg-gray-700">
+                ← Back to History
+              </Button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <ExperimentConversationViewer
+                conversationId={selectedItem.id}
+                onBackToList={handleBackToList}
+              />
+            </div>
           </div>
         </div>
-      </div>
-    );
+      );
+    } else {
+      // For imported conversations, use the existing logic
+      const foundConversation = conversations.find(c => c.id === selectedItem.id);
+      if (!foundConversation) return null;
+
+      return (
+        <div className="p-8 animate-fade-in">
+          <div className="bg-gray-800 p-6 rounded-2xl shadow-xl">
+            <div className="flex items-center justify-between mb-6">
+              <Button onClick={handleBackToList} className="bg-gray-600 hover:bg-gray-700">
+                ← Back to History
+              </Button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <ChatView
+                conversation={{
+                  id: foundConversation.id,
+                  title: foundConversation.title,
+                  agents: foundConversation.agents,
+                  messages: foundConversation.messages,
+                  createdAt: foundConversation.createdAt
+                }}
+                onBackToList={handleBackToList}
+                getAgentById={(agentId) => foundConversation.agents.find(a => a.id === agentId)}
+                getContrastColor={(color) => '#ffffff'}
+                formatTimestamp={(timestamp) => new Date(timestamp).toLocaleTimeString()}
+              />
+            </div>
+          </div>
+        </div>
+      );
+    }
   }
 
   // Show experiment conversations
@@ -225,7 +299,42 @@ export const History: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <h3 className="text-lg font-semibold text-white">
-                          {experiment.title}
+                          {editingExperimentId === experiment.id ? (
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="text"
+                                value={editingExperimentName}
+                                onChange={(e) => setEditingExperimentName(e.target.value)}
+                                onBlur={handleSaveExperimentName}
+                                onKeyPress={handleExperimentNameKeyPress}
+                                autoFocus
+                                className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-white text-lg font-semibold focus:outline-none focus:border-purple-400"
+                              />
+                              <div className="flex items-center space-x-1">
+                                <button
+                                  onClick={handleSaveExperimentName}
+                                  className="text-green-400 hover:text-green-300 p-1 rounded-full transition-colors duration-200"
+                                  title="Save name"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check">
+                                    <path d="M20 6 9 17l-5-5"/>
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={handleCancelEditExperimentName}
+                                  className="text-gray-400 hover:text-red-400 p-1 rounded-full transition-colors duration-200"
+                                  title="Cancel edit"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x">
+                                    <path d="M18 6 6 18"/>
+                                    <path d="m6 6 12 12"/>
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            experiment.title
+                          )}
                         </h3>
                         <div className="flex items-center space-x-4 mt-2 text-sm text-gray-300">
                           <span className="inline-flex items-center space-x-1">
@@ -254,6 +363,16 @@ export const History: React.FC = () => {
                         <Button onClick={() => handleViewExperiment(experiment)}>
                           View Conversations
                         </Button>
+                        <button
+                          onClick={() => handleStartEditExperimentName(experiment)}
+                          className="text-gray-400 hover:text-purple-400 p-1.5 rounded-full transition-all duration-200 hover:bg-purple-500/20 hover:scale-110 hover:shadow-lg"
+                          title="Edit experiment name"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-edit">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/>
+                          </svg>
+                        </button>
                         <button
                           onClick={() => handleDeleteExperiment(experiment.id)}
                           className="text-gray-400 hover:text-red-400 p-1.5 rounded-full transition-all duration-200 hover:bg-red-500/20 hover:scale-110 hover:shadow-lg"
@@ -316,7 +435,7 @@ export const History: React.FC = () => {
                           View
                         </Button>
                         <button
-                          onClick={() => handleDeleteConversation(conversation.id)}
+                          onClick={() => handleDeleteConversation(conversation.id, 'import')}
                           className="text-gray-400 hover:text-red-400 p-1.5 rounded-full transition-all duration-200 hover:bg-red-500/20 hover:scale-110 hover:shadow-lg"
                           title="Delete conversation"
                         >
@@ -345,8 +464,8 @@ export const History: React.FC = () => {
 interface ExperimentConversationsListProps {
   experimentId: string;
   getExperimentConversations: (experimentId: string) => Promise<StoredConversation[]>;
-  onViewConversation: (conversation: StoredConversation) => void;
-  onDeleteConversation: (conversationId: string) => void;
+  onViewConversation: (conversation: StoredConversation, source?: 'import' | 'experiment') => void;
+  onDeleteConversation: (conversationId: string, source?: 'import' | 'experiment') => void;
 }
 
 const ExperimentConversationsList: React.FC<ExperimentConversationsListProps> = ({
@@ -416,11 +535,11 @@ const ExperimentConversationsList: React.FC<ExperimentConversationsListProps> = 
               </div>
             </div>
             <div className="flex space-x-2">
-              <Button onClick={() => onViewConversation(conversation)}>
+              <Button onClick={() => onViewConversation(conversation, 'experiment')}>
                 View
               </Button>
               <button
-                onClick={() => onDeleteConversation(conversation.id)}
+                onClick={() => onDeleteConversation(conversation.id, 'experiment')}
                 className="text-gray-400 hover:text-red-400 p-1.5 rounded-full transition-all duration-200 hover:bg-red-500/20 hover:scale-110 hover:shadow-lg"
                 title="Delete conversation"
               >

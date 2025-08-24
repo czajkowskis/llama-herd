@@ -20,7 +20,7 @@ export interface StoredConversation {
   createdAt: string;
   importedAt: string;
   source: 'import' | 'experiment';
-  experimentId?: string;
+  experiment_id?: string;
 }
 
 class BackendStorageService {

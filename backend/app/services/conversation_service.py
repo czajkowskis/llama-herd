@@ -83,6 +83,42 @@ class ConversationService:
             )
             
             if state_manager.add_conversation(experiment_id, conversation):
+                # Also save to persistent storage using new folder structure
+                try:
+                    from ..storage.file_storage import storage
+                    # Convert to dict format for storage
+                    conversation_dict = conversation.dict()
+                    
+                    # Extract iteration number from title (e.g., "Run 1" -> 1, "Dataset item 3" -> 3)
+                    current_iteration = 1  # Default fallback
+                    if title.startswith("Run "):
+                        try:
+                            current_iteration = int(title.split(" ")[1])
+                        except (IndexError, ValueError):
+                            pass
+                    elif title.startswith("Dataset item "):
+                        try:
+                            current_iteration = int(title.split(" ")[2])
+                        except (IndexError, ValueError):
+                            pass
+                    
+                    # Get experiment title for folder naming
+                    experiment_title = None
+                    if hasattr(experiment, 'task') and hasattr(experiment.task, 'prompt'):
+                        experiment_title = experiment.task.prompt[:50]  # Limit length
+                    
+                    # Save conversation using new method (this will create experiment folder if needed)
+                    storage.save_experiment_conversation(
+                        experiment_id=experiment_id,
+                        iteration=current_iteration,
+                        title=title,
+                        conversation=conversation_dict,
+                        experiment_title=experiment_title
+                    )
+                    logger.info(f"Saved conversation snapshot {conversation.id} to persistent storage (iteration {current_iteration})")
+                except Exception as storage_error:
+                    logger.warning(f"Failed to save conversation to persistent storage: {str(storage_error)}")
+                
                 # Notify via message queue
                 ConversationService._notify_conversation(experiment_id, conversation)
                 return conversation

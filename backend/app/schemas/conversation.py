@@ -24,4 +24,5 @@ class Conversation(BaseModel):
     agents: List[ConversationAgent]
     messages: List[Message]
     createdAt: str
+    experiment_id: Optional[str] = None
 

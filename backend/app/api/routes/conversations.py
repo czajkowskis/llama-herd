@@ -31,6 +31,16 @@ async def list_conversations(source: Optional[str] = None):
         raise HTTPException(status_code=500, detail=f"Error retrieving conversations: {str(e)}")
 
 
+@router.get("/experiment/{experiment_id}")
+async def get_experiment_conversations(experiment_id: str):
+    """Get all conversations for a specific experiment."""
+    try:
+        conversations = storage.get_experiment_conversations(experiment_id)
+        return {"conversations": conversations}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving experiment conversations: {str(e)}")
+
+
 @router.get("/{conversation_id}")
 async def get_conversation(conversation_id: str):
     """Get a specific conversation by ID."""
@@ -44,16 +54,6 @@ async def get_conversation(conversation_id: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving conversation: {str(e)}")
-
-
-@router.get("/experiment/{experiment_id}")
-async def get_experiment_conversations(experiment_id: str):
-    """Get all conversations for a specific experiment."""
-    try:
-        conversations = storage.get_experiment_conversations(experiment_id)
-        return {"conversations": conversations}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error retrieving experiment conversations: {str(e)}")
 
 
 @router.delete("/{conversation_id}")

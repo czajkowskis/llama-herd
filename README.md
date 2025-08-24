@@ -1,111 +1,190 @@
 # LLaMa-Herd
 
-A React application for managing multi-agent conversations and experiments.
+A React-based application for creating and managing multi-agent conversations using Ollama models and Microsoft's Autogen framework.
 
-## Conversation JSON Format
+## Features
 
-The application expects conversation files to be in JSON format with the following structure:
+- **Multi-Agent Conversations**: Create and manage conversations between multiple AI agents
+- **Ollama Integration**: Use local Ollama models for agent responses
+- **Autogen Integration**: Leverage Microsoft's Autogen framework for sophisticated multi-agent interactions
+- **Real-time Updates**: Live WebSocket updates during experiments
+- **Conversation Import**: Import existing conversations from JSON files
+- **Agent Configuration**: Customize agent prompts, models, and visual appearance
+- **Task Management**: Create and manage tasks for agent conversations
+- **Modern UI**: Beautiful, responsive interface built with React and Tailwind CSS
 
-```json
-{
-  "title": "Conversation Title",
-  "messages": [
-    {
-      "agent": {
-        "name": "Agent Name",
-        "model": "llama2:7b"
-      },
-      "content": "Agent message content",
-      "timestamp": "2024-01-01T12:00:00.000Z"
-    },
-    {
-      "agent": {
-        "name": "Another Agent",
-        "model": "mistral:7b"
-      },
-      "content": "Another agent's message",
-      "timestamp": "2024-01-01T12:01:00.000Z"
-    }
-  ]
-}
+## Architecture
+
+The application consists of two main components:
+
+1. **Frontend (React/TypeScript)**: User interface for creating and managing experiments
+2. **Backend (FastAPI/Python)**: Handles Autogen integration and real-time communication
+
+## Quick Start
+
+### Prerequisites
+
+1. **Node.js** (v16 or higher)
+2. **Python 3.8+**
+3. **Ollama** - Download from [ollama.ai](https://ollama.ai)
+
+### Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone <repository-url>
+   cd llama-herd
+   ```
+
+2. **Install frontend dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Install backend dependencies:**
+   ```bash
+   cd backend
+   pip install -r requirements.txt
+   cd ..
+   ```
+
+4. **Start Ollama:**
+   ```bash
+   ollama serve
+   ```
+
+5. **Pull required models:**
+   ```bash
+   ollama pull llama2
+   # Add other models as needed
+   ```
+
+### Running the Application
+
+1. **Start the backend:**
+   ```bash
+   cd backend
+   ./start.sh
+   # Or manually: python main.py
+   ```
+
+2. **Start the frontend (in a new terminal):**
+   ```bash
+   npm start
+   ```
+
+3. **Open your browser:**
+   Navigate to `http://localhost:3000`
+
+## Usage
+
+### Creating Experiments
+
+1. **Create a Task**: Define what you want your agents to discuss or accomplish
+2. **Add Agents**: Create agents with custom prompts, models, and visual styles
+3. **Start Experiment**: Click "Start Experiment" to begin the Autogen group chat
+4. **Monitor Progress**: Watch real-time updates as agents interact with each other
+
+### Importing Conversations
+
+1. **Upload JSON Files**: Import existing conversations from JSON files
+2. **Configure Agents**: Customize agent names, colors, and models
+3. **View Conversations**: Browse and interact with imported conversations
+
+## API Documentation
+
+The backend provides a REST API and WebSocket endpoints:
+
+- **API Docs**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+
+### Key Endpoints
+
+- `POST /api/experiments/start` - Start a new experiment
+- `GET /api/experiments/{id}` - Get experiment status
+- `WS /ws/experiments/{id}` - Real-time updates
+
+## Development
+
+### Frontend Structure
+
+```
+src/
+├── components/          # React components
+│   ├── agent/          # Agent management
+│   ├── conversation/    # Conversation display
+│   ├── experiment/     # Experiment management
+│   └── ui/            # Reusable UI components
+├── pages/             # Page components
+├── services/          # API services
+└── types/            # TypeScript definitions
 ```
 
-### Key Features:
+### Backend Structure
 
-- **Agent Configuration**: Each agent can have a unique name and color
-- **Model Information**: The model used by each agent is displayed in the chat
-- **Multiple Conversations**: Upload and manage multiple conversation files
-- **Inline Editing**: Edit conversation titles and agent names directly
-- **Color Management**: Unique color assignment with custom color picker
+```
+backend/
+├── main.py           # FastAPI application
+├── requirements.txt  # Python dependencies
+├── test_backend.py  # Backend testing
+└── start.sh         # Startup script
+```
 
-### Supported JSON Structures:
+### Testing
 
-1. **Standard Format** (recommended):
-   ```json
-   {
-     "agent": {
-       "name": "Agent Name",
-       "model": "llama2:7b"
-     },
-     "content": "Message content"
-   }
-   ```
-
-2. **Alternative Format**:
-   ```json
-   {
-     "agent": "Agent Name",
-     "model": "llama2:7b",
-     "message": "Message content"
-   }
-   ```
-
-The application will automatically extract model information and display it in both the agent configuration window and the chat visualization.
-
-## Core Functionality
-
-* **API Integration:** The application includes a service layer for seamless communication with the Ollama API, enabling access to local Ollama models.
-
-* **AutoGen Integration:** The application is designed to work with AutoGen, providing a graphical interface for defining and executing multi-agent experiments. This allows users to easily set up and manage collaborative tasks and conversational workflows involving multiple AI agents.
-
-## Prerequisites
-
-To install and run this project, ensure the following software is installed on your system:
-
-* **Node.js & npm:** A stable version of Node.js is required for the React development environment.
-
-* **Ollama:** The Ollama server must be running locally to enable the application's core functionality. Detailed installation instructions can be found on the [official Ollama website](https://ollama.ai/).
-
-## Installation and Execution
-
-Follow these steps to set up and run the project:
-
-1.  **Clone the repository:**
-
-    ```bash
-    git clone <your-repo-url>
-    cd <your-project-directory>
-    ```
-
-2.  **Install project dependencies:**
-
-    ```bash
-    npm install
-    ```
-
-3.  **Start the development server:**
-
-    ```bash
-    npm start
-    ```
-
-The application will be accessible via a web browser at `http://localhost:3000` (or the configured port).
-
-## Ollama Server Configuration
-
-For the application to function correctly, the Ollama server must be operational. Use the following commands to pull a model (e.g., `llama2`) and start the server:
+**Test the backend:**
 ```bash
-ollama pull llama2
-ollama run llama2
+cd backend
+python test_backend.py
 ```
-The application is initially configured to connect to the default Ollama API endpoint at `http://localhost:11434/api`. You can change it in the Settings page.
+
+## Configuration
+
+### Models
+
+The application works with any Ollama model. Popular options include:
+- `llama2` - Meta's Llama 2
+- `codellama` - Code-focused model
+- `mistral` - Mistral AI's model
+- `neural-chat` - Intel's conversational model
+
+### Agent Prompts
+
+Customize agent behavior by modifying their system prompts. Example prompts:
+- **Expert Agent**: "You are an expert in [field]. Provide detailed, accurate information."
+- **Critic Agent**: "You are a critical thinker. Question assumptions and identify potential issues."
+- **Facilitator Agent**: "You are a conversation facilitator. Help guide the discussion and summarize points."
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Ollama not running**: Start with `ollama serve`
+2. **Model not found**: Pull the model with `ollama pull <model-name>`
+3. **Backend connection failed**: Ensure the backend is running on port 8000
+4. **CORS errors**: Backend is configured for `http://localhost:3000`
+
+### Logs
+
+- **Frontend**: Check browser console for errors
+- **Backend**: Check terminal output for Python errors
+- **Ollama**: Check Ollama logs for model issues
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License.
+
+## Acknowledgments
+
+- [Microsoft Autogen](https://github.com/microsoft/autogen) - Multi-agent conversation framework
+- [Ollama](https://ollama.ai) - Local LLM server
+- [React](https://reactjs.org) - Frontend framework
+- [FastAPI](https://fastapi.tiangolo.com) - Backend framework
