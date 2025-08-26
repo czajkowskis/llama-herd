@@ -57,7 +57,7 @@ const App: React.FC = () => {
       <Sidebar
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
-        isExpanded={isSidebarExpanded || currentPage === 'about'}
+        isExpanded={isSidebarExpanded}
         onMouseEnter={() => setIsSidebarExpanded(true)}
         onMouseLeave={() => setIsSidebarExpanded(false)}
       />
