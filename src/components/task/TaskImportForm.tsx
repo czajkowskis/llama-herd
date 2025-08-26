@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Icon } from '../ui/Icon';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
+import { ErrorPopup } from '../ui/ErrorPopup';
+import { ConfirmationPopup } from '../ui/ConfirmationPopup';
 import { Task } from '../../types/index.d';
 
 interface TaskImportFormProps {
@@ -11,6 +13,10 @@ interface TaskImportFormProps {
 export const TaskImportForm: React.FC<TaskImportFormProps> = ({ onTaskImport }) => {
   const [importedTaskFile, setImportedTaskFile] = useState<File | null>(null);
   const [expectedSolutionRegex, setExpectedSolutionRegex] = useState<string>('');
+  const [showErrorPopup, setShowErrorPopup] = useState<boolean>(false);
+  const [errorPopupMessage, setErrorPopupMessage] = useState<string>('');
+  const [showConfirmPopup, setShowConfirmPopup] = useState<boolean>(false);
+  const [pendingTask, setPendingTask] = useState<Task | null>(null);
 
   const handleImportTask = async () => {
     if (importedTaskFile) {
@@ -29,33 +35,36 @@ export const TaskImportForm: React.FC<TaskImportFormProps> = ({ onTaskImport }) 
                 expectedSolutionRegex: expectedSolutionRegex || undefined,
               };
               
-              const confirmed = window.confirm(
-                `Confirm task import?\n\n` +
-                `File: ${importedTaskFile.name}\n` +
-                `Items: ${parsedTask.length}\n` +
-                `Task: ${newTask.prompt}\n\n` +
-                `Click OK to confirm or Cancel to abort.`
-              );
-              
-              if (confirmed) {
-                onTaskImport(newTask);
-                setImportedTaskFile(null);
-                setExpectedSolutionRegex('');
-                alert('Task imported successfully!');
-              }
+              // Show confirmation popup instead of window.confirm
+              setPendingTask(newTask);
+              setShowConfirmPopup(true);
             } else {
-              alert('Invalid file format. The file should contain an array of objects with "task" and "answer" properties.');
+              setErrorPopupMessage('Invalid file format. The file should contain an array of objects with "task" and "answer" properties.');
+              setShowErrorPopup(true);
             }
           } catch (error) {
-            alert('Failed to parse the JSON file. Please check the file format.');
+            setErrorPopupMessage('Failed to parse the JSON file. Please check the file format.');
+            setShowErrorPopup(true);
           }
         };
         reader.readAsText(importedTaskFile);
       } catch (error) {
-        alert('Failed to read the file. Please try again.');
+        setErrorPopupMessage('Failed to read the file. Please try again.');
+        setShowErrorPopup(true);
       }
     } else {
-      alert('Please select a file to import.');
+      setErrorPopupMessage('Please select a file to import.');
+      setShowErrorPopup(true);
+    }
+  };
+
+  const handleConfirmImport = () => {
+    if (pendingTask) {
+      onTaskImport(pendingTask);
+      setImportedTaskFile(null);
+      setExpectedSolutionRegex('');
+      setPendingTask(null);
+      setShowConfirmPopup(false);
     }
   };
 
@@ -108,6 +117,28 @@ export const TaskImportForm: React.FC<TaskImportFormProps> = ({ onTaskImport }) 
           Import Task
         </Button>
       </div>
+      
+      <ErrorPopup
+        isOpen={showErrorPopup}
+        title="Import Error"
+        message={errorPopupMessage}
+        onClose={() => setShowErrorPopup(false)}
+        type="error"
+      />
+      
+      <ConfirmationPopup
+        isOpen={showConfirmPopup}
+        title="Confirm Task Import"
+        message={`Confirm task import?\n\nFile: ${pendingTask ? pendingTask.prompt : ''}\nItems: ${pendingTask?.datasetItems?.length || 0}\n\nClick Confirm to import or Cancel to abort.`}
+        onConfirm={handleConfirmImport}
+        onCancel={() => {
+          setShowConfirmPopup(false);
+          setPendingTask(null);
+        }}
+        confirmText="Import"
+        cancelText="Cancel"
+        type="info"
+      />
     </div>
   );
 }; 

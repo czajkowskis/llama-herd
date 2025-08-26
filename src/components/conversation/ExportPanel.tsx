@@ -5,6 +5,7 @@ import { ExportService, ExportStyle, defaultExportStyle, exportThemes } from '..
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { SimpleColorPicker } from '../ui/SimpleColorPicker';
+import { ConfirmationPopup } from '../ui/ConfirmationPopup';
 
 interface ExportPanelProps {
   messages: Message[];
@@ -43,6 +44,8 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
     timestamp: string;
   }>>([]);
   const [showTemplateManager, setShowTemplateManager] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState<string>('');
   const previewRef = useRef<HTMLDivElement>(null);
 
   // Select all messages by default
@@ -169,12 +172,19 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
   };
 
   const deleteTemplate = (templateId: string) => {
-    if (window.confirm('Are you sure you want to delete this template?')) {
+    setTemplateToDelete(templateId);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (templateToDelete) {
       const savedConfigs = JSON.parse(localStorage.getItem('llama-herd-export-configs') || '[]');
-      const updatedConfigs = savedConfigs.filter((config: any) => config.id !== templateId);
+      const updatedConfigs = savedConfigs.filter((config: any) => config.id !== templateToDelete);
       localStorage.setItem('llama-herd-export-configs', JSON.stringify(updatedConfigs));
       
-      setSavedTemplates(prev => prev.filter(template => template.id !== templateId));
+      setSavedTemplates(prev => prev.filter(template => template.id !== templateToDelete));
+      setShowDeleteConfirm(false);
+      setTemplateToDelete('');
     }
   };
 
@@ -730,6 +740,20 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
           </div>
         </div>
       </div>
+      
+      <ConfirmationPopup
+        isOpen={showDeleteConfirm}
+        title="Delete Template"
+        message="Are you sure you want to delete this template? This action cannot be undone."
+        onConfirm={handleConfirmDelete}
+        onCancel={() => {
+          setShowDeleteConfirm(false);
+          setTemplateToDelete('');
+        }}
+        confirmText="Delete"
+        cancelText="Cancel"
+        type="danger"
+      />
     </div>
   );
 }; 

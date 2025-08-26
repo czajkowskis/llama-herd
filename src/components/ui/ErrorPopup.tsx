@@ -2,48 +2,42 @@ import React from 'react';
 import { Icon } from './Icon';
 import { Button } from './Button';
 
-interface ConfirmationPopupProps {
+interface ErrorPopupProps {
   isOpen: boolean;
   title: string;
   message: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-  confirmText?: string;
-  cancelText?: string;
-  type?: 'warning' | 'info' | 'danger';
+  onClose: () => void;
+  type?: 'error' | 'warning' | 'info';
 }
 
-export const ConfirmationPopup: React.FC<ConfirmationPopupProps> = ({
+export const ErrorPopup: React.FC<ErrorPopupProps> = ({
   isOpen,
   title,
   message,
-  onConfirm,
-  onCancel,
-  confirmText = 'Confirm',
-  cancelText = 'Cancel',
-  type = 'warning'
+  onClose,
+  type = 'error'
 }) => {
   if (!isOpen) return null;
 
   const getIconColor = () => {
     switch (type) {
-      case 'danger':
-        return 'text-red-400';
+      case 'warning':
+        return 'text-yellow-400';
       case 'info':
         return 'text-blue-400';
       default:
-        return 'text-yellow-400';
+        return 'text-red-400';
     }
   };
 
   const getIcon = () => {
     switch (type) {
-      case 'danger':
+      case 'warning':
         return (
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="15" y1="9" x2="9" y2="15"/>
-            <line x1="9" y1="9" x2="15" y2="15"/>
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+            <path d="M12 9v4"/>
+            <path d="M12 17h.01"/>
           </svg>
         );
       case 'info':
@@ -57,22 +51,11 @@ export const ConfirmationPopup: React.FC<ConfirmationPopupProps> = ({
       default:
         return (
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
-            <path d="M12 9v4"/>
-            <path d="M12 17h.01"/>
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
           </svg>
         );
-    }
-  };
-
-  const getConfirmButtonStyle = () => {
-    switch (type) {
-      case 'danger':
-        return 'bg-red-600 hover:bg-red-700 text-white';
-      case 'info':
-        return 'bg-blue-600 hover:bg-blue-700 text-white';
-      default:
-        return 'bg-yellow-600 hover:bg-yellow-700 text-white';
     }
   };
 
@@ -89,18 +72,12 @@ export const ConfirmationPopup: React.FC<ConfirmationPopupProps> = ({
           
           <p className="text-gray-300 mb-6 leading-relaxed">{message}</p>
           
-          <div className="flex justify-end space-x-3">
+          <div className="flex justify-end">
             <Button
-              onClick={onCancel}
+              onClick={onClose}
               className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2"
             >
-              {cancelText}
-            </Button>
-            <Button
-              onClick={onConfirm}
-              className={`${getConfirmButtonStyle()} px-6 py-2`}
-            >
-              {confirmText}
+              OK
             </Button>
           </div>
         </div>

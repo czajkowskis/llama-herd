@@ -4,6 +4,7 @@ import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
 import { ColorPicker } from '../ui/ColorPicker';
 import { ErrorDisplay } from '../common/ErrorDisplay';
+import { ErrorPopup } from '../ui/ErrorPopup';
 import { Agent } from '../../types/index.d';
 
 // Predefined colors from ColorPicker component
@@ -56,6 +57,8 @@ export const AgentForm: React.FC<AgentFormProps> = ({
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
   const [colorError, setColorError] = useState<string>('');
   const [nameError, setNameError] = useState<string>('');
+  const [showErrorPopup, setShowErrorPopup] = useState<boolean>(false);
+  const [errorPopupMessage, setErrorPopupMessage] = useState<string>('');
 
   // Initialize form with editing agent data
   useEffect(() => {
@@ -86,15 +89,18 @@ export const AgentForm: React.FC<AgentFormProps> = ({
   const handleSave = () => {
     // Validate required fields
     if (!agentName.trim()) {
-      alert('Please enter an agent name.');
+      setErrorPopupMessage('Please enter an agent name.');
+      setShowErrorPopup(true);
       return;
     }
     if (!agentPrompt.trim()) {
-      alert('Please enter an agent prompt.');
+      setErrorPopupMessage('Please enter an agent prompt.');
+      setShowErrorPopup(true);
       return;
     }
     if (!agentModel) {
-      alert('Please select a model.');
+      setErrorPopupMessage('Please select a model.');
+      setShowErrorPopup(true);
       return;
     }
 
@@ -248,6 +254,14 @@ export const AgentForm: React.FC<AgentFormProps> = ({
           {editingAgent ? 'Update Agent' : 'Add an agent'}
         </Button>
       </div>
+      
+      <ErrorPopup
+        isOpen={showErrorPopup}
+        title="Validation Error"
+        message={errorPopupMessage}
+        onClose={() => setShowErrorPopup(false)}
+        type="error"
+      />
     </div>
   );
 }; 

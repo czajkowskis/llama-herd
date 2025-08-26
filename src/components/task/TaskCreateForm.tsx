@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/Button';
 import { Textarea } from '../ui/Textarea';
+import { ErrorPopup } from '../ui/ErrorPopup';
 import { Task } from '../../types/index.d';
 
 interface TaskCreateFormProps {
@@ -9,10 +10,11 @@ interface TaskCreateFormProps {
 
 export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({ onTaskCreate }) => {
   const [taskPrompt, setTaskPrompt] = useState<string>('');
+  const [showErrorPopup, setShowErrorPopup] = useState<boolean>(false);
 
   const handleCreateTask = () => {
     if (!taskPrompt.trim()) {
-      alert('Please enter a task prompt.');
+      setShowErrorPopup(true);
       return;
     }
     
@@ -38,6 +40,14 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({ onTaskCreate }) 
           Create Task
         </Button>
       </div>
+      
+      <ErrorPopup
+        isOpen={showErrorPopup}
+        title="Validation Error"
+        message="Please enter a task prompt."
+        onClose={() => setShowErrorPopup(false)}
+        type="error"
+      />
     </div>
   );
 }; 
