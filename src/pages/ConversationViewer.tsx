@@ -7,6 +7,7 @@ import { UploadInterface } from '../components/common/UploadInterface';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Icon } from '../components/ui/Icon';
+import { ConfirmationPopup } from '../components/ui/ConfirmationPopup';
 import { storageService } from '../services/storageService';
 import { backendStorageService } from '../services/backendStorageService';
 
@@ -35,6 +36,8 @@ export const ConversationViewer: React.FC = () => {
   const [nameError, setNameError] = useState<string>('');
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
   const [editingAgentId, setEditingAgentId] = useState<string>('');
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState<boolean>(false);
+  const [conversationToDelete, setConversationToDelete] = useState<{ index: number; conversation: Conversation } | null>(null);
 
   // Load conversations from local storage on mount
   useEffect(() => {
@@ -338,41 +341,54 @@ export const ConversationViewer: React.FC = () => {
   };
 
   const handleDeleteConversation = async (index: number) => {
-    if (window.confirm('Are you sure you want to delete this conversation?')) {
-      const conversationToDelete = conversations[index];
-      
-      // Remove from localStorage
-      storageService.deleteConversation(conversationToDelete.id);
-      
-      // Also delete from backend storage
-      try {
-        const backendSuccess = await backendStorageService.deleteConversation(conversationToDelete.id);
-        if (backendSuccess) {
-          console.log('ConversationViewer: Successfully deleted from backend storage');
-        } else {
-          console.error('ConversationViewer: Failed to delete from backend storage');
-        }
-      } catch (error) {
-        console.error('ConversationViewer: Error deleting from backend storage:', error);
+    setConversationToDelete({ index, conversation: conversations[index] });
+    setShowDeleteConfirmation(true);
+  };
+
+  const confirmDeleteConversation = async () => {
+    if (!conversationToDelete) return;
+    
+    const { index, conversation } = conversationToDelete;
+    
+    // Remove from localStorage
+    storageService.deleteConversation(conversation.id);
+    
+    // Also delete from backend storage
+    try {
+      const backendSuccess = await backendStorageService.deleteConversation(conversation.id);
+      if (backendSuccess) {
+        console.log('ConversationViewer: Successfully deleted from backend storage');
+      } else {
+        console.error('ConversationViewer: Failed to delete from backend storage');
       }
-      
-      setConversations(prev => prev.filter((_, i) => i !== index));
-      
-      // If we're deleting the current conversation, select the next one or go back to list
-      if (index === currentConversationIndex) {
-        if (conversations.length > 1) {
-          const newIndex = index === 0 ? 0 : index - 1;
-          setCurrentConversationIndex(newIndex);
-          setAgents(conversations[newIndex].agents);
-        } else {
-          setCurrentConversationIndex(-1);
-          setAgents([]);
-        }
-      } else if (index < currentConversationIndex) {
-        // Adjust current index if we deleted a conversation before the current one
-        setCurrentConversationIndex(currentConversationIndex - 1);
-      }
+    } catch (error) {
+      console.error('ConversationViewer: Error deleting from backend storage:', error);
     }
+    
+    setConversations(prev => prev.filter((_, i) => i !== index));
+    
+    // If we're deleting the current conversation, select the next one or go back to list
+    if (index === currentConversationIndex) {
+      if (conversations.length > 1) {
+        const newIndex = index === 0 ? 0 : index - 1;
+        setCurrentConversationIndex(newIndex);
+        setAgents(conversations[newIndex].agents);
+      } else {
+        setCurrentConversationIndex(-1);
+        setAgents([]);
+      }
+    } else if (index < currentConversationIndex) {
+      // Adjust current index if we deleted a conversation before the current one
+      setCurrentConversationIndex(currentConversationIndex - 1);
+    }
+    
+    setShowDeleteConfirmation(false);
+    setConversationToDelete(null);
+  };
+
+  const cancelDeleteConversation = () => {
+    setShowDeleteConfirmation(false);
+    setConversationToDelete(null);
   };
 
   const handleStartEditTitle = (index: number) => {
@@ -523,57 +539,70 @@ export const ConversationViewer: React.FC = () => {
 
   // Render conversation list or upload interface
   return (
-    <div className="p-8 space-y-6 animate-fade-in">
-      <div className="bg-gray-800 p-6 rounded-2xl shadow-xl">
-        <div className="flex items-center space-x-4 mb-6">
-          <div className="flex items-center space-x-3">
-            <Icon className="text-purple-400 text-xl">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-message-circle">
-                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-              </svg>
-            </Icon>
-            <h2 className="text-xl font-semibold text-white">Conversation Viewer</h2>
-          </div>
-          {conversations.length > 0 && showUploadInterface && (
-            <Button 
-              onClick={() => setShowUploadInterface(false)}
-              className="bg-gray-600 hover:bg-gray-700 text-sm px-3 py-1 flex items-center"
-            >
-              <Icon className="mr-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-left">
-                  <path d="m12 19-7-7 7-7"/>
-                  <path d="M19 12H5"/>
+    <>
+      <div className="p-8 space-y-6 animate-fade-in">
+        <div className="bg-gray-800 p-6 rounded-2xl shadow-xl">
+          <div className="flex items-center space-x-4 mb-6">
+            <div className="flex items-center space-x-3">
+              <Icon className="text-purple-400 text-xl">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-message-circle">
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
                 </svg>
               </Icon>
-              Back to Conversations
-            </Button>
+              <h2 className="text-xl font-semibold text-white">Conversation Viewer</h2>
+            </div>
+            {conversations.length > 0 && showUploadInterface && (
+              <Button 
+                onClick={() => setShowUploadInterface(false)}
+                className="bg-gray-600 hover:bg-gray-700 text-sm px-3 py-1 flex items-center"
+              >
+                <Icon className="mr-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-message-circle">
+                    <path d="m12 19-7-7 7-7"/>
+                    <path d="M19 12H5"/>
+                  </svg>
+                </Icon>
+                Back to Conversations
+              </Button>
+            )}
+          </div>
+
+          {conversations.length > 0 && !showUploadInterface && !isConfiguring ? (
+            <ConversationList
+              conversations={conversations}
+              editingTitleIndex={editingTitleIndex}
+              editingTitle={editingTitle}
+              onConversationSelect={handleConversationSelect}
+              onStartEditTitle={handleStartEditTitle}
+              onSaveTitle={handleSaveTitle}
+              onCancelEditTitle={handleCancelEditTitle}
+              onDeleteConversation={handleDeleteConversation}
+              onTitleChange={setEditingTitle}
+              onTitleKeyPress={handleTitleKeyPress}
+              onShowUploadInterface={() => setShowUploadInterface(true)}
+              formatTimestamp={formatTimestamp}
+            />
+          ) : (
+            <UploadInterface
+              conversations={conversations}
+              isUploading={isUploading}
+              uploadError={uploadError}
+              onFileUpload={handleFileUpload}
+            />
           )}
         </div>
-
-        {conversations.length > 0 && !showUploadInterface && !isConfiguring ? (
-          <ConversationList
-            conversations={conversations}
-            editingTitleIndex={editingTitleIndex}
-            editingTitle={editingTitle}
-            onConversationSelect={handleConversationSelect}
-            onStartEditTitle={handleStartEditTitle}
-            onSaveTitle={handleSaveTitle}
-            onCancelEditTitle={handleCancelEditTitle}
-            onDeleteConversation={handleDeleteConversation}
-            onTitleChange={setEditingTitle}
-            onTitleKeyPress={handleTitleKeyPress}
-            onShowUploadInterface={() => setShowUploadInterface(true)}
-            formatTimestamp={formatTimestamp}
-          />
-        ) : (
-          <UploadInterface
-            conversations={conversations}
-            isUploading={isUploading}
-            uploadError={uploadError}
-            onFileUpload={handleFileUpload}
-          />
-        )}
       </div>
-    </div>
+
+      <ConfirmationPopup
+        isOpen={showDeleteConfirmation}
+        title="Delete Conversation"
+        message={`Are you sure you want to delete "${conversationToDelete?.conversation.title}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDeleteConversation}
+        onCancel={cancelDeleteConversation}
+        type="danger"
+      />
+    </>
   );
 }; 

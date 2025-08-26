@@ -16,17 +16,9 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({ onTaskCreate }) 
       return;
     }
     
-    const confirmed = window.confirm(
-      `Confirm task creation?\n\n` +
-      `Task Prompt: ${taskPrompt.substring(0, 100)}${taskPrompt.length > 100 ? '...' : ''}\n\n` +
-      `Click OK to confirm or Cancel to abort.`
-    );
-    
-    if (confirmed) {
-      const taskId = `task-${Date.now()}`;
-      onTaskCreate({ id: taskId, prompt: taskPrompt });
-      setTaskPrompt('');
-    }
+    const taskId = `task-${Date.now()}`;
+    onTaskCreate({ id: taskId, prompt: taskPrompt });
+    setTaskPrompt('');
   };
 
   return (

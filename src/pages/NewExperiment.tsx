@@ -3,6 +3,7 @@ import { Agent, Task } from '../types/index.d';
 import { ollamaService } from '../services/ollamaService';
 import { experimentService } from '../services/experimentService';
 import { storageService } from '../services/storageService';
+import { ConfirmationPopup } from '../components/ui/ConfirmationPopup';
 import { TaskCreationSection } from '../components/experiment/TaskCreationSection';
 import { AgentCreationSection } from '../components/experiment/AgentCreationSection';
 import { ExperimentStatus } from '../components/experiment/ExperimentStatus';
@@ -27,6 +28,8 @@ export const NewExperiment: React.FC<NewExperimentProps> = ({ onExperimentStart 
   const [experimentError, setExperimentError] = useState<string | null>(null);
   const [iterations, setIterations] = useState<number>(1);
   const [experimentName, setExperimentName] = useState<string>('');
+  const [showDeleteAgentConfirmation, setShowDeleteAgentConfirmation] = useState<boolean>(false);
+  const [agentToDelete, setAgentToDelete] = useState<Agent | null>(null);
 
   // Fetch Ollama models on component mount
   useEffect(() => {
@@ -161,10 +164,22 @@ export const NewExperiment: React.FC<NewExperimentProps> = ({ onExperimentStart 
     setAgentCreationStep('edit');
   };
 
-  const handleDeleteAgent = (agentId: string) => {
-    if (window.confirm('Are you sure you want to delete this agent?')) {
-      setAgents(prev => prev.filter(agent => agent.id !== agentId));
+  const handleDeleteAgent = (agent: Agent) => {
+    setAgentToDelete(agent);
+    setShowDeleteAgentConfirmation(true);
+  };
+
+  const confirmDeleteAgent = () => {
+    if (agentToDelete) {
+      setAgents(prev => prev.filter(agent => agent.id !== agentToDelete.id));
+      setShowDeleteAgentConfirmation(false);
+      setAgentToDelete(null);
     }
+  };
+
+  const cancelDeleteAgent = () => {
+    setShowDeleteAgentConfirmation(false);
+    setAgentToDelete(null);
   };
 
   const handleCancelEdit = () => {
@@ -237,6 +252,17 @@ export const NewExperiment: React.FC<NewExperimentProps> = ({ onExperimentStart 
           </p>
         </div>
       )}
+
+      <ConfirmationPopup
+        isOpen={showDeleteAgentConfirmation}
+        title="Delete Agent"
+        message={`Are you sure you want to delete "${agentToDelete?.name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={confirmDeleteAgent}
+        onCancel={cancelDeleteAgent}
+        type="danger"
+      />
     </div>
   );
 };

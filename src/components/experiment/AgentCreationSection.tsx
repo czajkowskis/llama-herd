@@ -13,7 +13,7 @@ interface AgentCreationSectionProps {
   ollamaError: string | null;
   onAgentCreationStepChange: (step: 'list' | 'create' | 'edit') => void;
   onEditAgent: (agent: Agent) => void;
-  onDeleteAgent: (agentId: string) => void;
+  onDeleteAgent: (agent: Agent) => void;
   onSaveAgent: (agent: Omit<Agent, 'id'>) => void;
   onCancelEdit: () => void;
   isColorUsed: (color: string, excludeAgentId?: string) => boolean;

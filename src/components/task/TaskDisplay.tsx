@@ -3,6 +3,7 @@ import { Task } from '../../types/index.d';
 import { Button } from '../ui/Button';
 import { Textarea } from '../ui/Textarea';
 import { Icon } from '../ui/Icon';
+import { ConfirmationPopup } from '../ui/ConfirmationPopup';
 
 interface TaskDisplayProps {
   task: Task;
@@ -13,6 +14,7 @@ interface TaskDisplayProps {
 export const TaskDisplay: React.FC<TaskDisplayProps> = ({ task, onEdit, onDelete }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editPrompt, setEditPrompt] = useState(task.prompt);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
   const handleSave = () => {
     if (editPrompt.trim()) {
@@ -24,6 +26,19 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({ task, onEdit, onDelete
   const handleCancel = () => {
     setEditPrompt(task.prompt);
     setIsEditing(false);
+  };
+
+  const handleDeleteClick = () => {
+    setShowDeleteConfirmation(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    onDelete();
+    setShowDeleteConfirmation(false);
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteConfirmation(false);
   };
 
   return (
@@ -55,7 +70,7 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({ task, onEdit, onDelete
             </Icon>
           </button>
           <button
-            onClick={onDelete}
+            onClick={handleDeleteClick}
             className="text-red-400 hover:text-red-300 p-2 rounded-full transition-colors duration-200 bg-red-500/10 hover:bg-red-500/20"
             title="Delete task"
           >
@@ -95,6 +110,19 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({ task, onEdit, onDelete
             {task.prompt}
           </p>
         </div>
+      )}
+
+      {showDeleteConfirmation && (
+        <ConfirmationPopup
+          isOpen={showDeleteConfirmation}
+          title="Delete Task"
+          message="Are you sure you want to delete this task? This action cannot be undone."
+          confirmText="Delete"
+          cancelText="Cancel"
+          onConfirm={handleDeleteConfirm}
+          onCancel={handleDeleteCancel}
+          type="danger"
+        />
       )}
     </div>
   );

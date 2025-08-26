@@ -12,25 +12,24 @@ export const About: React.FC = () => {
         </div>
         <div className="text-gray-300 space-y-4 leading-relaxed">
           <p>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur
-            dapibus, nisl ultrices imperdiet vulputate, ligula erat tincidunt est, quis
-            varius justo mi vel purus. Phasellus aliquam vulputate augue, sed
-            lobortis elit dignissim nec. Integer porta a nisi ac imperdiet. Sed
-            molestie diam diam, in elementum nisi volutpat quis. Suspendisse quis
-            ipsum dui. Curabitur faucibus nisi lectus, sit amet
+            LLaMa-Herd is an innovative multi-agent conversation platform that enables you to create, 
+            configure, and orchestrate conversations between multiple AI agents. Built with modern web 
+            technologies and designed for researchers, developers, and AI enthusiasts, it provides a 
+            powerful environment for exploring multi-agent interactions and collaborative AI systems.
           </p>
           <p>
-            Praesent sodales viverra leo et blandit. Vivamus pellentesque diam ac
-            augue bibendum tristique. Duis tempor ante id nisi euismod, nec
-            scelerisque felis vulputate. Aliquam ac gravida mauris, vel accumsan
-            risus. Praesent semper ligula tortor, id sollicitudin mi ultricies id. Cras
-            velit ipsum, malesuada nec leo at, placerat lacinia quam. Vestibulum
-            vitae hendrerit urna. Suspendisse condimentum pulvinar sem
+            The platform supports both live experiments with running agents and imported conversation 
+            analysis. You can create custom agents with specific personalities, models, and behaviors, 
+            then set them to work on tasks through iterative conversations. The system tracks all 
+            interactions, making it easy to analyze patterns, improve agent configurations, and 
+            understand how different AI models collaborate.
           </p>
           <p>
-            Donec rutrum finibus magna. Morbi ac facilisis eros, ut ornare nisl. Orci
-            varius natoque penatibus et magnis dis parturient montes, nascetur
-            ridiculus mus. Nam volutpat erat id velit blandit iaculis.
+            Key features include real-time agent management, conversation history tracking, 
+            customizable agent parameters, support for various Ollama models, and an intuitive 
+            interface for monitoring and controlling multi-agent experiments. Whether you're 
+            researching AI collaboration, testing conversational AI systems, or simply exploring 
+            the possibilities of multi-agent conversations, LLaMa-Herd provides the tools you need.
           </p>
         </div>
       </div>

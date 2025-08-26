@@ -5,7 +5,7 @@ import { Agent } from '../../types/index.d';
 interface AgentListProps {
   agents: Agent[];
   onEditAgent: (agent: Agent) => void;
-  onDeleteAgent: (agentId: string) => void;
+  onDeleteAgent: (agent: Agent) => void;
   onAddAgent: () => void;
 }
 
@@ -60,7 +60,7 @@ export const AgentList: React.FC<AgentListProps> = ({
             </Icon>
           </button>
           <button
-            onClick={() => onDeleteAgent(agent.id)}
+            onClick={() => onDeleteAgent(agent)}
             className="text-gray-400 hover:text-red-400 p-2 rounded-full transition-colors duration-200 ml-2"
             aria-label={`Delete ${agent.name}`}
           >
