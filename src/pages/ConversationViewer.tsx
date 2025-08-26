@@ -8,7 +8,6 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Icon } from '../components/ui/Icon';
 import { ConfirmationPopup } from '../components/ui/ConfirmationPopup';
-import { storageService } from '../services/storageService';
 import { backendStorageService } from '../services/backendStorageService';
 
 // Available colors for agents
@@ -39,23 +38,32 @@ export const ConversationViewer: React.FC = () => {
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState<boolean>(false);
   const [conversationToDelete, setConversationToDelete] = useState<{ index: number; conversation: Conversation } | null>(null);
 
-  // Load conversations from local storage on mount
+  // Load conversations from backend storage on mount
   useEffect(() => {
-    const storedConversations = storageService.getConversations();
-    console.log('ConversationViewer: All stored conversations:', storedConversations);
+    const loadConversations = async () => {
+      try {
+        const backendConversations = await backendStorageService.getConversations('import');
+        console.log('ConversationViewer: All backend conversations:', backendConversations);
+        
+        const importedConversations: Conversation[] = backendConversations
+          .filter(c => c.source === 'import')
+          .map(c => ({
+            id: c.id,
+            title: c.title,
+            agents: c.agents,
+            messages: c.messages,
+            createdAt: c.createdAt
+          }));
+        
+        console.log('ConversationViewer: Filtered imported conversations:', importedConversations);
+        setConversations(importedConversations);
+      } catch (error) {
+        console.error('ConversationViewer: Failed to load conversations from backend:', error);
+        setConversations([]);
+      }
+    };
     
-    const importedConversations: Conversation[] = storedConversations
-      .filter(c => c.source === 'import')
-      .map(c => ({
-        id: c.id,
-        title: c.title,
-        agents: c.agents,
-        messages: c.messages,
-        createdAt: c.createdAt
-      }));
-    
-    console.log('ConversationViewer: Filtered imported conversations:', importedConversations);
-    setConversations(importedConversations);
+    loadConversations();
   }, []);
 
   const currentConversation = currentConversationIndex >= 0 ? conversations[currentConversationIndex] : null;
@@ -286,7 +294,7 @@ export const ConversationViewer: React.FC = () => {
     // Add to conversations list
     setConversations(prev => [...prev, updatedConversation]);
     
-    // Save to both localStorage and backend storage
+    // Save to backend storage only
     const storedConversation = {
       id: updatedConversation.id,
       title: updatedConversation.title,
@@ -296,14 +304,16 @@ export const ConversationViewer: React.FC = () => {
       importedAt: new Date().toISOString(),
       source: 'import' as const,
     };
-    console.log('ConversationViewer: Saving conversation to localStorage:', storedConversation);
-    storageService.saveConversation(storedConversation);
     
-    // Also save to backend storage (data folder)
-    console.log('ConversationViewer: Saving conversation to backend storage:', storedConversation);
+    // Save to backend storage - convert to snake_case for backend
+    const backendConversation = {
+      ...storedConversation,
+      imported_at: storedConversation.importedAt, // Backend expects snake_case
+    };
+    console.log('ConversationViewer: Saving conversation to backend storage:', backendConversation);
     console.log('ConversationViewer: Using backendStorageService.saveConversation...');
     try {
-      const backendSuccess = await backendStorageService.saveConversation(storedConversation);
+      const backendSuccess = await backendStorageService.saveConversation(backendConversation);
       console.log('ConversationViewer: Backend save result:', backendSuccess);
       if (backendSuccess) {
         console.log('ConversationViewer: Successfully saved to backend storage');
@@ -350,22 +360,20 @@ export const ConversationViewer: React.FC = () => {
     
     const { index, conversation } = conversationToDelete;
     
-    // Remove from localStorage
-    storageService.deleteConversation(conversation.id);
-    
-    // Also delete from backend storage
+    // Delete from backend storage
     try {
       const backendSuccess = await backendStorageService.deleteConversation(conversation.id);
       if (backendSuccess) {
         console.log('ConversationViewer: Successfully deleted from backend storage');
+        
+        // Remove from local state only after successful backend deletion
+        setConversations(prev => prev.filter((_, i) => i !== index));
       } else {
         console.error('ConversationViewer: Failed to delete from backend storage');
       }
     } catch (error) {
       console.error('ConversationViewer: Error deleting from backend storage:', error);
     }
-    
-    setConversations(prev => prev.filter((_, i) => i !== index));
     
     // If we're deleting the current conversation, select the next one or go back to list
     if (index === currentConversationIndex) {
@@ -417,11 +425,13 @@ export const ConversationViewer: React.FC = () => {
           importedAt: new Date().toISOString(),
           source: 'import' as const,
         };
-        storageService.saveConversation(storedConversation);
-        
-        // Also save to backend storage
+        // Save to backend storage - convert to snake_case for backend
+        const backendConversation = {
+          ...storedConversation,
+          imported_at: storedConversation.importedAt, // Backend expects snake_case
+        };
         try {
-          const backendSuccess = await backendStorageService.saveConversation(storedConversation);
+          const backendSuccess = await backendStorageService.saveConversation(backendConversation);
           if (backendSuccess) {
             console.log('ConversationViewer: Successfully updated title in backend storage');
           } else {

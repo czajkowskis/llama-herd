@@ -3,7 +3,6 @@ import { ChatView } from '../components/conversation/ChatView';
 import { Button } from '../components/ui/Button';
 import { ConfirmationPopup } from '../components/ui/ConfirmationPopup';
 import { backendStorageService, StoredExperiment, StoredConversation } from '../services/backendStorageService';
-import { storageService } from '../services/storageService';
 import { experimentService } from '../services/experimentService';
 import { ExperimentConversationViewer } from '../components/conversation/ExperimentConversationViewer';
 
@@ -25,6 +24,11 @@ export const History: React.FC = () => {
     loadHistory();
   }, []);
 
+  // Debug logging for conversations state
+  useEffect(() => {
+    console.log('History: conversations state updated:', conversations);
+  }, [conversations]);
+
   const loadHistory = async () => {
     setLoading(true);
     try {
@@ -45,14 +49,36 @@ export const History: React.FC = () => {
       
       setExperiments(mergedExperiments);
       
-      // Load imported conversations from localStorage (where ConversationViewer saves them)
-      const allLocalConversations = storageService.getConversations();
-      console.log('All local conversations:', allLocalConversations);
+      // Load imported conversations from backend storage only
+      let backendConversations: StoredConversation[] = [];
       
-      const importedConversations = allLocalConversations.filter(c => c.source === 'import');
-      console.log('Filtered imported conversations:', importedConversations);
-      
-      setConversations(importedConversations);
+      try {
+        console.log('Loading conversations from backend...');
+        backendConversations = await backendStorageService.getConversations('import');
+        console.log('Backend imported conversations:', backendConversations);
+        
+        // Convert backend conversations from snake_case to camelCase for frontend compatibility
+        backendConversations = backendConversations.map((conv: any) => {
+          const converted = {
+            ...conv,
+            importedAt: conv.imported_at || conv.importedAt || conv.createdAt,
+          };
+          console.log('Converting conversation:', { original: conv, converted });
+          return converted;
+        });
+        console.log('Backend conversations after conversion:', backendConversations);
+        
+        // Filter to only show imported conversations
+        const importedConversations = backendConversations.filter(c => c.source === 'import');
+        console.log('Final imported conversations:', importedConversations);
+        console.log('Final conversations count:', importedConversations.length);
+        
+        setConversations(importedConversations);
+      } catch (error) {
+        console.error('Failed to load conversations from backend:', error);
+        console.error('Backend error details:', error);
+        setConversations([]);
+      }
     } catch (error) {
       console.error('Failed to load history:', error);
     } finally {
@@ -153,13 +179,8 @@ export const History: React.FC = () => {
     if (!conversationToDelete) return;
     
     try {
-      if (conversationToDelete.source === 'experiment') {
-        // Delete from backend storage for experiment conversations
-        await backendStorageService.deleteConversation(conversationToDelete.conversation.id);
-      } else {
-        // Delete from localStorage for imported conversations
-        storageService.deleteConversation(conversationToDelete.conversation.id);
-      }
+      // Delete from backend storage for all conversations
+      await backendStorageService.deleteConversation(conversationToDelete.conversation.id);
       await loadHistory();
     } catch (error) {
       console.error('Failed to delete conversation:', error);
