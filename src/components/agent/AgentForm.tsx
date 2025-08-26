@@ -6,6 +6,23 @@ import { ColorPicker } from '../ui/ColorPicker';
 import { ErrorDisplay } from '../common/ErrorDisplay';
 import { Agent } from '../../types/index.d';
 
+// Predefined colors from ColorPicker component
+const PREDEFINED_COLORS = [
+  '#EF4444', '#10B981', '#F59E0B', '#6366F1', '#EC4899',
+  '#06B6D4', '#8B5CF6', '#F97316'
+];
+
+// Function to get the first available color
+const getFirstAvailableColor = (agents: Agent[], excludeAgentId?: string): string => {
+  for (const color of PREDEFINED_COLORS) {
+    if (!agents.some(agent => agent.color === color && agent.id !== excludeAgentId)) {
+      return color;
+    }
+  }
+  // Fallback to first color if all are used
+  return PREDEFINED_COLORS[0];
+};
+
 interface AgentFormProps {
   editingAgent: Agent | null;
   agents: Agent[];
@@ -33,7 +50,7 @@ export const AgentForm: React.FC<AgentFormProps> = ({
 }) => {
   const [agentName, setAgentName] = useState<string>('');
   const [agentPrompt, setAgentPrompt] = useState<string>('');
-  const [agentColor, setAgentColor] = useState<string>('#EF4444');
+  const [agentColor, setAgentColor] = useState<string>('');
   const [agentModel, setAgentModel] = useState<string>('');
   const [agentTemperature, setAgentTemperature] = useState<number>(0.7);
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
@@ -51,13 +68,20 @@ export const AgentForm: React.FC<AgentFormProps> = ({
     } else {
       setAgentName('');
       setAgentPrompt('');
-      setAgentColor('#EF4444');
+      setAgentColor(getFirstAvailableColor(agents));
       setAgentModel('');
       setAgentTemperature(0.7);
     }
     setColorError('');
     setNameError('');
-  }, [editingAgent]);
+  }, [editingAgent, agents]);
+
+  // Initialize color when component mounts or agents change
+  useEffect(() => {
+    if (!editingAgent && !agentColor) {
+      setAgentColor(getFirstAvailableColor(agents));
+    }
+  }, [agents, editingAgent, agentColor]);
 
   const handleSave = () => {
     // Validate required fields
