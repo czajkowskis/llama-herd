@@ -12,6 +12,7 @@ export interface Agent {
 export interface Task {
   id: string;
   prompt: string;
+  iterations?: number;
   datasetItems?: { task: string; answer: string }[];
   expectedSolutionRegex?: string;
 }
