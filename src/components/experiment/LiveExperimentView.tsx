@@ -95,7 +95,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
             storageService.saveExperiment({
               id: experimentId,
               title: `Experiment: ${liveConversation.title}`,
-              task: { id: '', prompt: liveConversation.title, datasetItems: [] },
+              task: { id: '', prompt: liveConversation.title, iterations: 1, datasetItems: [] },
               agents: liveConversation.agents.map(agent => ({
                 id: agent.id,
                 name: agent.name,

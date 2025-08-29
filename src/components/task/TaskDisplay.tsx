@@ -14,17 +14,26 @@ interface TaskDisplayProps {
 export const TaskDisplay: React.FC<TaskDisplayProps> = ({ task, onEdit, onDelete }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editPrompt, setEditPrompt] = useState(task.prompt);
+  const [editIterations, setEditIterations] = useState(task.iterations || 1);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
   const handleSave = () => {
     if (editPrompt.trim()) {
-      onEdit({ ...task, prompt: editPrompt });
+      // For imported tasks with dataset, keep the original iterations
+      const updatedTask = { ...task, prompt: editPrompt };
+      if (!task.datasetItems || task.datasetItems.length === 0) {
+        updatedTask.iterations = editIterations;
+      }
+      onEdit(updatedTask);
       setIsEditing(false);
     }
   };
 
   const handleCancel = () => {
     setEditPrompt(task.prompt);
+    if (!task.datasetItems || task.datasetItems.length === 0) {
+      setEditIterations(task.iterations || 1);
+    }
     setIsEditing(false);
   };
 
@@ -95,6 +104,33 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({ task, onEdit, onDelete
             value={editPrompt}
             onChange={(e) => setEditPrompt(e.target.value)}
           />
+          
+          {!task.datasetItems || task.datasetItems.length === 0 ? (
+            <div className="space-y-2">
+              <label htmlFor="edit-iterations" className="block text-sm font-medium text-gray-300">
+                Number of iterations
+              </label>
+              <input
+                id="edit-iterations"
+                type="number"
+                min="1"
+                max="100"
+                value={editIterations}
+                onChange={(e) => setEditIterations(Math.max(1, parseInt(e.target.value) || 1))}
+                className="w-32 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-300">
+                Number of iterations
+              </label>
+              <div className="text-gray-400 text-sm">
+                {task.iterations || 1} (automatically set from dataset - cannot be edited)
+              </div>
+            </div>
+          )}
+          
           <div className="flex justify-end space-x-3">
             <Button onClick={handleCancel} className="bg-gray-600 hover:bg-gray-700">
               Cancel
@@ -105,10 +141,26 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({ task, onEdit, onDelete
           </div>
         </div>
       ) : (
-        <div className="bg-gray-800 p-4 rounded-lg border border-gray-600">
-          <p className="text-gray-200 leading-relaxed whitespace-pre-wrap">
-            {task.prompt}
-          </p>
+        <div className="space-y-4">
+          <div className="bg-gray-800 p-4 rounded-lg border border-gray-600">
+            <p className="text-gray-200 leading-relaxed whitespace-pre-wrap">
+              {task.prompt}
+            </p>
+          </div>
+          
+                  {(!task.datasetItems || task.datasetItems.length === 0) && (
+          <div className="flex items-center space-x-2 text-sm text-gray-400">
+            <Icon className="text-purple-400">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-repeat">
+                <polyline points="17 1 21 5 17 9"/>
+                <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                <polyline points="7 23 3 19 7 15"/>
+                <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+              </svg>
+            </Icon>
+            <span>Iterations: {task.iterations || 1}</span>
+          </div>
+        )}
         </div>
       )}
 

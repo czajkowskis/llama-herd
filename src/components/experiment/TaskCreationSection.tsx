@@ -14,8 +14,6 @@ interface TaskCreationSectionProps {
   onTaskDelete: () => void;
   onTaskCreate: (task: Task) => void;
   onTaskImport: (task: Task) => void;
-  iterations: number;
-  onIterationsChange: (n: number) => void;
 }
 
 export const TaskCreationSection: React.FC<TaskCreationSectionProps> = ({
@@ -25,9 +23,7 @@ export const TaskCreationSection: React.FC<TaskCreationSectionProps> = ({
   onTaskEdit,
   onTaskDelete,
   onTaskCreate,
-  onTaskImport,
-  iterations,
-  onIterationsChange
+  onTaskImport
 }) => {
   return (
     <div className="bg-gray-800 p-6 rounded-2xl shadow-xl">
@@ -82,19 +78,7 @@ export const TaskCreationSection: React.FC<TaskCreationSectionProps> = ({
           )}
 
           {taskCreationStep === 'create' && (
-            <>
-              <div className="mb-6">
-                <label className="block text-gray-300 mb-2 font-medium">Iterations</label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={iterations}
-                  onChange={(e) => onIterationsChange(Number(e.target.value) || 1)}
-                />
-                <p className="text-gray-500 text-sm mt-2">How many times to repeat the experiment.</p>
-              </div>
-              <TaskCreateForm onTaskCreate={onTaskCreate} />
-            </>
+            <TaskCreateForm onTaskCreate={onTaskCreate} />
           )}
 
           {taskCreationStep === 'import' && (

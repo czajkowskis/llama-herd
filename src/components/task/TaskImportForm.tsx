@@ -31,6 +31,7 @@ export const TaskImportForm: React.FC<TaskImportFormProps> = ({ onTaskImport }) 
               const newTask: Task = {
                 id: taskId,
                 prompt: `Imported task with ${parsedTask.length} items.`,
+                iterations: parsedTask.length,
                 datasetItems: parsedTask,
                 expectedSolutionRegex: expectedSolutionRegex || undefined,
               };
@@ -107,6 +108,8 @@ export const TaskImportForm: React.FC<TaskImportFormProps> = ({ onTaskImport }) 
             value={expectedSolutionRegex}
             onChange={(e) => setExpectedSolutionRegex(e.target.value)}
           />
+          
+
         </div>
       </div>
       <div className="flex justify-end">
@@ -129,7 +132,7 @@ export const TaskImportForm: React.FC<TaskImportFormProps> = ({ onTaskImport }) 
       <ConfirmationPopup
         isOpen={showConfirmPopup}
         title="Confirm Task Import"
-        message={`Confirm task import?\n\nFile: ${pendingTask ? pendingTask.prompt : ''}\nItems: ${pendingTask?.datasetItems?.length || 0}\n\nClick Confirm to import or Cancel to abort.`}
+        message={`Confirm task import?\n\nFile: ${pendingTask ? pendingTask.prompt : ''}\nItems: ${pendingTask?.datasetItems?.length || 0}\nIterations: ${pendingTask?.datasetItems?.length || 1} (auto-set from dataset)\n\nClick Confirm to import or Cancel to abort.`}
         onConfirm={handleConfirmImport}
         onCancel={() => {
           setShowConfirmPopup(false);

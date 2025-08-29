@@ -26,7 +26,7 @@ export const NewExperiment: React.FC<NewExperimentProps> = ({ onExperimentStart 
   const [currentExperimentId, setCurrentExperimentId] = useState<string | null>(null);
   const [isStartingExperiment, setIsStartingExperiment] = useState<boolean>(false);
   const [experimentError, setExperimentError] = useState<string | null>(null);
-  const [iterations, setIterations] = useState<number>(1);
+
   const [experimentName, setExperimentName] = useState<string>('');
   const [showDeleteAgentConfirmation, setShowDeleteAgentConfirmation] = useState<boolean>(false);
   const [agentToDelete, setAgentToDelete] = useState<Agent | null>(null);
@@ -88,7 +88,7 @@ export const NewExperiment: React.FC<NewExperimentProps> = ({ onExperimentStart 
       setExperimentError(null);
       
       try {
-        const response = await experimentService.startExperiment(currentTask, agents, Math.max(1, iterations));
+        const response = await experimentService.startExperiment(currentTask, agents, Math.max(1, currentTask.iterations || 1));
         
         // Save experiment to local storage
         const storedExperiment = {
@@ -98,7 +98,7 @@ export const NewExperiment: React.FC<NewExperimentProps> = ({ onExperimentStart 
           agents: agents,
           status: 'running',
           createdAt: new Date().toISOString(),
-          iterations: Math.max(1, iterations),
+          iterations: Math.max(1, currentTask.iterations || 1),
           currentIteration: 0
         };
         storageService.saveExperiment(storedExperiment);
@@ -199,8 +199,6 @@ export const NewExperiment: React.FC<NewExperimentProps> = ({ onExperimentStart 
         onTaskDelete={handleTaskDelete}
         onTaskCreate={handleTaskCreate}
         onTaskImport={handleTaskImport}
-        iterations={iterations}
-        onIterationsChange={setIterations}
       />
       
       <AgentCreationSection
