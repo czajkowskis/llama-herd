@@ -85,7 +85,8 @@ class ConversationService:
             if state_manager.add_conversation(experiment_id, conversation):
                 # Also save to persistent storage using new folder structure
                 try:
-                    from ..storage.file_storage import storage
+                    from ..storage import get_storage
+                    storage = get_storage()
                     # Convert to dict format for storage
                     conversation_dict = conversation.dict()
                     

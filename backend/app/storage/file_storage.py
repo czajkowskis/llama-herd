@@ -11,9 +11,10 @@ import re
 
 from ..core.config import settings
 from ..core.exceptions import StorageError
+from .base import BaseStorage
 
 
-class FileStorage:
+class FileStorage(BaseStorage):
     """File-based storage for experiments and conversations."""
     
     def __init__(self, data_dir: str = None):
@@ -465,5 +466,4 @@ class FileStorage:
         }
 
 
-# Global storage instance
-storage = FileStorage() 
+ 

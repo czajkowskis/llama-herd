@@ -2,7 +2,10 @@ from fastapi import APIRouter, HTTPException
 from typing import List, Optional
 from datetime import datetime
 
-from ...storage.file_storage import storage
+from ...storage import get_storage
+from ...utils.logging import logger
+
+storage = get_storage()
 
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
