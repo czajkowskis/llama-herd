@@ -8,6 +8,7 @@ from typing import List, Dict, Any, Optional
 from pathlib import Path
 import uuid
 import re
+from filelock import FileLock
 
 from ..core.config import settings
 from ..core.exceptions import StorageError
@@ -20,9 +21,56 @@ class FileStorage(BaseStorage):
     def __init__(self, data_dir: str = None):
         self.data_dir = Path(data_dir or settings.data_directory)
         self.experiments_dir = self.data_dir / settings.experiments_directory
+        self.index_file = self.data_dir / 'experiments_index.json'
+        self.index_lock_file = self.data_dir / 'experiments_index.lock'
         
         # Create directories if they don't exist
         self.experiments_dir.mkdir(parents=True, exist_ok=True)
+
+        if not self.index_file.exists():
+            self._rebuild_index()
+
+    def _read_index(self) -> List[Dict[str, Any]]:
+        """Reads the experiment index file with locking."""
+        lock = FileLock(self.index_lock_file)
+        with lock:
+            if not self.index_file.exists():
+                return []
+            try:
+                with open(self.index_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, IOError):
+                return []
+
+    def _write_index(self, experiments_list: List[Dict[str, Any]]):
+        """Writes to the experiment index file with locking."""
+        lock = FileLock(self.index_lock_file)
+        with lock:
+            try:
+                with open(self.index_file, 'w', encoding='utf-8') as f:
+                    json.dump(experiments_list, f, indent=2, ensure_ascii=False, default=str)
+            except IOError as e:
+                raise StorageError(f"Error writing index file: {e}")
+
+    def _rebuild_index(self):
+        """Rebuilds the experiment index from scratch."""
+        experiments = []
+        if self.experiments_dir.exists():
+            for experiment_dir in self.experiments_dir.iterdir():
+                if experiment_dir.is_dir():
+                    experiment_file = experiment_dir / "experiment.json"
+                    if experiment_file.exists():
+                        experiment_data = self._read_json_file(experiment_file)
+                        if experiment_data:
+                            experiments.append({
+                                'id': experiment_data.get('id'),
+                                'title': experiment_data.get('title'),
+                                'created_at': experiment_data.get('created_at'),
+                                'status': experiment_data.get('status'),
+                            })
+        
+        experiments.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+        self._write_index(experiments)
     
     def _get_experiment_path(self, experiment_id: str) -> Path:
         """Get the path to an experiment's metadata file."""
@@ -73,27 +121,47 @@ class FileStorage(BaseStorage):
         file_path = self._get_experiment_path(experiment_id)
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
-        return self._write_json_file(file_path, experiment)
-    
+        if self._write_json_file(file_path, experiment):
+            index = self._read_index()
+            
+            # Create a slim version of the experiment for the index
+            experiment_metadata = {
+                'id': experiment.get('id'),
+                'title': experiment.get('title'),
+                'created_at': experiment.get('created_at'),
+                'status': experiment.get('status'),
+            }
+
+            # Find if experiment already exists in index
+            found = False
+            for i, exp in enumerate(index):
+                if exp['id'] == experiment_id:
+                    index[i] = experiment_metadata
+                    found = True
+                    break
+            
+            if not found:
+                index.append(experiment_metadata)
+            
+            index.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+            self._write_index(index)
+            return True
+        return False
+
     def get_experiment(self, experiment_id: str) -> Optional[Dict[str, Any]]:
         """Get an experiment by ID."""
         file_path = self._get_experiment_path(experiment_id)
         return self._read_json_file(file_path)
 
     def get_experiments(self) -> List[Dict[str, Any]]:
-        """Get all experiments."""
-        experiments = []
-        for experiment_dir in self.experiments_dir.iterdir():
-            if experiment_dir.is_dir():
-                experiment_file = experiment_dir / "experiment.json"
-                if experiment_file.exists():
-                    experiment_data = self._read_json_file(experiment_file)
-                    if experiment_data:
-                        experiments.append(experiment_data)
+        """Get all experiments from the index."""
+        if not self.index_file.exists():
+            self._rebuild_index()
         
+        experiments = self._read_index()
         experiments.sort(key=lambda x: x.get('created_at', ''), reverse=True)
         return experiments
-    
+
     def update_experiment(self, experiment_id: str, updates: Dict[str, Any]) -> bool:
         """Update an existing experiment with new data."""
         experiment = self.get_experiment(experiment_id)
@@ -110,6 +178,11 @@ class FileStorage(BaseStorage):
             if experiment_dir.exists() and experiment_dir.is_dir():
                 import shutil
                 shutil.rmtree(experiment_dir)
+
+                index = self._read_index()
+                index = [exp for exp in index if exp['id'] != experiment_id]
+                self._write_index(index)
+
                 return True
             return False
         except IOError as e:
@@ -301,4 +374,3 @@ class FileStorage(BaseStorage):
         }
 
 
- 
