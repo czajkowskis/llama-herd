@@ -25,80 +25,17 @@ class FileStorage(BaseStorage):
         self.experiments_dir.mkdir(parents=True, exist_ok=True)
     
     def _get_experiment_path(self, experiment_id: str) -> Path:
-        """Get the path to an experiment file by searching in subdirectories."""
-        # First check if there's a direct experiment file (legacy)
-        direct_path = self.experiments_dir / f"{experiment_id}.json"
-        if direct_path.exists():
-            return direct_path
-        
-        # Search in subdirectories for the experiment file
-        for subdir in self.experiments_dir.iterdir():
-            if subdir.is_dir():
-                experiment_file = subdir / f"{experiment_id}.json"
-                if experiment_file.exists():
-                    return experiment_file
-        
-        # If not found, return the default path (will be created in experiments root)
-        return direct_path
-    
-    def _get_experiment_conversations_dir(self, experiment_id: str, experiment_title: str = None) -> Path:
+        """Get the path to an experiment's metadata file."""
+        return self.experiments_dir / experiment_id / "experiment.json"
+
+    def _get_experiment_conversations_dir(self, experiment_id: str) -> Path:
         """Get the conversations directory for a specific experiment."""
-        # We need experiment_title to create the folder
-        if not experiment_title:
-            return None
-        
-        # Create a safe folder name from the experiment title
-        safe_title = re.sub(r'[^\w\s-]', '', experiment_title).strip()
-        safe_title = re.sub(r'[-\s]+', '_', safe_title)
-        safe_title = safe_title[:50]  # Limit length
-        
-        # Check if folder with this name already exists and add numbering if needed
-        base_folder_name = safe_title
-        counter = 1
-        folder_name = base_folder_name
-        
-        while True:
-            folder_path = self.experiments_dir / folder_name
-            if not folder_path.exists():
-                break
-            
-            # Check if this folder belongs to the same experiment
-            # Look for any conversation file with this experiment_id
-            has_conversation_from_same_experiment = False
-            for conv_file in folder_path.glob("*.json"):
-                try:
-                    conv_data = self._read_json_file(conv_file)
-                    if conv_data and conv_data.get('experiment_id') == experiment_id:
-                        has_conversation_from_same_experiment = True
-                        break
-                except:
-                    continue
-            
-            # If it's the same experiment, use the existing folder
-            if has_conversation_from_same_experiment:
-                break
-            
-            # If it's a different experiment with the same name, add numbering
-            folder_name = f"{base_folder_name}_{counter:03d}"
-            counter += 1
-        
-        # Create folder path: experiments/{folder_name}/
-        folder_path = self.experiments_dir / folder_name
-        
-        # Create the folder if it doesn't exist
-        folder_path.mkdir(exist_ok=True)
-        
-        return folder_path
-    
-    def _get_conversation_path(self, experiment_id: str, iteration: int, title: str, experiment_title: str = None) -> Path:
-        """Get the path for a conversation file using the new naming convention."""
-        conversations_dir = self._get_experiment_conversations_dir(experiment_id, experiment_title)
-        if not conversations_dir:
-            return None
-        
-        # Create safe filename: {iteration:03d}_conversation.json
-        filename = f"{iteration:03d}_conversation.json"
-        return conversations_dir / filename
+        return self.experiments_dir / experiment_id / "conversations"
+
+    def _get_conversation_path(self, experiment_id: str, iteration: int) -> Path:
+        """Get the path for a conversation file."""
+        conversations_dir = self._get_experiment_conversations_dir(experiment_id)
+        return conversations_dir / f"{iteration}.json"
     
     def _read_json_file(self, file_path: Path) -> Optional[Dict[str, Any]]:
         """Read a JSON file and return its contents, or None if file doesn't exist."""
@@ -129,115 +66,31 @@ class FileStorage(BaseStorage):
         if not experiment_id:
             experiment_id = str(uuid.uuid4())
             experiment['id'] = experiment_id
-        
-        # Ensure created_at is set
+
         if 'created_at' not in experiment:
             experiment['created_at'] = datetime.utcnow().isoformat()
-        
-        # Get the experiment path (this will determine where to save it)
+
         file_path = self._get_experiment_path(experiment_id)
-        
-        # If the file path is in the root experiments directory, we need to move it to a subdirectory
-        if file_path.parent == self.experiments_dir:
-            # Find the correct subdirectory for this experiment
-            # We need to get the title from the experiment data to create the folder
-            title = experiment.get('title', 'Unknown Experiment')
-            if title.startswith('Experiment: '):
-                title = title[12:]
-            
-            # Create safe folder name
-            safe_title = re.sub(r'[^\w\s-]', '', title).strip()
-            safe_title = re.sub(r'[-\s]+', '_', safe_title)
-            safe_title = safe_title[:50]  # Limit length
-            
-            # Check if folder with this name already exists and add numbering if needed
-            base_folder_name = safe_title
-            counter = 1
-            folder_name = base_folder_name
-            
-            while True:
-                folder_path = self.experiments_dir / folder_name
-                if not folder_path.exists():
-                    break
-                
-                # Check if this folder belongs to the same experiment
-                experiment_file_in_folder = folder_path / f"{experiment_id}.json"
-                if experiment_file_in_folder.exists():
-                    break
-                
-                # If it's a different experiment with the same name, add numbering
-                folder_name = f"{base_folder_name}_{counter:03d}"
-                counter += 1
-            
-            # Create the folder and save experiment file there
-            folder_path = self.experiments_dir / folder_name
-            folder_path.mkdir(exist_ok=True)
-            file_path = folder_path / f"{experiment_id}.json"
-        
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
         return self._write_json_file(file_path, experiment)
     
     def get_experiment(self, experiment_id: str) -> Optional[Dict[str, Any]]:
         """Get an experiment by ID."""
-        # Since we don't save experiment metadata, reconstruct from conversations
-        conversations = self.get_experiment_conversations(experiment_id)
-        if not conversations:
-            return None
-        
-        # Create experiment object from conversation data
-        first_conv = conversations[0]
-        experiment = {
-            'id': experiment_id,
-            'title': f"Experiment: {first_conv.get('title', 'Unknown')}",
-            'status': 'running',
-            'created_at': first_conv.get('created_at', ''),
-            'iterations': len(conversations),
-            'current_iteration': max(conv.get('iteration', 0) for conv in conversations)
-        }
-        return experiment
-    
+        file_path = self._get_experiment_path(experiment_id)
+        return self._read_json_file(file_path)
+
     def get_experiments(self) -> List[Dict[str, Any]]:
         """Get all experiments."""
         experiments = []
+        for experiment_dir in self.experiments_dir.iterdir():
+            if experiment_dir.is_dir():
+                experiment_file = experiment_dir / "experiment.json"
+                if experiment_file.exists():
+                    experiment_data = self._read_json_file(experiment_file)
+                    if experiment_data:
+                        experiments.append(experiment_data)
         
-        # Since we don't save experiment metadata anymore, we need to reconstruct
-        # experiment information from conversation files in subdirectories
-        
-        # Check subdirectories for experiment conversations
-        for subdir in self.experiments_dir.iterdir():
-            if subdir.is_dir():
-                # Get all conversations from this folder
-                conversations = []
-                for file_path in subdir.glob("*.json"):
-                    conversation = self._read_json_file(file_path)
-                    if conversation:
-                        conversations.append(conversation)
-                
-                if conversations:
-                    # Group conversations by experiment_id
-                    experiment_groups = {}
-                    for conv in conversations:
-                        exp_id = conv.get('experiment_id')
-                        if exp_id:
-                            if exp_id not in experiment_groups:
-                                experiment_groups[exp_id] = []
-                            experiment_groups[exp_id].append(conv)
-                    
-                    # Create experiment objects from conversation data
-                    for exp_id, convs in experiment_groups.items():
-                        if convs:
-                            # Use the first conversation to get basic info
-                            first_conv = convs[0]
-                            experiment = {
-                                'id': exp_id,
-                                'title': f"Experiment: {subdir.name}",
-                                'status': 'running',
-                                'created_at': first_conv.get('created_at', ''),
-                                'iterations': len(convs),
-                                'current_iteration': max(conv.get('iteration', 0) for conv in convs)
-                            }
-                            experiments.append(experiment)
-        
-        # Sort by created_at (newest first)
         experiments.sort(key=lambda x: x.get('created_at', ''), reverse=True)
         return experiments
     
@@ -253,39 +106,23 @@ class FileStorage(BaseStorage):
     def delete_experiment(self, experiment_id: str) -> bool:
         """Delete an experiment and its conversations folder."""
         try:
-            # Find the conversations directory for this experiment
-            conversations_dir = None
-            for subdir in self.experiments_dir.iterdir():
-                if subdir.is_dir():
-                    # Check if this folder contains conversations from this experiment
-                    for file_path in subdir.glob("*.json"):
-                        try:
-                            conv_data = self._read_json_file(file_path)
-                            if conv_data and conv_data.get('experiment_id') == experiment_id:
-                                conversations_dir = subdir
-                                break
-                        except:
-                            continue
-                    if conversations_dir:
-                        break
-            
-            # Delete conversations directory and all files
-            if conversations_dir and conversations_dir.exists():
+            experiment_dir = self.experiments_dir / experiment_id
+            if experiment_dir.exists() and experiment_dir.is_dir():
                 import shutil
-                shutil.rmtree(conversations_dir)
-            
-            return True
+                shutil.rmtree(experiment_dir)
+                return True
+            return False
         except IOError as e:
             raise StorageError(f"Error deleting experiment {experiment_id}: {e}")
     
     # Conversation storage methods - NEW APPROACH
     def save_experiment_conversation(self, experiment_id: str, iteration: int, title: str, conversation: Dict[str, Any], experiment_title: str = None) -> bool:
         """Save an experiment conversation using the new folder structure."""
-        # Get the conversation file path (this will create folder if needed)
-        file_path = self._get_conversation_path(experiment_id, iteration, title, experiment_title)
-        if not file_path:
-            return False
+        file_path = self._get_conversation_path(experiment_id, iteration)
         
+        # Ensure the conversations directory exists
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
         # Add metadata
         conversation['experiment_id'] = experiment_id
         conversation['iteration'] = iteration
@@ -296,21 +133,16 @@ class FileStorage(BaseStorage):
     
     def get_experiment_conversations(self, experiment_id: str) -> List[Dict[str, Any]]:
         """Get all conversations for a specific experiment from the new folder structure."""
+        conversations_dir = self._get_experiment_conversations_dir(experiment_id)
+        if not conversations_dir.exists():
+            return []
+
         conversations = []
+        for file_path in sorted(conversations_dir.glob("*.json")):
+            conversation = self._read_json_file(file_path)
+            if conversation:
+                conversations.append(conversation)
         
-        # Search through all experiment folders for conversations with this experiment_id
-        for subdir in self.experiments_dir.iterdir():
-            if subdir.is_dir():
-                for file_path in subdir.glob("*.json"):
-                    try:
-                        conversation = self._read_json_file(file_path)
-                        if conversation and conversation.get('experiment_id') == experiment_id:
-                            conversations.append(conversation)
-                    except:
-                        continue
-        
-        # Sort by iteration number
-        conversations.sort(key=lambda x: x.get('iteration', 0))
         return conversations
     
     def delete_experiment_conversation(self, experiment_id: str, iteration: int, title: str) -> bool:
@@ -381,26 +213,29 @@ class FileStorage(BaseStorage):
         return conversations
     
     def get_conversation(self, conversation_id: str) -> Optional[Dict[str, Any]]:
-        """Get a conversation by ID (searches both imported and experiment conversations)."""
-        # First check imported conversations
-        legacy_dir = self.data_dir / "imported_conversations"
-        if legacy_dir.exists():
-            # Search through all files to find conversation with matching ID
-            for file_path in legacy_dir.glob("*.json"):
-                conversation = self._read_json_file(file_path)
-                if conversation and conversation.get('id') == conversation_id:
-                    return conversation
-        
-        # If not found in imported conversations, search in experiment conversations
+        """Get a single conversation by its ID from any storage location."""
+        # Check imported conversations first
+        imported_conversations_dir = self.data_dir / "imported_conversations"
+        imported_conv_path = imported_conversations_dir / f"{conversation_id}.json"
+        if imported_conv_path.exists():
+            return self._read_json_file(imported_conv_path)
+
+        # Check experiment conversations
         for experiment_dir in self.experiments_dir.iterdir():
             if experiment_dir.is_dir():
-                for conv_file in experiment_dir.glob("*.json"):
-                    conversation = self._read_json_file(conv_file)
-                    if conversation and conversation.get('id') == conversation_id:
-                        return conversation
-        
+                conversations_dir = experiment_dir / "conversations"
+                if conversations_dir.exists():
+                    for file_path in conversations_dir.glob("*.json"):
+                        # The conversation_id for experiment conversations is <experiment_id>_<iteration>
+                        try:
+                            experiment_id = experiment_dir.name
+                            iteration = file_path.stem
+                            if f"{experiment_id}_{iteration}" == conversation_id:
+                                return self._read_json_file(file_path)
+                        except:
+                            continue
         return None
-    
+
     def delete_conversation(self, conversation_id: str) -> bool:
         """Delete an imported conversation (legacy method)."""
         legacy_dir = self.data_dir / "imported_conversations"
