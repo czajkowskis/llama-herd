@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Agent, Task } from '../types/index.d';
 import { ollamaService } from '../services/ollamaService';
 import { experimentService } from '../services/experimentService';
-import { storageService } from '../services/storageService';
+import { backendStorageService } from '../services/backendStorageService';
 import { ConfirmationPopup } from '../components/ui/ConfirmationPopup';
 import { TaskCreationSection } from '../components/experiment/TaskCreationSection';
 import { AgentCreationSection } from '../components/experiment/AgentCreationSection';
@@ -101,7 +101,7 @@ export const NewExperiment: React.FC<NewExperimentProps> = ({ onExperimentStart 
           iterations: Math.max(1, currentTask.iterations || 1),
           currentIteration: 0
         };
-        storageService.saveExperiment(storedExperiment);
+        await backendStorageService.saveExperiment(storedExperiment);
         
         onExperimentStart(response.experiment_id);
       } catch (err: any) {

@@ -19,6 +19,7 @@ export const History: React.FC = () => {
   const [experimentToDelete, setExperimentToDelete] = useState<StoredExperiment | null>(null);
   const [showDeleteConversationConfirmation, setShowDeleteConversationConfirmation] = useState<boolean>(false);
   const [conversationToDelete, setConversationToDelete] = useState<{ conversation: StoredConversation; source?: 'import' | 'experiment' } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadHistory();
@@ -31,6 +32,7 @@ export const History: React.FC = () => {
 
   const loadHistory = async () => {
     setLoading(true);
+    setError(null);
     try {
       // Load experiments from backend storage
       const backendExperiments = await backendStorageService.getExperiments();
@@ -74,13 +76,14 @@ export const History: React.FC = () => {
         console.log('Final conversations count:', importedConversations.length);
         
         setConversations(importedConversations);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to load conversations from backend:', error);
-        console.error('Backend error details:', error);
+        setError('Failed to load conversations.');
         setConversations([]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load history:', error);
+      setError('Failed to load history.');
     } finally {
       setLoading(false);
     }
@@ -118,6 +121,7 @@ export const History: React.FC = () => {
       await loadHistory();
     } catch (error) {
       console.error('Failed to delete experiment:', error);
+      setError('Failed to delete experiment. Please try again later.');
     }
     
     setShowDeleteExperimentConfirmation(false);
@@ -151,6 +155,7 @@ export const History: React.FC = () => {
         }
       } catch (error) {
         console.error('Failed to save experiment name:', error);
+        setError('Failed to save experiment name. Please try again later.');
       }
     }
     setEditingExperimentId(null);
@@ -184,6 +189,7 @@ export const History: React.FC = () => {
       await loadHistory();
     } catch (error) {
       console.error('Failed to delete conversation:', error);
+      setError('Failed to delete conversation. Please try again later.');
     }
     
     setShowDeleteConversationConfirmation(false);
@@ -200,6 +206,7 @@ export const History: React.FC = () => {
       return await backendStorageService.getExperimentConversations(experimentId);
     } catch (error) {
       console.error('Failed to get experiment conversations:', error);
+      setError('Failed to load experiment conversations. Please try again later.');
       return [];
     }
   };
@@ -210,6 +217,31 @@ export const History: React.FC = () => {
         <div className="bg-gray-800 p-6 rounded-2xl shadow-xl">
           <div className="flex items-center justify-center h-32">
             <div className="text-lg text-gray-300">Loading history...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error message if exists
+  if (error) {
+    return (
+      <div className="p-8 animate-fade-in">
+        <div className="bg-red-800 p-6 rounded-2xl shadow-xl">
+          <div className="flex items-center justify-center h-32">
+            <div className="text-lg text-red-100">{error}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 animate-fade-in">
+        <div className="bg-red-800 p-6 rounded-2xl shadow-xl">
+          <div className="flex items-center justify-center h-32">
+            <div className="text-lg text-red-100">{error}</div>
           </div>
         </div>
       </div>
@@ -548,15 +580,18 @@ const ExperimentConversationsList: React.FC<ExperimentConversationsListProps> = 
 }) => {
   const [conversations, setConversations] = useState<StoredConversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadConversations = async () => {
       setLoading(true);
+      setError(null);
       try {
         const convs = await getExperimentConversations(experimentId);
         setConversations(convs);
       } catch (error) {
         console.error('Failed to load experiment conversations:', error);
+        setError('Failed to load conversations.');
       } finally {
         setLoading(false);
       }
@@ -567,6 +602,10 @@ const ExperimentConversationsList: React.FC<ExperimentConversationsListProps> = 
 
   if (loading) {
     return <div className="text-center py-8 text-gray-300">Loading conversations...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center py-8 text-red-400">{error}</div>;
   }
 
   if (conversations.length === 0) {
@@ -629,4 +668,4 @@ const ExperimentConversationsList: React.FC<ExperimentConversationsListProps> = 
       ))}
     </div>
   );
-}; 
+};

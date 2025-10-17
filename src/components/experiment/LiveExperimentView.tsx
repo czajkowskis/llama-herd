@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import { Conversation, ConversationAgent, Message, ExperimentStatusResponse } from '../../types/index.d';
 import { experimentService } from '../../services/experimentService';
 import { WebSocketMessage } from '../../types/api';
-import { storageService } from '../../services/storageService';
+import { backendStorageService } from '../../services/backendStorageService';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { ExportPanel } from '../conversation/ExportPanel';
@@ -93,7 +93,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
           
           // If experiment completed, update local storage
           if (message.data.status === 'completed' && liveConversation) {
-            storageService.saveExperiment({
+            backendStorageService.saveExperiment({
               id: experimentId,
               title: `Experiment: ${liveConversation.title}`,
               task: { id: '', prompt: liveConversation.title, iterations: 1, datasetItems: [] },
@@ -107,7 +107,6 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
               status: 'completed',
               createdAt: liveConversation.createdAt,
               completedAt: new Date().toISOString(),
-              conversation: liveConversation,
               iterations: 1,
               currentIteration: 1
             });
@@ -138,7 +137,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
               source: 'experiment' as const,
               experimentId: experimentId
             };
-            storageService.saveConversation(storedConversation);
+            backendStorageService.saveConversation(storedConversation);
             
             return updated;
           });
