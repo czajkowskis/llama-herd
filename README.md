@@ -20,6 +20,23 @@ The application consists of two main components:
 1. **Frontend (React/TypeScript)**: User interface for creating and managing experiments
 2. **Backend (FastAPI/Python)**: Handles Autogen integration and real-time communication
 
+## Environment Variables (Frontend)
+
+The frontend uses environment variables to configure API endpoints. These are managed via `.env` files, consistent with Create React App.
+
+Create a `.env` file in the root of the project by copying the example:
+
+```bash
+cp .env.example .env
+```
+
+The following variables are available:
+
+- `REACT_APP_API_BASE_URL`: The base URL for the backend API (e.g., `http://localhost:8000`).
+- `REACT_APP_OLLAMA_BASE_URL`: The base URL for the Ollama API (e.g., `http://localhost:11434`).
+
+These variables are embedded at build time. If you change them, you will need to restart the development server.
+
 ## Quick Start
 
 ### Prerequisites

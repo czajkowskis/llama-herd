@@ -1,6 +1,5 @@
+import { API_BASE_URL, buildWebSocketUrl } from '../config';
 import { Agent, Task, ExperimentStatusResponse } from '../types/index.d';
-
-const API_BASE_URL = 'http://localhost:8000/api';
 
 export interface ExperimentRequest {
   task: Task;
@@ -41,7 +40,7 @@ class ExperimentService {
   private messageHandlers: ((message: WebSocketMessage) => void)[] = [];
 
   async startExperiment(task: Task, agents: Agent[], iterations: number = 1): Promise<ExperimentResponse> {
-    const response = await fetch(`${API_BASE_URL}/experiments/start`, {
+    const response = await fetch(`${API_BASE_URL}/api/experiments/start`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -57,7 +56,7 @@ class ExperimentService {
   }
 
   async getExperiment(experimentId: string): Promise<ExperimentStatusResponse> {
-    const response = await fetch(`${API_BASE_URL}/experiments/${experimentId}`);
+    const response = await fetch(`${API_BASE_URL}/api/experiments/${experimentId}`);
     
     if (!response.ok) {
       throw new Error(`Failed to get experiment: ${response.statusText}`);
@@ -67,7 +66,7 @@ class ExperimentService {
   }
 
   async listExperiments(): Promise<ExperimentListResponse> {
-    const response = await fetch(`${API_BASE_URL}/experiments`);
+    const response = await fetch(`${API_BASE_URL}/api/experiments`);
     
     if (!response.ok) {
       throw new Error(`Failed to list experiments: ${response.statusText}`);
@@ -77,7 +76,7 @@ class ExperimentService {
   }
 
   async deleteExperiment(experimentId: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/experiments/${experimentId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/experiments/${experimentId}`, {
       method: 'DELETE',
     });
     
@@ -96,7 +95,7 @@ class ExperimentService {
     this.messageHandlers.push(onMessage);
 
     // Create WebSocket connection
-    const wsUrl = `ws://localhost:8000/ws/experiments/${experimentId}`;
+    const wsUrl = buildWebSocketUrl(`/ws/experiments/${experimentId}`);
     this.ws = new WebSocket(wsUrl);
 
     this.ws.onopen = () => {

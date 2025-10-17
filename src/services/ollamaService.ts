@@ -1,4 +1,4 @@
-const OLLAMA_API_BASE_URL = 'http://localhost:11434/api';
+import { OLLAMA_BASE_URL } from '../config';
 
 // Interface for the response when listing available models.
 export interface ModelTag {
@@ -18,7 +18,7 @@ export interface ListModelsResponse {
  */
 export const listModels = async (): Promise<string[]> => {
   try {
-    const response = await fetch(`${OLLAMA_API_BASE_URL}/tags`);
+    const response = await fetch(`${OLLAMA_BASE_URL}/api/tags`);
     if (!response.ok) {
       throw new Error(`API call failed with status: ${response.status}`);
     }
@@ -68,7 +68,7 @@ export const generateCompletion = async (
   onStream?: (chunk: GenerateResponse) => void
 ): Promise<string | void> => {
   try {
-    const response = await fetch(`${OLLAMA_API_BASE_URL}/generate`, {
+    const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
