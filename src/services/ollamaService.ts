@@ -57,15 +57,89 @@ export interface GenerateResponse {
 }
 
 /**
+ * A reusable helper function to stream JSON objects from a ReadableStream.
+ * Each JSON object is expected to be on a new line.
+ *
+ * @param reader The ReadableStreamDefaultReader to read from.
+ * @param onObject A callback function invoked for each parsed JSON object.
+ * @param signal An optional AbortSignal to cancel the stream processing.
+ */
+async function streamJsonLinesToObject<T>(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  onObject: (obj: T) => void,
+  signal?: AbortSignal
+): Promise<void> {
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  const processBuffer = () => {
+    // As long as there's a newline in the buffer, process lines
+    while (buffer.includes('\n')) {
+      const newlineIndex = buffer.indexOf('\n');
+      const line = buffer.slice(0, newlineIndex);
+      buffer = buffer.slice(newlineIndex + 1);
+
+      if (line.trim() === '') {
+        continue; // Ignore empty lines
+      }
+      try {
+        const parsedObject = JSON.parse(line);
+        onObject(parsedObject);
+      } catch (error) {
+        console.error('Failed to parse JSON line:', line, error);
+        // Gracefully handle parsing errors and continue
+      }
+    }
+  };
+
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    if (signal?.aborted) {
+      await reader.cancel('Stream reading was aborted.');
+      break;
+    }
+
+    try {
+      const { value, done } = await reader.read();
+      if (done) {
+        // If there's any remaining data in the buffer, try to process it
+        if (buffer.length > 0) {
+          try {
+            const parsedObject = JSON.parse(buffer);
+            onObject(parsedObject);
+          } catch (error) {
+            // It might just be an incomplete line at the end of the stream
+            console.error('Failed to parse final buffer content:', buffer, error);
+          }
+        }
+        break;
+      }
+      buffer += decoder.decode(value, { stream: true });
+      processBuffer();
+    } catch (error) {
+      if (signal?.aborted) {
+        // This is an expected error when the stream is aborted.
+        console.log('Stream reading aborted as requested.');
+      } else {
+        console.error('Error reading from stream:', error);
+      }
+      break;
+    }
+  }
+}
+
+/**
  * Generates a text completion for a given prompt and model.
  * This function supports streaming and non-streaming responses.
  * @param request The request payload including the model and prompt.
  * @param onStream A callback function to handle each chunk of a streamed response.
+ * @param signal An optional AbortSignal to cancel the fetch request.
  * @returns A promise that resolves with the final response, or void for streamed responses.
  */
 export const generateCompletion = async (
   request: GenerateRequest,
-  onStream?: (chunk: GenerateResponse) => void
+  onStream?: (chunk: GenerateResponse) => void,
+  signal?: AbortSignal
 ): Promise<string | void> => {
   try {
     const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
@@ -74,6 +148,7 @@ export const generateCompletion = async (
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ ...request, stream: request.stream ?? !!onStream }),
+      signal, // Pass the signal to the fetch request
     });
 
     if (!response.ok || !response.body) {
@@ -81,35 +156,23 @@ export const generateCompletion = async (
     }
 
     if (onStream) {
-      // Handle streaming responses
+      // Handle streaming responses using the helper
       const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let accumulatedResponse = '';
-
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        // The API returns a JSON object per line.
-        // We need to split the string by newlines to parse each object.
-        const lines = chunk.split('\n').filter(Boolean);
-        for (const line of lines) {
-          const data: GenerateResponse = JSON.parse(line);
-          accumulatedResponse += data.response;
-          if (onStream) {
-            onStream(data);
-          }
-        }
-      }
-      return accumulatedResponse;
+      await streamJsonLinesToObject<GenerateResponse>(reader, onStream, signal);
+      // After the stream is complete, we can signal we are done if needed.
+      // For example, by calling onStream with a special marker, but here we just resolve.
+      return;
     } else {
-      // Handle non-streaming response
-      const data: GenerateResponse = await response.json();
-      return data.response;
+      // Handle non-streaming responses
+      const finalResponse = await response.json();
+      return finalResponse.response;
     }
   } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      console.log('Fetch aborted as requested.');
+      // Don't rethrow abort errors as they are expected.
+      return;
+    }
     console.error('Error generating completion:', error);
     throw error;
   }
