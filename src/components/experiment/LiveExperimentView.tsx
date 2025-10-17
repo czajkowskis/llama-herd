@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Conversation, ConversationAgent, Message, ExperimentStatusResponse } from '../../types/index.d';
-import { experimentService, WebSocketMessage } from '../../services/experimentService';
+import { experimentService } from '../../services/experimentService';
+import { WebSocketMessage } from '../../types/api';
 import { storageService } from '../../services/storageService';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
@@ -152,13 +153,12 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
     loadExperiment();
 
     // Connect to WebSocket for real-time updates
-    experimentService.connectToExperiment(experimentId, handleWebSocketMessage);
+    const unsubscribe = experimentService.connectToExperiment(experimentId, handleWebSocketMessage);
     setIsConnected(true);
 
     return () => {
       mounted = false;
-      experimentService.removeMessageHandler(handleWebSocketMessage);
-      experimentService.disconnect();
+      unsubscribe();
     };
   }, [experimentId]);
 
