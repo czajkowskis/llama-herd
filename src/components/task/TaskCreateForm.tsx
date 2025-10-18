@@ -27,7 +27,7 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({ onTaskCreate }) 
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      <h3 className="text-lg font-medium text-gray-200">Task prompt</h3>
+      <h3 className="text-lg font-medium" style={{ color: 'var(--color-text-secondary)' }}>Task prompt</h3>
       <Textarea
         rows={10}
         placeholder="Enter your task prompt here..."
@@ -36,7 +36,7 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({ onTaskCreate }) 
       />
       
       <div className="space-y-2">
-        <label htmlFor="iterations" className="block text-sm font-medium text-gray-300">
+        <label htmlFor="iterations" className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
           Number of iterations
         </label>
         <input
@@ -46,9 +46,15 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({ onTaskCreate }) 
           max="100"
           value={iterations}
           onChange={(e) => setIterations(Math.max(1, parseInt(e.target.value) || 1))}
-          className="w-32 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          className="w-32 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          style={{ 
+            backgroundColor: 'var(--color-bg-tertiary)', 
+            color: 'var(--color-text-primary)',
+            borderColor: 'var(--color-border)',
+            borderWidth: '1px'
+          }}
         />
-        <p className="text-sm text-gray-500">
+        <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
           How many times to repeat the experiment with the same task.
         </p>
       </div>

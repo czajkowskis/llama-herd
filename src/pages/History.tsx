@@ -214,9 +214,9 @@ export const History: React.FC = () => {
   if (loading) {
     return (
       <div className="p-8 animate-fade-in">
-        <div className="bg-gray-800 p-6 rounded-2xl shadow-xl">
+        <div className="p-6 rounded-2xl shadow-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
           <div className="flex items-center justify-center h-32">
-            <div className="text-lg text-gray-300">Loading history...</div>
+            <div className="text-lg" style={{ color: 'var(--color-text-secondary)' }}>Loading history...</div>
           </div>
         </div>
       </div>
@@ -257,9 +257,9 @@ export const History: React.FC = () => {
       // This will be handled by a new component that fetches the conversation
       return (
         <div className="p-8 animate-fade-in">
-          <div className="bg-gray-800 p-6 rounded-2xl shadow-xl">
+          <div className="p-6 rounded-2xl shadow-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
             <div className="flex items-center justify-between mb-6">
-              <Button onClick={handleBackToList} className="bg-gray-600 hover:bg-gray-700">
+              <Button onClick={handleBackToList}>
                 ← Back to History
               </Button>
             </div>
@@ -279,9 +279,9 @@ export const History: React.FC = () => {
 
       return (
         <div className="p-8 animate-fade-in">
-          <div className="bg-gray-800 p-6 rounded-2xl shadow-xl">
+          <div className="p-6 rounded-2xl shadow-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
             <div className="flex items-center justify-between mb-6">
-              <Button onClick={handleBackToList} className="bg-gray-600 hover:bg-gray-700">
+              <Button onClick={handleBackToList}>
                 ← Back to History
               </Button>
             </div>
@@ -313,12 +313,12 @@ export const History: React.FC = () => {
 
     return (
       <div className="p-8 animate-fade-in">
-        <div className="bg-gray-800 p-6 rounded-2xl shadow-xl">
+        <div className="p-6 rounded-2xl shadow-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
           <div className="flex items-center justify-between mb-6">
-            <Button onClick={handleBackToExperiments} className="bg-gray-600 hover:bg-gray-700">
+            <Button onClick={handleBackToExperiments}>
               ← Back to Experiments
             </Button>
-            <h2 className="text-xl font-semibold text-white">{experiment.title}</h2>
+            <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>{experiment.title}</h2>
           </div>
           <div className="flex-1 overflow-auto">
             <ExperimentConversationsList 
@@ -337,27 +337,47 @@ export const History: React.FC = () => {
   return (
     <>
       <div className="p-8 animate-fade-in">
-        <div className="bg-gray-800 p-6 rounded-2xl shadow-xl">
+        <div className="p-6 rounded-2xl shadow-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-white">History</h1>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>History</h1>
             <div className="flex space-x-2">
               <button
                 onClick={() => setActiveTab('experiments')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  activeTab === 'experiments'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
+                className="px-4 py-2 rounded-lg font-medium transition-colors"
+                style={{
+                  backgroundColor: activeTab === 'experiments' ? '#9333ea' : 'var(--color-bg-tertiary)',
+                  color: activeTab === 'experiments' ? 'white' : 'var(--color-text-secondary)'
+                }}
+                onMouseEnter={(e) => {
+                  if (activeTab !== 'experiments') {
+                    e.currentTarget.style.backgroundColor = 'var(--color-border)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTab !== 'experiments') {
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                  }
+                }}
               >
                 Experiments ({experiments.length})
               </button>
               <button
                 onClick={() => setActiveTab('conversations')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  activeTab === 'conversations'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
+                className="px-4 py-2 rounded-lg font-medium transition-colors"
+                style={{
+                  backgroundColor: activeTab === 'conversations' ? '#9333ea' : 'var(--color-bg-tertiary)',
+                  color: activeTab === 'conversations' ? 'white' : 'var(--color-text-secondary)'
+                }}
+                onMouseEnter={(e) => {
+                  if (activeTab !== 'conversations') {
+                    e.currentTarget.style.backgroundColor = 'var(--color-border)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTab !== 'conversations') {
+                    e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                  }
+                }}
               >
                 Imported Conversations ({conversations.length})
               </button>
@@ -368,18 +388,19 @@ export const History: React.FC = () => {
             {activeTab === 'experiments' ? (
               <div className="space-y-4">
                 {experiments.length === 0 ? (
-                  <div className="text-center text-gray-400 py-8">
+                  <div className="text-center py-8" style={{ color: 'var(--color-text-tertiary)' }}>
                     No experiments found
                   </div>
                 ) : (
                   experiments.map((experiment) => (
                     <div
                       key={experiment.id}
-                      className="bg-gray-700 rounded-lg border border-gray-600 p-4 hover:shadow-md transition-shadow"
+                      className="rounded-lg border p-4 hover:shadow-md transition-shadow"
+                      style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)' }}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-white">
+                          <h3 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                             {editingExperimentId === experiment.id ? (
                               <div className="flex items-center space-x-2">
                                 <input
@@ -389,7 +410,13 @@ export const History: React.FC = () => {
                                   onBlur={handleSaveExperimentName}
                                   onKeyPress={handleExperimentNameKeyPress}
                                   autoFocus
-                                  className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-white text-lg font-semibold focus:outline-none focus:border-purple-400"
+                                  className="rounded px-2 py-1 text-lg font-semibold focus:outline-none focus:border-purple-400"
+                                  style={{
+                                    backgroundColor: 'var(--color-bg-secondary)',
+                                    borderColor: 'var(--color-border)',
+                                    borderWidth: '1px',
+                                    color: 'var(--color-text-primary)'
+                                  }}
                                 />
                                 <div className="flex items-center space-x-1">
                                   <button
@@ -417,7 +444,7 @@ export const History: React.FC = () => {
                               experiment.title
                             )}
                           </h3>
-                          <div className="flex items-center space-x-4 mt-2 text-sm text-gray-300">
+                          <div className="flex items-center space-x-4 mt-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                             <span className="inline-flex items-center space-x-1">
                               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
@@ -476,21 +503,22 @@ export const History: React.FC = () => {
             ) : (
               <div className="space-y-4">
                 {conversations.length === 0 ? (
-                  <div className="text-center text-gray-400 py-8">
+                  <div className="text-center py-8" style={{ color: 'var(--color-text-tertiary)' }}>
                     No imported conversations found
                   </div>
                 ) : (
                   conversations.map((conversation) => (
                     <div
                       key={conversation.id}
-                      className="bg-gray-700 rounded-lg border border-gray-600 p-4 hover:shadow-md transition-shadow"
+                      className="rounded-lg border p-4 hover:shadow-md transition-shadow"
+                      style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)' }}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-white">
+                          <h3 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                             {conversation.title}
                           </h3>
-                          <div className="flex items-center space-x-4 mt-2 text-sm text-gray-300">
+                          <div className="flex items-center space-x-4 mt-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                             <span className="inline-flex items-center space-x-1">
                               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
@@ -601,7 +629,7 @@ const ExperimentConversationsList: React.FC<ExperimentConversationsListProps> = 
   }, [experimentId, getExperimentConversations]);
 
   if (loading) {
-    return <div className="text-center py-8 text-gray-300">Loading conversations...</div>;
+    return <div className="text-center py-8" style={{ color: 'var(--color-text-secondary)' }}>Loading conversations...</div>;
   }
 
   if (error) {
@@ -609,7 +637,7 @@ const ExperimentConversationsList: React.FC<ExperimentConversationsListProps> = 
   }
 
   if (conversations.length === 0) {
-    return <div className="text-center text-gray-400 py-8">No conversations found for this experiment</div>;
+    return <div className="text-center py-8" style={{ color: 'var(--color-text-tertiary)' }}>No conversations found for this experiment</div>;
   }
 
   return (
@@ -617,14 +645,15 @@ const ExperimentConversationsList: React.FC<ExperimentConversationsListProps> = 
       {conversations.map((conversation) => (
         <div
           key={conversation.id}
-          className="bg-gray-700 rounded-lg border border-gray-600 p-4 hover:shadow-md transition-shadow"
+          className="rounded-lg border p-4 hover:shadow-md transition-shadow"
+          style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}
         >
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                 {conversation.title}
               </h3>
-              <div className="flex items-center space-x-4 mt-2 text-sm text-gray-300">
+              <div className="flex items-center space-x-4 mt-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                 <span className="inline-flex items-center space-x-1">
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />

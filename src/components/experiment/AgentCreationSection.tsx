@@ -38,7 +38,7 @@ export const AgentCreationSection: React.FC<AgentCreationSectionProps> = ({
   getAvailableColorsCount
 }) => {
   return (
-    <div className="bg-gray-800 p-6 rounded-2xl shadow-xl">
+    <div className="p-6 rounded-2xl shadow-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
       <div className="flex items-center space-x-3 mb-6">
         <Icon className="text-purple-400 text-xl">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-users">
@@ -48,7 +48,7 @@ export const AgentCreationSection: React.FC<AgentCreationSectionProps> = ({
             <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
           </svg>
         </Icon>
-        <h2 className="text-xl font-semibold text-white">Create your agents</h2>
+        <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>Create your agents</h2>
       </div>
 
       {agentCreationStep === 'list' && (

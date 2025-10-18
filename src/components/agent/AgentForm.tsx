@@ -165,7 +165,7 @@ export const AgentForm: React.FC<AgentFormProps> = ({
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      <h3 className="text-lg font-medium text-gray-200">
+      <h3 className="text-lg font-medium" style={{ color: 'var(--color-text-secondary)' }}>
         {editingAgent ? 'Edit Agent' : 'Name of an agent'}
       </h3>
       
@@ -174,9 +174,22 @@ export const AgentForm: React.FC<AgentFormProps> = ({
           <button
             onClick={() => setShowColorPicker(!showColorPicker)}
             className={`w-8 h-8 rounded border-2 transition-all duration-200 ${
-              colorError ? 'border-red-500' : 'border-gray-600 hover:border-gray-400'
+              colorError ? 'border-red-500' : ''
             }`}
-            style={{ backgroundColor: agentColor }}
+            style={{ 
+              backgroundColor: agentColor,
+              borderColor: colorError ? '#ef4444' : 'var(--color-border)'
+            }}
+            onMouseEnter={(e) => {
+              if (!colorError) {
+                e.currentTarget.style.borderColor = 'var(--color-text-tertiary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!colorError) {
+                e.currentTarget.style.borderColor = 'var(--color-border)';
+              }
+            }}
             aria-label="Select agent color"
           />
           <ColorPicker
@@ -206,7 +219,12 @@ export const AgentForm: React.FC<AgentFormProps> = ({
           <select
             value={agentModel}
             onChange={(e) => setAgentModel(e.target.value)}
-            className="w-full p-3 rounded-xl bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200"
+            className="w-full p-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200"
+            style={{
+              backgroundColor: 'var(--color-bg-tertiary)',
+              color: 'var(--color-text-primary)',
+              borderColor: 'var(--color-border)'
+            }}
           >
             <option value="">Select a model</option>
             {isLoadingOllamaModels ? (
@@ -226,7 +244,7 @@ export const AgentForm: React.FC<AgentFormProps> = ({
 
       <ErrorDisplay colorError={colorError} nameError={nameError} />
 
-      <h3 className="text-lg font-medium text-gray-200">Temperature</h3>
+      <h3 className="text-lg font-medium" style={{ color: 'var(--color-text-secondary)' }}>Temperature</h3>
       <div className="space-y-2">
         <input
           type="range"
@@ -237,10 +255,10 @@ export const AgentForm: React.FC<AgentFormProps> = ({
           onChange={(e) => setAgentTemperature(parseFloat(e.target.value))}
           className="w-full"
         />
-        <div className="text-sm text-gray-300">{agentTemperature.toFixed(2)}</div>
+        <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>{agentTemperature.toFixed(2)}</div>
       </div>
 
-      <h3 className="text-lg font-medium text-gray-200">Prompt</h3>
+      <h3 className="text-lg font-medium" style={{ color: 'var(--color-text-secondary)' }}>Prompt</h3>
       <Textarea
         rows={10}
         placeholder="You are the Coordinator responsible for guiding the team..."

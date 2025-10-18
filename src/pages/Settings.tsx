@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { ollamaService } from '../services/ollamaService';
 import { OLLAMA_BASE_URL as DEFAULT_OLLAMA_BASE } from '../config';
 import { Button } from '../components/ui/Button';
+import { useUIPreferences } from '../hooks/useUIPreferences';
+import { Theme, MessageDensity } from '../services/uiPreferencesService';
 
 // Keys for localStorage
 const STORAGE_KEY_BASE = 'llama-herd-ollama-base-url';
@@ -9,6 +11,16 @@ const STORAGE_KEY_MODEL = 'llama-herd-default-ollama-model';
 
 // This page component handles application settings, particularly the Ollama connection.
 export const Settings: React.FC = () => {
+  // UI Preferences hook
+  const {
+    theme,
+    compactMode,
+    messageDensity,
+    setTheme,
+    setCompactMode,
+    setMessageDensity,
+  } = useUIPreferences();
+
   const [endpoint, setEndpoint] = useState<string>(() => {
     // Use the configured base URL (no '/api' appended) to avoid duplicate '/api/api'
     return localStorage.getItem(STORAGE_KEY_BASE) || DEFAULT_OLLAMA_BASE;
@@ -76,18 +88,23 @@ export const Settings: React.FC = () => {
   };
 
   return (
-    <div className="p-8 text-center text-gray-400 animate-fade-in">
-      <h2 className="text-2xl font-semibold mb-4">Settings</h2>
+    <div className="p-8 text-center animate-fade-in" style={{ color: 'var(--color-text-tertiary)' }}>
+      <h2 className="text-2xl font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>Settings</h2>
       <p>Configure your Ollama connection and other preferences.</p>
-      <div className="mt-6 p-4 bg-gray-800 rounded-xl max-w-2xl mx-auto text-left">
-        <h3 className="text-lg font-medium text-white mb-2">Ollama Connection</h3>
+      <div className="mt-6 p-4 rounded-xl max-w-2xl mx-auto text-left" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
+        <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--color-text-primary)' }}>Ollama Connection</h3>
 
-        <label className="block text-sm text-gray-300 mb-1">Ollama API endpoint</label>
+        <label className="block text-sm mb-1" style={{ color: 'var(--color-text-secondary)' }}>Ollama API endpoint</label>
         <div className="flex space-x-3">
           <input
             value={endpoint}
             onChange={(e) => setEndpoint(e.target.value)}
-            className={`flex-1 p-3 rounded-xl bg-gray-700 text-white border ${endpointError ? 'border-red-500' : 'border-gray-600'} focus:outline-none`}
+            className={`flex-1 p-3 rounded-xl border ${endpointError ? 'border-red-500' : ''} focus:outline-none focus:ring-2 focus:ring-purple-500`}
+            style={{ 
+              backgroundColor: 'var(--color-bg-tertiary)', 
+              color: 'var(--color-text-primary)',
+              borderColor: endpointError ? '#ef4444' : 'var(--color-border)'
+            }}
             placeholder="http://localhost:11434/api"
             aria-label="Ollama API endpoint"
           />
@@ -95,7 +112,7 @@ export const Settings: React.FC = () => {
             <Button
               onClick={handleTest}
               disabled={!!endpointError || isTesting}
-              className="bg-gray-600"
+              variant="secondary"
             >
               {isTesting ? 'Testing…' : 'Test connection'}
             </Button>
@@ -108,22 +125,27 @@ export const Settings: React.FC = () => {
             </Button>
           </div>
         </div>
-        {endpointError && <p className="text-red-400 mt-2">{endpointError}</p>}
+        {endpointError && <p className="text-red-500 mt-2 font-medium">{endpointError}</p>}
 
         <div className="mt-4">
-          {isTesting && <p className="text-purple-300">Testing connection…</p>}
-          {testError && <p className="text-red-400 mt-2">Error: {testError}</p>}
+          {isTesting && <p className="text-purple-600 font-medium">Testing connection…</p>}
+          {testError && <p className="text-red-500 mt-2 font-medium">Error: {testError}</p>}
           {testResultMessage && !testError && (
-            <p className="text-green-400 mt-2">{testResultMessage}</p>
+            <p className="text-green-600 mt-2 font-medium">{testResultMessage}</p>
           )}
         </div>
 
         <div className="mt-4">
-          <label className="block text-sm text-gray-300 mb-1">Default model (optional)</label>
+          <label className="block text-sm mb-1" style={{ color: 'var(--color-text-secondary)' }}>Default model (optional)</label>
           <select
             value={selectedModel}
             onChange={(e) => setSelectedModel(e.target.value)}
-            className="w-full p-3 rounded-xl bg-gray-700 text-white border border-gray-600"
+            className="w-full p-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-purple-500"
+            style={{ 
+              backgroundColor: 'var(--color-bg-tertiary)', 
+              color: 'var(--color-text-primary)',
+              borderColor: 'var(--color-border)'
+            }}
           >
             <option value="">(no default)</option>
             {isTesting ? (
@@ -136,6 +158,125 @@ export const Settings: React.FC = () => {
           </select>
         </div>
 
+      </div>
+
+      {/* UI Preferences Section */}
+      <div className="mt-6 p-4 rounded-xl max-w-2xl mx-auto text-left" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
+        <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--color-text-primary)' }}>UI Preferences</h3>
+        <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
+          Customize the appearance and layout of the interface to improve readability and accessibility.
+        </p>
+
+        {/* Theme Toggle */}
+        <div className="mb-6">
+          <label className="block text-sm mb-2" style={{ color: 'var(--color-text-secondary)' }}>Theme</label>
+          <div className="flex space-x-3">
+            <Button
+              onClick={() => setTheme('light')}
+              className={theme === 'light' ? 'bg-purple-600 hover:bg-purple-700 text-white' : ''}
+              variant={theme === 'light' ? 'primary' : 'secondary'}
+              data-testid="theme-light-button"
+            >
+              ☀️ Light
+            </Button>
+            <Button
+              onClick={() => setTheme('dark')}
+              className={theme === 'dark' ? 'bg-purple-600 hover:bg-purple-700 text-white' : ''}
+              variant={theme === 'dark' ? 'primary' : 'secondary'}
+              data-testid="theme-dark-button"
+            >
+              🌙 Dark
+            </Button>
+            <Button
+              onClick={() => setTheme('system')}
+              className={theme === 'system' ? 'bg-purple-600 hover:bg-purple-700 text-white' : ''}
+              variant={theme === 'system' ? 'primary' : 'secondary'}
+              data-testid="theme-system-button"
+            >
+              💻 System
+            </Button>
+          </div>
+        </div>
+
+        {/* Compact Mode Toggle */}
+        <div className="mb-6">
+          <label className="flex items-center justify-between">
+            <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Compact Mode</span>
+            <button
+              onClick={() => setCompactMode(!compactMode)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                compactMode ? 'bg-purple-600' : ''
+              }`}
+              style={{ backgroundColor: compactMode ? undefined : 'var(--color-bg-tertiary)' }}
+              data-testid="compact-mode-toggle"
+              aria-label="Toggle compact mode"
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  compactMode ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </label>
+          <p className="text-xs mt-1" style={{ color: 'var(--color-text-tertiary)' }}>
+            Reduces padding and font sizes in the conversation list.
+          </p>
+        </div>
+
+        {/* Message Density Slider */}
+        <div className="mb-6">
+          <label className="block text-sm mb-2" style={{ color: 'var(--color-text-secondary)' }}>Message Density</label>
+          <div className="flex items-center space-x-4">
+            <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Sparse</span>
+            <input
+              type="range"
+              min="0"
+              max="2"
+              value={messageDensity === 'sparse' ? 0 : messageDensity === 'normal' ? 1 : 2}
+              onChange={(e) => {
+                const value = parseInt(e.target.value);
+                const density: MessageDensity = value === 0 ? 'sparse' : value === 1 ? 'normal' : 'dense';
+                setMessageDensity(density);
+              }}
+              className="flex-1"
+              data-testid="message-density-slider"
+              aria-label="Message density slider"
+            />
+            <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Dense</span>
+          </div>
+          <p className="text-xs mt-1" style={{ color: 'var(--color-text-tertiary)' }}>
+            Current: <span className="font-medium text-purple-600" data-testid="current-density">{messageDensity}</span>
+          </p>
+        </div>
+
+        {/* Preview Area */}
+        <div className="mt-6">
+          <label className="block text-sm mb-2" style={{ color: 'var(--color-text-secondary)' }}>Preview</label>
+          <div className="rounded-xl p-4 space-y-2" data-testid="preview-area" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
+            <div className="preview-message message-container rounded-lg" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
+              <div className="flex space-x-3">
+                <div className={`agent-avatar flex-shrink-0 w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-sm font-semibold text-white`}>
+                  A
+                </div>
+                <div className="flex-1">
+                  <div className="font-semibold text-sm" style={{ color: 'var(--color-text-primary)' }}>Agent Name</div>
+                  <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>This is a preview message showing the current density and compact mode settings.</div>
+                </div>
+              </div>
+            </div>
+            <div className="preview-message message-container rounded-lg" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
+              <div className="flex space-x-3">
+                <div className={`agent-avatar flex-shrink-0 w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-sm font-semibold text-white`}>
+                  B
+                </div>
+                <div className="flex-1">
+                  <div className="font-semibold text-sm" style={{ color: 'var(--color-text-primary)' }}>Another Agent</div>
+                  <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>The preview updates in real-time as you change settings.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

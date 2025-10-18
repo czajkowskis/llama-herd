@@ -34,7 +34,13 @@ export const ConversationTile: React.FC<ConversationTileProps> = ({
 }) => {
   return (
     <div
-      className="bg-gray-700 p-4 rounded-xl hover:bg-gray-600 transition-all duration-200 cursor-pointer border border-gray-600 group"
+      className="conversation-tile p-4 rounded-xl transition-all duration-200 cursor-pointer border group"
+      style={{
+        backgroundColor: 'var(--color-bg-secondary)',
+        borderColor: 'var(--color-border)',
+      }}
+      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)'}
+      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)'}
       onClick={() => onConversationSelect(index)}
     >
       <div className="flex items-start justify-between mb-3">
@@ -47,7 +53,7 @@ export const ConversationTile: React.FC<ConversationTileProps> = ({
                   onChange={(e) => onTitleChange(e.target.value)}
                   onKeyDown={onTitleKeyPress}
                   onBlur={onSaveTitle}
-                  className="bg-gray-600 border-gray-500 text-white text-sm pr-16"
+                  className="text-sm pr-16"
                   autoFocus
                 />
                 <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
@@ -70,7 +76,10 @@ export const ConversationTile: React.FC<ConversationTileProps> = ({
                       e.stopPropagation();
                       onCancelEditTitle();
                     }}
-                    className="text-gray-400 hover:text-red-400 p-1.5 rounded-full transition-colors duration-200"
+                    style={{ color: 'var(--color-text-tertiary)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-tertiary)'}
+                    className="p-1.5 rounded-full transition-colors duration-200"
                     title="Cancel edit"
                   >
                     <Icon>
@@ -85,13 +94,16 @@ export const ConversationTile: React.FC<ConversationTileProps> = ({
             </div>
           ) : (
             <div className="flex items-center space-x-2">
-              <h4 className="font-semibold text-white truncate flex-1">{conversation.title}</h4>
+              <h4 className="font-semibold truncate flex-1" style={{ color: 'var(--color-text-primary)' }}>{conversation.title}</h4>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onStartEditTitle(index);
                 }}
-                className="text-gray-400 hover:text-purple-400 p-1.5 rounded-full transition-all duration-200 hover:bg-purple-500/20 hover:scale-110 hover:shadow-lg"
+                style={{ color: 'var(--color-text-tertiary)' }}
+                onMouseEnter={(e) => e.currentTarget.style.color = '#a855f7'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-tertiary)'}
+                className="p-1.5 rounded-full transition-all duration-200 hover:bg-purple-500/20 hover:scale-110 hover:shadow-lg"
                 title="Edit title"
               >
                 <Icon>
@@ -109,7 +121,10 @@ export const ConversationTile: React.FC<ConversationTileProps> = ({
             e.stopPropagation();
             onDeleteConversation(index);
           }}
-          className="text-gray-400 hover:text-red-400 p-1.5 rounded-full transition-all duration-200 hover:bg-red-500/20 hover:scale-110 hover:shadow-lg"
+          style={{ color: 'var(--color-text-tertiary)' }}
+          onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-tertiary)'}
+          className="p-1.5 rounded-full transition-all duration-200 hover:bg-red-500/20 hover:scale-110 hover:shadow-lg"
           title="Delete conversation"
         >
           <Icon>
@@ -125,7 +140,7 @@ export const ConversationTile: React.FC<ConversationTileProps> = ({
       </div>
       
       <div className="space-y-2">
-        <div className="flex items-center space-x-2 text-sm text-gray-400">
+        <div className="flex items-center space-x-2 text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
           <Icon>
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-users">
               <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
@@ -137,7 +152,7 @@ export const ConversationTile: React.FC<ConversationTileProps> = ({
           <span>{conversation.agents.length} agents</span>
         </div>
         
-        <div className="flex items-center space-x-2 text-sm text-gray-400">
+        <div className="flex items-center space-x-2 text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
           <Icon>
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-message-circle">
               <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
@@ -146,7 +161,7 @@ export const ConversationTile: React.FC<ConversationTileProps> = ({
           <span>{conversation.messages.length} messages</span>
         </div>
         
-        <div className="flex items-center space-x-2 text-sm text-gray-400">
+        <div className="flex items-center space-x-2 text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
           <Icon>
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar">
               <path d="M8 2v4"/>

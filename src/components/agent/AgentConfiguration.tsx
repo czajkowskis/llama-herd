@@ -55,7 +55,7 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
 }) => {
   return (
     <div className="p-8 space-y-6 animate-fade-in">
-      <div className="bg-gray-800 p-6 rounded-2xl shadow-xl">
+      <div className="p-6 rounded-2xl shadow-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
             <Icon className="text-purple-400 text-xl">
@@ -66,9 +66,9 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                 <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
               </svg>
             </Icon>
-            <h2 className="text-xl font-semibold text-white">Configure Agents</h2>
+            <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>Configure Agents</h2>
             {pendingConversations.length > 1 && (
-              <span className="text-sm text-gray-400">
+              <span className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
                 ({pendingConversationIndex + 1} of {pendingConversations.length})
               </span>
             )}
@@ -76,14 +76,14 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
           <div className="flex items-center space-x-2">
             {isEditingConversationTitle ? (
               <div className="flex items-center space-x-2">
-                <span className="text-gray-300 text-sm">Title:</span>
+                <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Title:</span>
                 <div className="relative">
                   <Input
                     value={editingConversationTitle}
                     onChange={(e) => onConversationTitleChange(e.target.value)}
                     onKeyDown={onConversationTitleKeyPress}
                     onBlur={onSaveConversationTitle}
-                    className="bg-gray-600 border-gray-500 text-white text-sm w-64 pr-16"
+                    className="text-sm w-64 pr-16"
                     autoFocus
                   />
                   <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
@@ -100,7 +100,10 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                     </button>
                     <button
                       onClick={onCancelEditConversationTitle}
-                      className="text-gray-400 hover:text-red-400 p-1.5 rounded-full transition-colors duration-200"
+                      style={{ color: 'var(--color-text-tertiary)' }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-tertiary)'}
+                      className="p-1.5 rounded-full transition-colors duration-200"
                       title="Cancel edit"
                     >
                       <Icon>
@@ -115,11 +118,16 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
               </div>
             ) : (
               <div className="flex items-center space-x-2">
-                <span className="text-gray-300 text-sm">Title:</span>
+                <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Title:</span>
                 <Input
                   value={pendingConversations[pendingConversationIndex]?.title || ''}
                   readOnly
-                  className="bg-gray-600 border-gray-500 text-white text-sm w-64 cursor-pointer hover:bg-gray-500"
+                  className="text-sm w-64 cursor-pointer"
+                  style={{ 
+                    backgroundColor: 'var(--color-bg-tertiary)',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-border)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)'}
                   onClick={onStartEditConversationTitle}
                 />
               </div>
@@ -131,14 +139,27 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
 
         <div className="space-y-4">
           {agents.map((agent) => (
-            <div key={agent.id} className="flex items-center space-x-4 p-4 bg-gray-700 rounded-xl">
+            <div key={agent.id} className="flex items-center space-x-4 p-4 rounded-xl" style={{ backgroundColor: 'var(--color-bg-tertiary)' }}>
               <div className="relative color-picker-container">
                 <button
                   onClick={() => onColorPickerToggle(agent.id)}
                   className={`w-12 h-12 rounded border-2 transition-all duration-200 ${
-                    colorError && isColorUsed(agent.color, agent.id) ? 'border-red-500' : 'border-gray-600 hover:border-gray-400'
+                    colorError && isColorUsed(agent.color, agent.id) ? 'border-red-500' : ''
                   }`}
-                  style={{ backgroundColor: agent.color }}
+                  style={{ 
+                    backgroundColor: agent.color,
+                    borderColor: colorError && isColorUsed(agent.color, agent.id) ? '#ef4444' : 'var(--color-border)'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!(colorError && isColorUsed(agent.color, agent.id))) {
+                      e.currentTarget.style.borderColor = 'var(--color-text-tertiary)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!(colorError && isColorUsed(agent.color, agent.id))) {
+                      e.currentTarget.style.borderColor = 'var(--color-border)';
+                    }
+                  }}
                   aria-label="Select agent color"
                 />
                 <ColorPicker
@@ -157,13 +178,13 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                   value={agent.name}
                   onChange={(e) => onAgentUpdate(agent.id, { name: e.target.value })}
                   placeholder="Agent name"
-                  className={`bg-gray-600 border-gray-500 w-full ${nameError && isNameUsed(agent.name, agent.id) ? 'border-red-500' : ''}`}
+                  className={`w-full ${nameError && isNameUsed(agent.name, agent.id) ? 'border-red-500' : ''}`}
                 />
                 {nameError && isNameUsed(agent.name, agent.id) && (
                   <p className="text-red-400 text-sm mt-1">{nameError}</p>
                 )}
               </div>
-              <div className="text-sm text-gray-400 flex-shrink-0">
+              <div className="text-sm flex-shrink-0" style={{ color: 'var(--color-text-tertiary)' }}>
                 {agent.model}
               </div>
             </div>

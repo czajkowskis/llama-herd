@@ -30,7 +30,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   return (
     <div className="p-8 space-y-6 animate-fade-in">
-      <div className="bg-gray-800 p-6 rounded-2xl shadow-xl">
+      <div className="p-6 rounded-2xl shadow-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
             <Icon className="text-purple-400 text-xl">
@@ -38,7 +38,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
               </svg>
             </Icon>
-            <h2 className="text-xl font-semibold text-white">{conversation.title}</h2>
+            <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>{conversation.title}</h2>
           </div>
           <div className="flex space-x-3">
             <Button 
@@ -64,7 +64,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         </div>
 
         {/* Chat Messages */}
-        <div className="bg-gray-900 rounded-xl p-4 h-[600px] overflow-y-auto space-y-4">
+        <div className="rounded-xl p-4 h-[600px] overflow-y-auto space-y-4" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
           {conversation.messages.map((message) => {
             const agent = getAgentById(message.agentId);
             if (!agent) return null;
@@ -72,10 +72,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
             const textColor = getContrastColor(agent.color);
             
             return (
-              <div key={message.id} className="flex space-x-3">
+              <div key={message.id} className="message-container flex space-x-3">
                 <div className="flex-shrink-0">
                   <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold"
+                    className="agent-avatar w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold"
                     style={{ backgroundColor: agent.color, color: textColor }}
                   >
                     {agent.name.charAt(0).toUpperCase()}
@@ -83,21 +83,21 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center mb-1">
-                    <span className="font-semibold text-white">{agent.name}</span>
-                    <span className="text-xs text-gray-400 ml-2">{formatTimestamp(message.timestamp)}</span>
-                    <span className="text-xs text-gray-500 ml-2">• {agent.model}</span>
+                    <span className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>{agent.name}</span>
+                    <span className="text-xs ml-2" style={{ color: 'var(--color-text-tertiary)' }}>{formatTimestamp(message.timestamp)}</span>
+                    <span className="text-xs ml-2" style={{ color: 'var(--color-text-tertiary)' }}>• {agent.model}</span>
                   </div>
-                  <div className="bg-gray-800 rounded-lg p-3 text-gray-200">
+                  <div className="rounded-lg p-3" style={{ backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)' }}>
                     <ReactMarkdown
                       components={{
                         h1: (props: any) => (
-                          <h1 className="text-xl font-semibold text-white mt-2 mb-2" {...props} />
+                          <h1 className="text-xl font-semibold mt-2 mb-2" style={{ color: 'var(--color-text-primary)' }} {...props} />
                         ),
                         h2: (props: any) => (
-                          <h2 className="text-lg font-semibold text-white mt-2 mb-2" {...props} />
+                          <h2 className="text-lg font-semibold mt-2 mb-2" style={{ color: 'var(--color-text-primary)' }} {...props} />
                         ),
                         h3: (props: any) => (
-                          <h3 className="text-base font-semibold text-white mt-2 mb-2" {...props} />
+                          <h3 className="text-base font-semibold mt-2 mb-2" style={{ color: 'var(--color-text-primary)' }} {...props} />
                         ),
                         p: (props: any) => (
                           <p className="mb-2" {...props} />
@@ -120,13 +120,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         code: ({ node, inline, className, children, ...props }: any) => {
                           if (inline) {
                             return (
-                              <code className="bg-gray-900 rounded px-1 py-0.5 text-sm" {...props}>
+                              <code className="rounded px-1 py-0.5 text-sm" style={{ backgroundColor: 'var(--color-bg-primary)' }} {...props}>
                                 {children}
                               </code>
                             );
                           }
                           return (
-                            <pre className="bg-gray-900 rounded-md p-3 overflow-x-auto text-sm">
+                            <pre className="rounded-md p-3 overflow-x-auto text-sm" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
                               <code className={className} {...props}>{children}</code>
                             </pre>
                           );

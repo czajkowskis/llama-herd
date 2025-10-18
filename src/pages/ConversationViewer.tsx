@@ -551,7 +551,7 @@ export const ConversationViewer: React.FC = () => {
   return (
     <>
       <div className="p-8 space-y-6 animate-fade-in">
-        <div className="bg-gray-800 p-6 rounded-2xl shadow-xl">
+        <div className="p-6 rounded-2xl shadow-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
           <div className="flex items-center space-x-4 mb-6">
             <div className="flex items-center space-x-3">
               <Icon className="text-purple-400 text-xl">
@@ -559,7 +559,7 @@ export const ConversationViewer: React.FC = () => {
                   <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
                 </svg>
               </Icon>
-              <h2 className="text-xl font-semibold text-white">Conversation Viewer</h2>
+              <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>Conversation Viewer</h2>
             </div>
             {conversations.length > 0 && showUploadInterface && (
               <Button 

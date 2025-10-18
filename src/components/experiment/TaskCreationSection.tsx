@@ -26,7 +26,7 @@ export const TaskCreationSection: React.FC<TaskCreationSectionProps> = ({
   onTaskImport
 }) => {
   return (
-    <div className="bg-gray-800 p-6 rounded-2xl shadow-xl">
+    <div className="p-6 rounded-2xl shadow-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
       <div className="flex items-center space-x-3 mb-6">
         <Icon className="text-purple-400 text-xl">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-file-text">
@@ -37,7 +37,7 @@ export const TaskCreationSection: React.FC<TaskCreationSectionProps> = ({
             <path d="M16 17H8"/>
           </svg>
         </Icon>
-        <h2 className="text-xl font-semibold text-white">Create or import the task</h2>
+        <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>Create or import the task</h2>
       </div>
 
       {currentTask ? (
@@ -53,24 +53,48 @@ export const TaskCreationSection: React.FC<TaskCreationSectionProps> = ({
           <div className="flex space-x-4 mb-6">
             <button
               onClick={() => onTaskCreationStepChange('create')}
-              className={`px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
-                taskCreationStep === 'create' ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
+              className="px-6 py-3 rounded-xl font-semibold transition-all duration-200"
+              style={{
+                backgroundColor: taskCreationStep === 'create' ? '#9333ea' : 'var(--color-bg-tertiary)',
+                color: taskCreationStep === 'create' ? 'white' : 'var(--color-text-secondary)'
+              }}
+              onMouseEnter={(e) => {
+                if (taskCreationStep !== 'create') {
+                  e.currentTarget.style.backgroundColor = 'var(--color-border)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (taskCreationStep !== 'create') {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                }
+              }}
             >
               Create
             </button>
             <button
               onClick={() => onTaskCreationStepChange('import')}
-              className={`px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
-                taskCreationStep === 'import' ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
+              className="px-6 py-3 rounded-xl font-semibold transition-all duration-200"
+              style={{
+                backgroundColor: taskCreationStep === 'import' ? '#9333ea' : 'var(--color-bg-tertiary)',
+                color: taskCreationStep === 'import' ? 'white' : 'var(--color-text-secondary)'
+              }}
+              onMouseEnter={(e) => {
+                if (taskCreationStep !== 'import') {
+                  e.currentTarget.style.backgroundColor = 'var(--color-border)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (taskCreationStep !== 'import') {
+                  e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                }
+              }}
             >
               Import
             </button>
           </div>
 
           {taskCreationStep === 'initial' && (
-            <div className="py-8 text-center text-gray-400">
+            <div className="py-8 text-center" style={{ color: 'var(--color-text-tertiary)' }}>
               <p>Define the task that your agents will work on. You can either create a new task by writing a prompt, 
               or import an existing task from a JSON file. The task should clearly describe what you want your 
               multi-agent team to accomplish.</p>

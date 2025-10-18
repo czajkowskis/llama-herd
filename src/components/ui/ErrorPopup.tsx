@@ -61,13 +61,13 @@ export const ErrorPopup: React.FC<ErrorPopupProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in">
-      <div className="bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full mx-4 animate-fade-in-up">
+      <div className="rounded-2xl shadow-2xl max-w-md w-full mx-4 animate-fade-in-up" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
         <div className="p-6">
           <div className="flex items-center space-x-3 mb-4">
             <Icon className={`${getIconColor()} text-xl`}>
               {getIcon()}
             </Icon>
-            <h3 className="text-lg font-semibold text-white">{title}</h3>
+            <h3 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>{title}</h3>
           </div>
           
           <p className="text-gray-300 mb-6 leading-relaxed">{message}</p>

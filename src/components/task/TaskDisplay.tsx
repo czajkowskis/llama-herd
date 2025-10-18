@@ -51,7 +51,7 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({ task, onEdit, onDelete
   };
 
   return (
-    <div className="bg-gray-700 p-6 rounded-xl shadow-md border border-gray-600">
+    <div className="p-6 rounded-xl shadow-md border" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-3">
           <Icon className="text-purple-400 text-xl">
@@ -63,12 +63,15 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({ task, onEdit, onDelete
               <path d="M16 17H8"/>
             </svg>
           </Icon>
-          <h3 className="text-lg font-semibold text-white">Current Task</h3>
+          <h3 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>Current Task</h3>
         </div>
         <div className="flex space-x-2">
           <button
             onClick={() => setIsEditing(true)}
-            className="text-gray-400 hover:text-blue-400 p-2 rounded-full transition-colors duration-200"
+            style={{ color: 'var(--color-text-tertiary)' }}
+            onMouseEnter={(e) => e.currentTarget.style.color = '#60a5fa'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-tertiary)'}
+            className="p-2 rounded-full transition-colors duration-200"
             title="Edit task"
           >
             <Icon>
@@ -107,7 +110,7 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({ task, onEdit, onDelete
           
           {!task.datasetItems || task.datasetItems.length === 0 ? (
             <div className="space-y-2">
-              <label htmlFor="edit-iterations" className="block text-sm font-medium text-gray-300">
+              <label htmlFor="edit-iterations" className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
                 Number of iterations
               </label>
               <input
@@ -117,15 +120,21 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({ task, onEdit, onDelete
                 max="100"
                 value={editIterations}
                 onChange={(e) => setEditIterations(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-32 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-32 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                style={{ 
+                  backgroundColor: 'var(--color-bg-tertiary)', 
+                  color: 'var(--color-text-primary)',
+                  borderColor: 'var(--color-border)',
+                  borderWidth: '1px'
+                }}
               />
             </div>
           ) : (
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-300">
+              <label className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
                 Number of iterations
               </label>
-              <div className="text-gray-400 text-sm">
+              <div className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
                 {task.iterations || 1} (automatically set from dataset - cannot be edited)
               </div>
             </div>
@@ -142,14 +151,14 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({ task, onEdit, onDelete
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="bg-gray-800 p-4 rounded-lg border border-gray-600">
-            <p className="text-gray-200 leading-relaxed whitespace-pre-wrap">
+          <div className="p-4 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)' }}>
+            <p className="leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--color-text-secondary)' }}>
               {task.prompt}
             </p>
           </div>
           
                   {(!task.datasetItems || task.datasetItems.length === 0) && (
-          <div className="flex items-center space-x-2 text-sm text-gray-400">
+          <div className="flex items-center space-x-2 text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
             <Icon className="text-purple-400">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-repeat">
                 <polyline points="17 1 21 5 17 9"/>

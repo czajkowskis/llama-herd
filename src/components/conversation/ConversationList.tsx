@@ -35,8 +35,8 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 }) => {
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-medium text-gray-200">Your Conversations</h3>
+      <div className="conversation-list-header flex items-center justify-between mb-6">
+        <h3 className="text-lg font-medium" style={{ color: 'var(--color-text-secondary)' }}>Your Conversations</h3>
         <Button 
           onClick={onShowUploadInterface}
           className="bg-purple-600 hover:bg-purple-700"

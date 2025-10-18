@@ -17,7 +17,7 @@ export const AgentList: React.FC<AgentListProps> = ({
 }) => {
   if (agents.length === 0) {
     return (
-      <div className="py-8 text-center text-gray-400">
+      <div className="py-8 text-center" style={{ color: 'var(--color-text-tertiary)' }}>
         <p>No agents created yet. Click the '+' button to add your first agent.</p>
         <button
           onClick={onAddAgent}
@@ -40,16 +40,20 @@ export const AgentList: React.FC<AgentListProps> = ({
       {agents.map((agent) => (
         <div
           key={agent.id}
-          className="flex items-center bg-gray-700 p-4 rounded-xl shadow-md transition-transform duration-200 hover:scale-[1.01]"
+          className="flex items-center p-4 rounded-xl shadow-md transition-transform duration-200 hover:scale-[1.01]"
+          style={{ backgroundColor: 'var(--color-bg-secondary)' }}
         >
           <div
             className="w-12 h-12 rounded-lg mr-4 flex-shrink-0"
             style={{ backgroundColor: agent.color }}
           ></div>
-          <span className="flex-grow text-white font-medium">{agent.name}</span>
+          <span className="flex-grow font-medium" style={{ color: 'var(--color-text-primary)' }}>{agent.name}</span>
           <button
             onClick={() => onEditAgent(agent)}
-            className="text-gray-400 hover:text-purple-400 p-2 rounded-full transition-colors duration-200"
+            style={{ color: 'var(--color-text-tertiary)' }}
+            onMouseEnter={(e) => e.currentTarget.style.color = '#a855f7'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-tertiary)'}
+            className="p-2 rounded-full transition-colors duration-200"
             aria-label={`Edit ${agent.name}`}
           >
             <Icon>
@@ -61,7 +65,10 @@ export const AgentList: React.FC<AgentListProps> = ({
           </button>
           <button
             onClick={() => onDeleteAgent(agent)}
-            className="text-gray-400 hover:text-red-400 p-2 rounded-full transition-colors duration-200 ml-2"
+            style={{ color: 'var(--color-text-tertiary)' }}
+            onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-tertiary)'}
+            className="p-2 rounded-full transition-colors duration-200 ml-2"
             aria-label={`Delete ${agent.name}`}
           >
             <Icon>
