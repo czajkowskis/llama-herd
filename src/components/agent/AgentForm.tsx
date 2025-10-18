@@ -69,10 +69,12 @@ export const AgentForm: React.FC<AgentFormProps> = ({
       setAgentModel(editingAgent.model);
       setAgentTemperature(editingAgent.temperature ?? 0.7);
     } else {
+      // If user has a saved default model, use it when creating a new agent
+      const savedDefault = localStorage.getItem('llama-herd-default-ollama-model') || '';
       setAgentName('');
       setAgentPrompt('');
       setAgentColor(getFirstAvailableColor(agents));
-      setAgentModel('');
+      setAgentModel(savedDefault);
       setAgentTemperature(0.7);
     }
     setColorError('');

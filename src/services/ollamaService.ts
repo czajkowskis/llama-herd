@@ -16,9 +16,11 @@ export interface ListModelsResponse {
  * Fetches the list of available models from the Ollama server.
  * @returns A promise that resolves with an array of model names as strings, or rejects with an error.
  */
-export const listModels = async (): Promise<string[]> => {
+// Accept an optional baseUrl so callers (Settings) can test arbitrary endpoints.
+export const listModels = async (baseUrl?: string): Promise<string[]> => {
+  const urlBase = baseUrl || OLLAMA_BASE_URL;
   try {
-    const response = await fetch(`${OLLAMA_BASE_URL}/api/tags`);
+    const response = await fetch(`${urlBase}/api/tags`);
     if (!response.ok) {
       throw new Error(`API call failed with status: ${response.status}`);
     }

@@ -28,6 +28,22 @@ describe('ollamaService', () => {
     jest.restoreAllMocks();
   });
 
+  describe('listModels', () => {
+    it('should call tags endpoint on provided baseUrl and return model names', async () => {
+      const mockResponse = { models: [{ name: 'model-a', size: 1, digest: '', modified_at: '' }] };
+      (global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => mockResponse });
+
+      const models = await (await import('./ollamaService')).listModels('http://example.com');
+      expect(models).toEqual(['model-a']);
+      expect((global.fetch as jest.Mock).mock.calls[0][0]).toBe('http://example.com/api/tags');
+    });
+
+    it('should bubble up non-ok status as error', async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 502 });
+      await expect((await import('./ollamaService')).listModels('http://bad.example')).rejects.toThrow('API call failed with status: 502');
+    });
+  });
+
   describe('generateCompletion streaming', () => {
     it('should handle a stream with multiple JSON objects in one chunk', async () => {
       const mockResponse: GenerateResponse[] = [
