@@ -196,7 +196,8 @@ class FileStorage(BaseStorage):
         # Ensure the conversations directory exists
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Add metadata
+        # Add metadata with deterministic ID
+        conversation['id'] = f"{experiment_id}_{iteration}"
         conversation['experiment_id'] = experiment_id
         conversation['iteration'] = iteration
         conversation['title'] = title
@@ -293,20 +294,29 @@ class FileStorage(BaseStorage):
         if imported_conv_path.exists():
             return self._read_json_file(imported_conv_path)
 
-        # Check experiment conversations
+        # Try to parse conversation_id as experiment conversation: {experiment_id}_{iteration}
+        # This allows direct file lookup instead of scanning all directories
+        if '_' in conversation_id:
+            parts = conversation_id.rsplit('_', 1)  # Split from the right in case experiment_id contains underscores
+            if len(parts) == 2:
+                experiment_id, iteration_str = parts
+                try:
+                    iteration = int(iteration_str)
+                    file_path = self._get_conversation_path(experiment_id, iteration)
+                    if file_path.exists():
+                        return self._read_json_file(file_path)
+                except (ValueError, TypeError):
+                    pass  # Not a valid iteration number, continue with fallback
+        
+        # Fallback: Search through all experiment directories (for legacy data)
         for experiment_dir in self.experiments_dir.iterdir():
             if experiment_dir.is_dir():
                 conversations_dir = experiment_dir / "conversations"
                 if conversations_dir.exists():
                     for file_path in conversations_dir.glob("*.json"):
-                        # The conversation_id for experiment conversations is <experiment_id>_<iteration>
-                        try:
-                            experiment_id = experiment_dir.name
-                            iteration = file_path.stem
-                            if f"{experiment_id}_{iteration}" == conversation_id:
-                                return self._read_json_file(file_path)
-                        except:
-                            continue
+                        conversation = self._read_json_file(file_path)
+                        if conversation and conversation.get('id') == conversation_id:
+                            return conversation
         return None
 
     def delete_conversation(self, conversation_id: str) -> bool:

@@ -25,4 +25,5 @@ class Conversation(BaseModel):
     messages: List[Message]
     createdAt: str
     experiment_id: Optional[str] = None
+    iteration: Optional[int] = None
 
