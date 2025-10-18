@@ -7,6 +7,7 @@
 
 export type Theme = 'light' | 'dark' | 'system';
 export type MessageDensity = 'sparse' | 'normal' | 'dense';
+export type TimeFormatPreference = '12h' | '24h';
 
 export interface UIPreferences {
   theme: Theme;
@@ -20,11 +21,13 @@ const STORAGE_KEY_THEME = `${STORAGE_KEY_PREFIX}theme`;
 const STORAGE_KEY_COMPACT = `${STORAGE_KEY_PREFIX}compact-mode`;
 const STORAGE_KEY_DENSITY = `${STORAGE_KEY_PREFIX}message-density`;
 const STORAGE_KEY_STARRED = `${STORAGE_KEY_PREFIX}starred-messages`;
+const STORAGE_KEY_TIME_FORMAT = `${STORAGE_KEY_PREFIX}time-format`;
 
 // Default values
 const DEFAULT_THEME: Theme = 'dark';
 const DEFAULT_COMPACT_MODE = false;
 const DEFAULT_MESSAGE_DENSITY: MessageDensity = 'normal';
+const DEFAULT_TIME_FORMAT: TimeFormatPreference = '24h';
 
 /**
  * Get the current theme preference
@@ -78,6 +81,25 @@ export function setMessageDensity(density: MessageDensity): void {
   localStorage.setItem(STORAGE_KEY_DENSITY, density);
 }
 
+// ============================================================================
+// Time format preference (12h/24h/locale)
+// ============================================================================
+
+/** Get the preferred time format. Legacy 'system' maps to 24h default. */
+export function getTimeFormatPreference(): TimeFormatPreference {
+  const stored = localStorage.getItem(STORAGE_KEY_TIME_FORMAT);
+  if (stored === '12h' || stored === '24h') {
+    return stored;
+  }
+  if (stored === 'system') return '24h';
+  return DEFAULT_TIME_FORMAT;
+}
+
+/** Set the preferred time format. */
+export function setTimeFormatPreference(pref: TimeFormatPreference): void {
+  localStorage.setItem(STORAGE_KEY_TIME_FORMAT, pref);
+}
+
 /**
  * Get all UI preferences at once
  */
@@ -111,6 +133,7 @@ export function resetPreferences(): void {
   localStorage.removeItem(STORAGE_KEY_THEME);
   localStorage.removeItem(STORAGE_KEY_COMPACT);
   localStorage.removeItem(STORAGE_KEY_DENSITY);
+  // Intentionally not clearing STARRED messages
 }
 
 /**

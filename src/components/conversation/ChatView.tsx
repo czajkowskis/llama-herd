@@ -8,6 +8,7 @@ import { MessageActions, CopyButton } from './MessageActions';
 import { RawJSONModal } from './RawJSONModal';
 import { CodeBlock } from './CodeBlock';
 import { getStarredMessages, toggleStarredMessage } from '../../services/uiPreferencesService';
+import { formatTimeShort, formatDateLabel, isSameLocalDate } from '../../services/dateTimeService';
 
 interface ChatViewProps {
   conversation: Conversation;
@@ -117,8 +118,17 @@ export const ChatView: React.FC<ChatViewProps> = ({
             const agentModel = (agent.model || '').toLowerCase();
             const isRightAligned = agentName === 'user' || agentName === 'system' || agentModel === 'user' || agentModel === 'system';
             
+            const showDateSeparator = index > 0 && !isSameLocalDate(conversation.messages[index - 1].timestamp, message.timestamp);
             return (
-              <div key={message.id} className={`message-container flex space-x-3 group ${isRightAligned ? 'flex-row-reverse space-x-reverse' : ''}`}>
+              <React.Fragment key={`wrap-${message.id}`}>
+                {showDateSeparator && (
+                  <div className="w-full">
+                    <div className="date-separator" role="separator" aria-label={formatDateLabel(message.timestamp)}>
+                      <span className="date-separator-label">{formatDateLabel(message.timestamp)}</span>
+                    </div>
+                  </div>
+                )}
+                <div className={`message-container flex space-x-3 group ${isRightAligned ? 'flex-row-reverse space-x-reverse' : ''}`}>
                 <div className="flex-shrink-0">
                   <div
                     className="agent-avatar w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold"
@@ -131,7 +141,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   <div className={`flex items-center justify-between mb-1 message-header ${isRightAligned ? 'flex-row-reverse' : ''}`}>
                     <div className="flex items-center flex-wrap gap-2">
                       <span className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>{agent.name}</span>
-                      <span className="message-timestamp">{formatTimestamp(message.timestamp)}</span>
+                      <span className="message-timestamp">{formatTimeShort(message.timestamp)}</span>
                       <span className="message-model-badge">{agent.model}</span>
                       {isStarred && (
                         <span className="ml-2 text-yellow-400" title="Starred message">
@@ -225,6 +235,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   </div>
                 </div>
               </div>
+              </React.Fragment>
             );
           })}
           <div ref={messagesEndRef} />

@@ -3,7 +3,7 @@ import { ollamaService } from '../services/ollamaService';
 import { OLLAMA_BASE_URL as DEFAULT_OLLAMA_BASE } from '../config';
 import { Button } from '../components/ui/Button';
 import { useUIPreferences } from '../hooks/useUIPreferences';
-import { Theme, MessageDensity } from '../services/uiPreferencesService';
+import { Theme, MessageDensity, getTimeFormatPreference, setTimeFormatPreference, TimeFormatPreference } from '../services/uiPreferencesService';
 
 // Keys for localStorage
 const STORAGE_KEY_BASE = 'llama-herd-ollama-base-url';
@@ -35,6 +35,9 @@ export const Settings: React.FC = () => {
   const [selectedModel, setSelectedModel] = useState<string>(() => {
     return localStorage.getItem(STORAGE_KEY_MODEL) || '';
   });
+
+  // Time format preference state
+  const [timeFormat, setTimeFormat] = useState<TimeFormatPreference>(getTimeFormatPreference);
 
   // Validate endpoint URL roughly. It should be an absolute URL.
   const validateUrl = (value: string): string | null => {
@@ -247,6 +250,41 @@ export const Settings: React.FC = () => {
           <p className="text-xs mt-1" style={{ color: 'var(--color-text-tertiary)' }}>
             Current: <span className="font-medium text-purple-600" data-testid="current-density">{messageDensity}</span>
           </p>
+        </div>
+
+        {/* Time Format Selection */}
+        <div className="mb-6">
+          <label className="block text-sm mb-2" style={{ color: 'var(--color-text-secondary)' }}>Time Format</label>
+          <div className="flex items-center gap-2 flex-wrap">
+            {(['12h','24h'] as TimeFormatPreference[]).map((opt) => {
+              const selected = timeFormat === opt;
+              const label = opt === '12h' ? '12-hour' : '24-hour';
+              return (
+                <Button
+                  key={opt}
+                  onClick={() => { setTimeFormatPreference(opt); setTimeFormat(opt); }}
+                  className={selected ? 'bg-purple-600 hover:bg-purple-700 text-white' : ''}
+                  variant={selected ? 'primary' : 'secondary'}
+                  data-testid={`time-format-${opt}`}
+                >
+                  {label}
+                </Button>
+              );
+            })}
+          </div>
+          <p className="text-xs mt-1" style={{ color: 'var(--color-text-tertiary)' }}>
+            Current: <span className="font-medium text-purple-600" data-testid="current-time-format">{timeFormat}</span>
+          </p>
+          <div className="mt-3 rounded-lg p-3" style={{ backgroundColor: 'var(--color-bg-tertiary)' }}>
+            <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Preview: </span>
+            <span className="text-xs font-mono" data-testid="time-format-preview">
+              {new Date('2025-10-18T13:05:00Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: ((): boolean | undefined => {
+                if (timeFormat === '12h') return true;
+                if (timeFormat === '24h') return false;
+                return undefined;
+              })() })}
+            </span>
+          </div>
         </div>
 
         {/* Preview Area */}

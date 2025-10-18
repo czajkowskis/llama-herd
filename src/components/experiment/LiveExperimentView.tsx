@@ -15,6 +15,7 @@ import { CodeBlock } from '../conversation/CodeBlock';
 import { ConnectionStatus, ConnectionStatusType } from '../ui/ConnectionStatus';
 import { DebugPanel, DebugMessage } from '../ui/DebugPanel';
 import { ViewModeIndicator, HistoricalViewBanner } from './ViewModeIndicator';
+import { formatDateLabel, isSameLocalDate } from '../../services/dateTimeService';
 
 interface LiveExperimentViewProps {
   experimentId: string;
@@ -276,8 +277,15 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
   };
 
   const formatTimestamp = (timestamp: string): string => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    // Respect user preference or locale
+    try {
+      // lazy import to avoid circular issues in tests
+      const { formatTimeShort } = require('../../services/dateTimeService');
+      return formatTimeShort(timestamp);
+    } catch {
+      const date = new Date(timestamp);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
   };
 
   // Message action handlers
@@ -513,8 +521,17 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
             const agentModel = (agent.model || '').toLowerCase();
             const isRightAligned = agentName === 'user' || agentName === 'system' || agentModel === 'user' || agentModel === 'system';
             
+            const showDateSeparator = index > 0 && !isSameLocalDate(viewConversation.messages[index - 1].timestamp, message.timestamp);
             return (
-              <div key={message.id} className={`message-container flex space-x-3 group ${isNewlyArrived ? 'animate-message-arrive' : ''} ${isRightAligned ? 'flex-row-reverse space-x-reverse' : ''}`}>
+              <React.Fragment key={`wrap-${message.id}`}>
+                {showDateSeparator && (
+                  <div className="w-full">
+                    <div className="date-separator" role="separator" aria-label={formatDateLabel(message.timestamp)}>
+                      <span className="date-separator-label">{formatDateLabel(message.timestamp)}</span>
+                    </div>
+                  </div>
+                )}
+              <div className={`message-container flex space-x-3 group ${isNewlyArrived ? 'animate-message-arrive' : ''} ${isRightAligned ? 'flex-row-reverse space-x-reverse' : ''}`}>
                 <div className="flex-shrink-0">
                   <div
                     className="agent-avatar w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold"
@@ -621,6 +638,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
                   </div>
                 </div>
               </div>
+              </React.Fragment>
             );
           })}
           <div ref={messagesEndRef} />
