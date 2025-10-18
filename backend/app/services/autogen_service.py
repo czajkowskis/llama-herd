@@ -134,6 +134,7 @@ class AutogenService:
         message_handler: 'MessageHandler'
     ):
         """Run a single conversation with the given agents."""
+        final_sent = False
         try:
             # Create AutoGen agents
             autogen_agents = self.create_autogen_agents(agents, message_handler)
@@ -193,7 +194,27 @@ class AutogenService:
             
         except Exception as e:
             logger.error(f"Autogen conversation error: {str(e)}")
+            # Emit an error status for this conversation so listeners are aware
+            try:
+                from datetime import datetime
+                data = {
+                    "experiment_id": experiment_id,
+                    "status": "error",
+                    "final": True,
+                    "error": str(e),
+                    "completed_at": datetime.now().isoformat(),
+                    "close_connection": False
+                }
+                # Using close_connection False here because higher-level run_experiment will decide
+                state_manager.put_message_threadsafe(experiment_id, {"type": "status", "data": data})
+                final_sent = True
+            except Exception:
+                pass
             raise
+        finally:
+            # If we didn't send a final conversation-level message, do nothing; run_experiment will handle finalization
+            if final_sent:
+                logger.info(f"run_conversation emitted a final status for {experiment_id}")
     
     def _create_user_proxy(self, primary_agent: AgentModel, message_handler: 'MessageHandler') -> UserProxyAgent:
         """Create a user proxy agent with logging capabilities."""
@@ -245,6 +266,7 @@ class AutogenService:
         agents: List[AgentModel]
     ):
         """Run a complete experiment with multiple iterations."""
+        final_sent = False
         try:
             logger.info(f"Starting experiment {experiment_id} with {len(agents)} agents")
             
@@ -281,6 +303,7 @@ class AutogenService:
             logger.info(f"Persisted completion status for experiment {experiment_id}")
             
             self._notify_completion(experiment_id)
+            final_sent = True
             
         except Exception as e:
             logger.error(f"Error in experiment {experiment_id}: {str(e)}")
@@ -301,6 +324,22 @@ class AutogenService:
             logger.info(f"Persisted error status for experiment {experiment_id}")
             
             self._notify_error(experiment_id, str(e))
+            final_sent = True
+        finally:
+            # If for some reason we exited without sending a final notification, ensure we persist and notify
+            if not final_sent:
+                try:
+                    logger.warning(f"Final notification not sent for {experiment_id}; sending fallback error status")
+                    from datetime import datetime
+                    state_manager.update_experiment_status(experiment_id, 'error', error='terminated_without_final')
+                    storage.update_experiment(experiment_id, {
+                        'status': 'error',
+                        'error': 'terminated_without_final',
+                        'completed_at': datetime.now().isoformat()
+                    })
+                    self._notify_error(experiment_id, 'terminated_without_final')
+                except Exception as e2:
+                    logger.error(f"Failed to send fallback final notification for {experiment_id}: {str(e2)}")
     
     def _run_dataset_iterations(self, experiment_id: str, dataset_items: List, agents: List[AgentModel]):
         """Run experiment over dataset items."""
@@ -327,7 +366,32 @@ class AutogenService:
         
         # Create message handler and run conversation
         message_handler = MessageHandler(experiment_id)
-        self.run_conversation(experiment_id, prompt, agents, message_handler)
+        # Run conversation in a thread so we can enforce iteration-level timeout
+        conv_thread = threading.Thread(
+            target=self.run_conversation,
+            args=(experiment_id, prompt, agents, message_handler),
+            daemon=True
+        )
+        conv_thread.start()
+
+        # Wait for iteration to complete with configured timeout
+        try:
+            conv_thread.join(timeout=settings.iteration_timeout_seconds)
+            if conv_thread.is_alive():
+                # Iteration timed out
+                logger.error(f"Iteration {iteration} for {experiment_id} timed out after {settings.iteration_timeout_seconds}s")
+                # Mark error and emit final status for this experiment
+                state_manager.update_experiment_status(experiment_id, 'error', error='iteration_timeout')
+                from datetime import datetime
+                storage.update_experiment(experiment_id, {
+                    'status': 'error',
+                    'error': 'iteration_timeout',
+                    'completed_at': datetime.now().isoformat()
+                })
+                self._notify_error(experiment_id, 'iteration_timeout')
+        except Exception as e:
+            logger.error(f"Error while waiting for conversation thread: {str(e)}")
+            raise
     
     def _snapshot_conversation(self, experiment_id: str, title: str):
         """Create a snapshot of the current conversation."""
@@ -336,21 +400,43 @@ class AutogenService:
     def _notify_status(self, experiment_id: str, status: str, iteration: int = None):
         """Notify about status change."""
         try:
-            data = {"status": status}
+            data = {"experiment_id": experiment_id, "status": status}
             if iteration:
                 data["current_iteration"] = iteration
+            # Non-final status update (running, paused, etc.)
             state_manager.put_message_threadsafe(experiment_id, {"type": "status", "data": data})
         except Exception:
             pass
     
     def _notify_completion(self, experiment_id: str):
         """Notify about experiment completion."""
-        self._notify_status(experiment_id, 'completed')
+        try:
+            from datetime import datetime
+            data = {
+                "experiment_id": experiment_id,
+                "status": "completed",
+                "final": True,
+                "completed_at": datetime.now().isoformat(),
+                "close_connection": True
+            }
+            state_manager.put_message_threadsafe(experiment_id, {"type": "status", "data": data})
+        except Exception:
+            pass
     
     def _notify_error(self, experiment_id: str, error: str):
         """Notify about experiment error."""
         try:
-            state_manager.put_message_threadsafe(experiment_id, {"type": "error", "data": {"error": error}})
+            from datetime import datetime
+            data = {
+                "experiment_id": experiment_id,
+                "status": "error",
+                "final": True,
+                "error": str(error),
+                "completed_at": datetime.now().isoformat(),
+                "close_connection": True
+            }
+            # Send as a final status message so clients have a single contract to listen for
+            state_manager.put_message_threadsafe(experiment_id, {"type": "status", "data": data})
         except Exception:
             pass
     
@@ -365,11 +451,44 @@ class AutogenService:
             logger.info(f"Starting experiment {experiment_id} in background thread")
             thread = threading.Thread(
                 target=self.run_experiment,
-                args=(experiment_id, task, agents)
+                args=(experiment_id, task, agents),
+                daemon=True
             )
-            thread.daemon = True
             thread.start()
             logger.info(f"Background thread started for experiment {experiment_id}")
+
+            # Start a watchdog thread to enforce experiment-level timeout
+            def _watchdog():
+                try:
+                    timeout = settings.experiment_timeout_seconds
+                    logger.info(f"Watchdog for {experiment_id} will monitor for {timeout}s")
+                    thread.join(timeout=timeout)
+                    if thread.is_alive():
+                        logger.error(f"Experiment {experiment_id} exceeded timeout of {timeout}s; marking as error")
+                        state_manager.update_experiment_status(experiment_id, 'error', error='experiment_timeout')
+                        from datetime import datetime
+                        storage.update_experiment(experiment_id, {
+                            'status': 'error',
+                            'error': 'experiment_timeout',
+                            'completed_at': datetime.now().isoformat()
+                        })
+                        # Emit final terminal status
+                        try:
+                            data = {
+                                "status": "error",
+                                "final": True,
+                                "error": 'experiment_timeout',
+                                "completed_at": datetime.now().isoformat(),
+                                "close_connection": True
+                            }
+                            state_manager.put_message_threadsafe(experiment_id, {"type": "status", "data": data})
+                        except Exception:
+                            pass
+                except Exception as e:
+                    logger.error(f"Watchdog for {experiment_id} failed: {str(e)}")
+
+            watchdog_thread = threading.Thread(target=_watchdog, daemon=True)
+            watchdog_thread.start()
         except Exception as e:
             logger.error(f"Error starting background thread for experiment {experiment_id}: {str(e)}")
             raise

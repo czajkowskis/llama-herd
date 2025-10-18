@@ -1,4 +1,4 @@
-import { WebSocketMessage, ConnectionState } from '../types/api';
+import { WebSocketMessage, ConnectionState, isStatusData } from '../types/api';
 
 type Subscriber = (msg: WebSocketMessage) => void;
 type StateChangeListener = (state: ConnectionState, reconnectAttempts: number, nextReconnectDelay: number) => void;
@@ -20,6 +20,10 @@ export class ReconnectingWebSocket {
   private stateListeners: Set<StateChangeListener> = new Set();
   private reconnectAttempts = 0;
   private shouldStop = false;
+  // When the server sends a terminal final status with close_connection=true,
+  // mark the socket as terminally closed to prevent any further retries —
+  // this enforces the contract that completed experiments cannot be reconnected.
+  private terminalClosed = false;
   private heartbeatTimer: number | null = null;
   private idleTimer: number | null = null;
   private reconnectTimer: number | null = null;
@@ -39,6 +43,13 @@ export class ReconnectingWebSocket {
   }
 
   start() {
+    // Do not start if we've been informed server-side that the experiment is final
+    if (this.terminalClosed) {
+      console.warn('Socket marked terminally closed; will not start/reconnect')
+      // Notify listeners that the connection is completed
+      this.setState('completed');
+      return;
+    }
     this.shouldStop = false;
     this.open();
   }
@@ -92,6 +103,21 @@ export class ReconnectingWebSocket {
     if (!text) return;
     try {
       const msg = JSON.parse(text) as WebSocketMessage;
+      // If server signals a terminal final status, stop reconnecting
+      if (msg.type === 'status' && isStatusData(msg.data)) {
+        const statusData = msg.data as unknown as { final?: boolean; close_connection?: boolean };
+        if (statusData.final === true && statusData.close_connection === true) {
+          // Prevent further reconnects and close socket. Mark terminalClosed so
+          // manual retry attempts are also blocked.
+          this.shouldStop = true;
+          this.terminalClosed = true;
+          try {
+            if (this.ws) this.ws.close();
+          } catch (e) {
+            // ignore
+          }
+        }
+      }
       // deliver to subscribers
       this.subscribers.forEach(s => {
         try {
@@ -107,9 +133,14 @@ export class ReconnectingWebSocket {
 
   private onClose() {
     this.stopHeartbeat();
-    this.setState('disconnected');
-    if (!this.shouldStop) {
-      this.scheduleReconnect();
+    // If server indicated a terminal close, mark as completed; otherwise disconnected
+    if (this.terminalClosed) {
+      this.setState('completed');
+    } else {
+      this.setState('disconnected');
+      if (!this.shouldStop) {
+        this.scheduleReconnect();
+      }
     }
   }
 
@@ -200,6 +231,12 @@ export class ReconnectingWebSocket {
       }
       this.ws = null;
     }
+    // if we closed due to terminal, set completed state; otherwise disconnected
+    if (this.terminalClosed) {
+      this.setState('completed');
+    } else {
+      this.setState('disconnected');
+    }
   }
 
   getState(): ConnectionState {
@@ -229,6 +266,12 @@ export class ReconnectingWebSocket {
   }
 
   retry() {
+    if (this.terminalClosed) {
+      console.warn('Socket marked terminally closed; manual retry disabled')
+      this.setState('completed');
+      return;
+    }
+
     if (this.state === 'disconnected') {
       this.reconnectAttempts = 0;
       this.shouldStop = false;

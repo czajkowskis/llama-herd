@@ -4,7 +4,7 @@ export interface WebSocketMessage {
   data: unknown;
 }
 
-export type ConnectionState = 'connected' | 'disconnected' | 'reconnecting';
+export type ConnectionState = 'connected' | 'disconnected' | 'reconnecting' | 'completed';
 
 // Type guards for WebSocket message data
 export function isMessageData(data: unknown): data is { id: string; agentId: string; content: string; timestamp: string; model?: string } {

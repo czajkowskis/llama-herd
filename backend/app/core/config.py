@@ -109,6 +109,17 @@ class Settings(BaseSettings):
         description="Default temperature for LLM inference",
         env="DEFAULT_TEMPERATURE"
     )
+    # Timeouts (in seconds)
+    experiment_timeout_seconds: int = Field(
+        default=60 * 60,  # 1 hour default
+        description="Maximum time in seconds an experiment may run before being marked errored",
+        env="EXPERIMENT_TIMEOUT_SECONDS"
+    )
+    iteration_timeout_seconds: int = Field(
+        default=5 * 60,  # 5 minutes default
+        description="Maximum time in seconds an iteration/conversation may run before being marked errored",
+        env="ITERATION_TIMEOUT_SECONDS"
+    )
     
     model_config = {
         "env_file": ".env",
