@@ -5,7 +5,7 @@ from datetime import datetime
 from ...storage import get_storage
 from ...core.exceptions import NotFoundError, ConversationError, StorageError
 from ...utils.logging import get_logger, log_with_context
-from ...utils.case_converter import normalize_dict_to_snake
+from ...utils.case_converter import normalize_dict_to_snake, normalize_dict_to_camel
 
 storage = get_storage()
 logger = get_logger(__name__)
@@ -96,6 +96,8 @@ async def list_conversations(source: Optional[str] = None):
     """Get all conversations, optionally filtered by source."""
     try:
         conversations = storage.get_conversations(source)
+        # Convert to camelCase for frontend compatibility
+        conversations = [normalize_dict_to_camel(conv, deep=True) for conv in conversations]
         log_with_context(
             logger,
             'info',
@@ -122,6 +124,8 @@ async def get_experiment_conversations(experiment_id: str):
     """Get all conversations for a specific experiment."""
     try:
         conversations = storage.get_experiment_conversations(experiment_id)
+        # Convert to camelCase for frontend compatibility
+        conversations = [normalize_dict_to_camel(conv, deep=True) for conv in conversations]
         log_with_context(
             logger,
             'info',
@@ -150,6 +154,8 @@ async def get_conversation(conversation_id: str):
     try:
         conversation = storage.get_conversation(conversation_id)
         if conversation:
+            # Convert to camelCase for frontend compatibility
+            conversation = normalize_dict_to_camel(conversation, deep=True)
             log_with_context(
                 logger,
                 'info',

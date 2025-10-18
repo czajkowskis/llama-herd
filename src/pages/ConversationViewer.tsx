@@ -294,8 +294,8 @@ export const ConversationViewer: React.FC = () => {
     // Add to conversations list
     setConversations(prev => [...prev, updatedConversation]);
     
-    // Save to backend storage only
-    const storedConversation = {
+    // Save to backend storage
+    const backendConversation = {
       id: updatedConversation.id,
       title: updatedConversation.title,
       agents: updatedConversation.agents,
@@ -303,12 +303,6 @@ export const ConversationViewer: React.FC = () => {
       createdAt: updatedConversation.createdAt,
       importedAt: new Date().toISOString(),
       source: 'import' as const,
-    };
-    
-    // Save to backend storage - convert to snake_case for backend
-    const backendConversation = {
-      ...storedConversation,
-      imported_at: storedConversation.importedAt, // Backend expects snake_case
     };
     console.log('ConversationViewer: Saving conversation to backend storage:', backendConversation);
     console.log('ConversationViewer: Using backendStorageService.saveConversation...');
@@ -416,7 +410,7 @@ export const ConversationViewer: React.FC = () => {
       // Save updated conversation to both localStorage and backend storage
       const updatedConversation = updatedConversations[editingTitleIndex];
       if (updatedConversation) {
-        const storedConversation = {
+        const backendConversation = {
           id: updatedConversation.id,
           title: updatedConversation.title,
           agents: updatedConversation.agents,
@@ -424,11 +418,6 @@ export const ConversationViewer: React.FC = () => {
           createdAt: updatedConversation.createdAt,
           importedAt: new Date().toISOString(),
           source: 'import' as const,
-        };
-        // Save to backend storage - convert to snake_case for backend
-        const backendConversation = {
-          ...storedConversation,
-          imported_at: storedConversation.importedAt, // Backend expects snake_case
         };
         try {
           const backendSuccess = await backendStorageService.saveConversation(backendConversation);

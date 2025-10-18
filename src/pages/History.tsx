@@ -68,15 +68,11 @@ export const History: React.FC = () => {
         backendConversations = await backendStorageService.getConversations('import');
         console.log('Backend imported conversations:', backendConversations);
         
-        // Convert backend conversations from snake_case to camelCase for frontend compatibility
-        backendConversations = backendConversations.map((conv: any) => {
-          const converted = {
-            ...conv,
-            importedAt: conv.imported_at || conv.importedAt || conv.createdAt,
-          };
-          console.log('Converting conversation:', { original: conv, converted });
-          return converted;
-        });
+        // Backend now returns camelCase, but ensure importedAt is set correctly
+        backendConversations = backendConversations.map((conv: any) => ({
+          ...conv,
+          importedAt: conv.importedAt || conv.createdAt,
+        }));
         console.log('Backend conversations after conversion:', backendConversations);
         
         // Filter to only show imported conversations
