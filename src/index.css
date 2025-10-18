@@ -248,20 +248,25 @@ code {
 }
 
 /* Alternating message backgrounds */
-.message-container:nth-child(odd) .message-content {
+/* Support both explicit .message-container wrappers and the current LiveExperimentView structure */
+.message-container:nth-child(odd) .message-content,
+.message-list > div:nth-child(odd) .message-content {
   background-color: var(--color-bg-secondary);
 }
 
-.message-container:nth-child(even) .message-content {
+.message-container:nth-child(even) .message-content,
+.message-list > div:nth-child(even) .message-content {
   background-color: var(--color-bg-tertiary);
 }
 
 /* Light theme adjustments for alternating backgrounds */
-:root.light .message-container:nth-child(odd) .message-content {
+:root.light .message-container:nth-child(odd) .message-content,
+:root.light .message-list > div:nth-child(odd) .message-content {
   background-color: #f5f5f4;
 }
 
-:root.light .message-container:nth-child(even) .message-content {
+:root.light .message-container:nth-child(even) .message-content,
+:root.light .message-list > div:nth-child(even) .message-content {
   background-color: #e7e5e4;
 }
 

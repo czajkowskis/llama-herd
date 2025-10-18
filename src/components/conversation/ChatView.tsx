@@ -104,7 +104,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         </div>
 
         {/* Chat Messages */}
-        <div className="rounded-xl p-4 h-[600px] overflow-y-auto space-y-4" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
+        <div className="message-list rounded-xl p-4 h-[600px] overflow-y-auto space-y-4" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
           {conversation.messages.map((message, index) => {
             const agent = getAgentById(message.agentId);
             if (!agent) return null;
@@ -112,10 +112,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
             const textColor = getContrastColor(agent.color);
             const isStarred = starredMessages.has(message.id);
             const isInExportSelection = exportSelection.has(message.id);
-            const isOddMessage = index % 2 === 1;
+            // Role-based alignment: user/system on the right, agents on the left
+            const agentName = (agent.name || '').toLowerCase();
+            const agentModel = (agent.model || '').toLowerCase();
+            const isRightAligned = agentName === 'user' || agentName === 'system' || agentModel === 'user' || agentModel === 'system';
             
             return (
-              <div key={message.id} className={`message-container flex space-x-3 group ${isOddMessage ? 'flex-row-reverse space-x-reverse' : ''}`}>
+              <div key={message.id} className={`message-container flex space-x-3 group ${isRightAligned ? 'flex-row-reverse space-x-reverse' : ''}`}>
                 <div className="flex-shrink-0">
                   <div
                     className="agent-avatar w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold"
@@ -125,7 +128,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   </div>
                 </div>
                 <div className="flex-1 message-content-wrapper">
-                  <div className={`flex items-center justify-between mb-1 message-header ${isOddMessage ? 'flex-row-reverse' : ''}`}>
+                  <div className={`flex items-center justify-between mb-1 message-header ${isRightAligned ? 'flex-row-reverse' : ''}`}>
                     <div className="flex items-center flex-wrap gap-2">
                       <span className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>{agent.name}</span>
                       <span className="message-timestamp">{formatTimestamp(message.timestamp)}</span>

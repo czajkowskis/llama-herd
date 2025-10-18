@@ -170,6 +170,22 @@ export const RunSelector: React.FC<RunSelectorProps> = ({
   return (
     <div className="mb-4 flex items-center space-x-2">
       <span className="text-gray-300 text-sm">Browse runs:</span>
+      {/* Live button */}
+      <button
+        className={`px-3 py-1 rounded text-sm ${
+          isViewingLive
+            ? 'bg-green-800 text-green-200 cursor-default'
+            : liveConversation
+              ? 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+              : 'bg-gray-800 text-gray-500 cursor-default'
+        }`}
+        disabled={!liveConversation}
+        onClick={() => {
+          if (liveConversation) onSelectRun(liveConversation, true);
+        }}
+      >
+        Live
+      </button>
       
       {/* In progress indicator */}
       {completedConversations.length === 0 && status === 'running' && (

@@ -498,8 +498,8 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
           />
         )}
 
-        {/* Chat Messages */}
-        <div className={`bg-gray-900 rounded-xl p-4 h-[600px] overflow-y-auto space-y-4 ${!isViewingLive ? 'historical-view-dimmed' : ''}`}>
+  {/* Chat Messages */}
+  <div className={`message-list bg-gray-900 rounded-xl p-4 h-[600px] overflow-y-auto space-y-4 ${!isViewingLive ? 'historical-view-dimmed' : ''}`}>
           {viewConversation.messages.map((message, index) => {
             const agent = getAgentById(message.agentId);
             if (!agent) return null;
@@ -508,20 +508,23 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
             const isStarred = starredMessages.has(message.id);
             const isInExportSelection = exportSelection.has(message.id);
             const isNewlyArrived = isViewingLive && newlyArrivedMessages.has(message.id);
-            const isOddMessage = index % 2 === 1;
+            // Role-based alignment: user/system on the right, agents on the left
+            const agentName = (agent.name || '').toLowerCase();
+            const agentModel = (agent.model || '').toLowerCase();
+            const isRightAligned = agentName === 'user' || agentName === 'system' || agentModel === 'user' || agentModel === 'system';
             
             return (
-              <div key={message.id} className={`flex space-x-3 group ${isNewlyArrived ? 'animate-message-arrive' : ''} ${isOddMessage ? 'flex-row-reverse space-x-reverse' : ''}`}>
+              <div key={message.id} className={`message-container flex space-x-3 group ${isNewlyArrived ? 'animate-message-arrive' : ''} ${isRightAligned ? 'flex-row-reverse space-x-reverse' : ''}`}>
                 <div className="flex-shrink-0">
                   <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold"
+                    className="agent-avatar w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold"
                     style={{ backgroundColor: agent.color, color: textColor }}
                   >
                     {agent.name.charAt(0).toUpperCase()}
                   </div>
                 </div>
                 <div className="flex-1 message-content-wrapper">
-                  <div className={`flex items-center justify-between mb-1 message-header ${isOddMessage ? 'flex-row-reverse' : ''}`}>
+                  <div className={`flex items-center justify-between mb-1 message-header ${isRightAligned ? 'flex-row-reverse' : ''}`}>
                     <div className="flex items-center flex-wrap gap-2">
                       <span className="font-semibold text-white">{agent.name}</span>
                       <span className="message-timestamp">{formatTimestamp(message.timestamp)}</span>
