@@ -443,6 +443,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
             <ViewModeIndicator
               isViewingLive={isViewingLive}
               viewTitle={viewConversation.title}
+              onResumeLive={!isViewingLive ? handleResumeLive : undefined}
             />
             <div className={`flex items-center space-x-2 px-3 py-1 rounded-full bg-gray-700 ${getStatusColor(status)}`}>
               {getStatusIcon(status)}

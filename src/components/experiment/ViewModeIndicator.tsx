@@ -5,11 +5,13 @@ import { Icon } from '../ui/Icon';
 interface ViewModeIndicatorProps {
   isViewingLive: boolean;
   viewTitle?: string;
+  onResumeLive?: () => void;
 }
 
 export const ViewModeIndicator: React.FC<ViewModeIndicatorProps> = ({
   isViewingLive,
   viewTitle,
+  onResumeLive,
 }) => {
   if (isViewingLive) {
     return (
@@ -21,14 +23,24 @@ export const ViewModeIndicator: React.FC<ViewModeIndicatorProps> = ({
   }
 
   return (
-    <div className="flex items-center space-x-2 px-4 py-2 rounded-full bg-purple-700/30 border border-purple-500/50">
-      <Icon className="text-purple-300">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <polyline points="12 6 12 12 16 14"/>
-        </svg>
-      </Icon>
-      <span className="text-sm font-semibold text-purple-300">Viewing: {viewTitle || 'Historical Run'}</span>
+    <div className="flex items-center space-x-3">
+      <div className="flex items-center space-x-2 px-4 py-2 rounded-full bg-purple-700/30 border border-purple-500/50">
+        <Icon className="text-purple-300">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </Icon>
+        <span className="text-sm font-semibold text-purple-300">Viewing: {viewTitle || 'Historical Run'}</span>
+      </div>
+      {onResumeLive && (
+        <Button
+          onClick={onResumeLive}
+          className="bg-green-700 hover:bg-green-800 px-3 py-1 rounded-full text-sm"
+        >
+          Resume Live
+        </Button>
+      )}
     </div>
   );
 };
