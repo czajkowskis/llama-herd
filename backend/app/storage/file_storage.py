@@ -292,7 +292,12 @@ class FileStorage(BaseStorage):
     
     # Legacy conversation methods - for imported conversations only
     def save_conversation(self, conversation: Dict[str, Any]) -> bool:
-        """Save an imported conversation (legacy method) with validation."""
+        """Save an imported conversation (legacy method) with validation.
+        
+        When an id is provided, saves to {id}.json for deterministic lookups.
+        When no id is provided, generates a new id and saves to {id}.json.
+        This enables atomic updates by id.
+        """
         # Only allow imported conversations, not experiment conversations
         if conversation.get('source') == 'experiment':
             raise StorageError("Experiment conversations should use save_experiment_conversation")
@@ -306,22 +311,13 @@ class FileStorage(BaseStorage):
         if 'imported_at' not in conversation:
             conversation['imported_at'] = datetime.utcnow().isoformat()
         
-        # Save to a legacy conversations folder
-        legacy_dir = self.data_dir / "imported_conversations"
-        legacy_dir.mkdir(exist_ok=True)
+        # Save to imported conversations folder
+        imported_dir = self.data_dir / "imported_conversations"
+        imported_dir.mkdir(exist_ok=True)
         
-        # Create filename with current date/time and conversation title
-        current_time = datetime.utcnow()
-        date_time_str = current_time.strftime("%Y-%m-%d_%H-%M-%S")
-        
-        # Get conversation title and clean it for filename
-        title = conversation.get('title', 'untitled')
-        safe_title = re.sub(r'[^\w\s-]', '', title).strip()
-        safe_title = re.sub(r'[-\s]+', '_', safe_title)
-        safe_title = safe_title[:50]  # Limit length
-        
-        filename = f"{date_time_str}_{safe_title}.json"
-        file_path = legacy_dir / filename
+        # Use deterministic filename based on id for atomic updates
+        filename = f"{conversation_id}.json"
+        file_path = imported_dir / filename
         
         return self._write_json_file(file_path, conversation, validate_model=StoredConversation)
     
@@ -376,16 +372,63 @@ class FileStorage(BaseStorage):
                         conversation = self._read_json_file(file_path)
                         if conversation and conversation.get('id') == conversation_id:
                             return conversation
+        
+        # Fallback: Search through imported conversations with legacy timestamped filenames
+        if imported_conversations_dir.exists():
+            for file_path in imported_conversations_dir.glob("*.json"):
+                if file_path.name == f"{conversation_id}.json":
+                    continue  # Already checked above
+                conversation = self._read_json_file(file_path)
+                if conversation and conversation.get('id') == conversation_id:
+                    return conversation
+        
         return None
-
-    def delete_conversation(self, conversation_id: str) -> bool:
-        """Delete an imported conversation (legacy method)."""
-        legacy_dir = self.data_dir / "imported_conversations"
-        if not legacy_dir.exists():
+    
+    def update_conversation(self, conversation_id: str, updates: Dict[str, Any]) -> bool:
+        """Update an existing imported conversation with new data.
+        
+        Args:
+            conversation_id: The ID of the conversation to update
+            updates: Dictionary of fields to update
+            
+        Returns:
+            True if successful, False if conversation not found
+        """
+        # Get existing conversation
+        conversation = self.get_conversation(conversation_id)
+        if not conversation:
             return False
         
-        # Search through all files to find conversation with matching ID
-        for file_path in legacy_dir.glob("*.json"):
+        # Only allow updating imported conversations
+        if conversation.get('source') == 'experiment':
+            raise StorageError("Experiment conversations should use save_experiment_conversation")
+        
+        # Update fields
+        conversation.update(updates)
+        
+        # Save back using deterministic filename
+        return self.save_conversation(conversation)
+
+    def delete_conversation(self, conversation_id: str) -> bool:
+        """Delete an imported conversation (legacy method).
+        
+        Handles both deterministic {id}.json filenames and legacy timestamped filenames.
+        """
+        imported_dir = self.data_dir / "imported_conversations"
+        if not imported_dir.exists():
+            return False
+        
+        # Try deterministic filename first
+        deterministic_path = imported_dir / f"{conversation_id}.json"
+        if deterministic_path.exists():
+            try:
+                deterministic_path.unlink()
+                return True
+            except IOError as e:
+                raise StorageError(f"Error deleting conversation {deterministic_path}: {e}")
+        
+        # Fallback: Search through all files to find conversation with matching ID
+        for file_path in imported_dir.glob("*.json"):
             conversation = self._read_json_file(file_path)
             if conversation and conversation.get('id') == conversation_id:
                 try:

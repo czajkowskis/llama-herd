@@ -29,22 +29,29 @@ class BackendStorageService {
   // Experiment storage methods
   async saveExperiment(experiment: StoredExperiment): Promise<boolean> {
     try {
-      const response = await fetch(`${this.BASE_URL}/experiments/${experiment.id}/status`, {
+      // Always use PUT to update experiment metadata (including title)
+      // The experiment should already exist (created by /start endpoint)
+      const response = await fetch(`${this.BASE_URL}/experiments/${experiment.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ status: experiment.status }),
+        body: JSON.stringify(experiment),
       });
       
       if (response.ok) {
         return true;
       }
       
-      // If experiment doesn't exist, create it via the start endpoint
-      // This is a fallback for experiments that were started before persistent storage
-      console.log('Experiment not found, creating new one...');
-      return true;
+      // If experiment doesn't exist yet (race condition), that's okay
+      // The backend will save it when the experiment starts
+      if (response.status === 404) {
+        console.log('Experiment not yet in persistent storage, will be saved by backend');
+        return true;
+      }
+      
+      console.warn('Failed to save experiment, status:', response.status);
+      return false;
     } catch (error) {
       console.error('Failed to save experiment:', error);
       return false;
@@ -112,21 +119,35 @@ class BackendStorageService {
   // Conversation storage methods
   async saveConversation(conversation: StoredConversation): Promise<boolean> {
     console.log('BackendStorageService: Attempting to save conversation:', conversation.id);
-    console.log('BackendStorageService: URL:', `${this.BASE_URL}/conversations`);
+    
     try {
-      const response = await fetch(`${this.BASE_URL}/conversations`, {
-        method: 'POST',
+      // Check if conversation already exists to determine if we should PUT or POST
+      const existingConversation = await this.getConversation(conversation.id);
+      const isUpdate = existingConversation !== null;
+      
+      const method = isUpdate ? 'PUT' : 'POST';
+      const url = isUpdate 
+        ? `${this.BASE_URL}/conversations/${conversation.id}`
+        : `${this.BASE_URL}/conversations`;
+      
+      console.log('BackendStorageService: Using', method, 'to URL:', url);
+      
+      const response = await fetch(url, {
+        method: method,
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(conversation),
       });
+      
       console.log('BackendStorageService: Response status:', response.status);
       console.log('BackendStorageService: Response ok:', response.ok);
+      
       if (!response.ok) {
         const errorText = await response.text();
         console.error('BackendStorageService: Response error text:', errorText);
       }
+      
       return response.ok;
     } catch (error) {
       console.error('BackendStorageService: Failed to save conversation:', error);

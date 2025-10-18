@@ -50,6 +50,47 @@ async def save_conversation(conversation: dict):
         raise ConversationError(f"Error saving conversation: {str(e)}")
 
 
+@router.put("/{conversation_id}")
+async def update_conversation(conversation_id: str, conversation: dict):
+    """Update an existing conversation by ID."""
+    try:
+        # Normalize camelCase keys to snake_case
+        normalized_conversation = normalize_dict_to_snake(conversation, deep=True)
+        
+        # Ensure the id matches
+        normalized_conversation['id'] = conversation_id
+        
+        success = storage.update_conversation(conversation_id, normalized_conversation)
+        if success:
+            log_with_context(
+                logger,
+                'info',
+                f"Updated conversation",
+                conversation_id=conversation_id
+            )
+            return {"message": "Conversation updated", "id": conversation_id}
+        else:
+            raise NotFoundError(
+                f"Conversation not found",
+                resource_type="conversation",
+                resource_id=conversation_id
+            )
+    except (NotFoundError, StorageError):
+        raise
+    except Exception as e:
+        log_with_context(
+            logger,
+            'error',
+            f"Error updating conversation: {str(e)}",
+            conversation_id=conversation_id,
+            exception_type=type(e).__name__
+        )
+        raise ConversationError(
+            f"Error updating conversation",
+            conversation_id=conversation_id
+        )
+
+
 @router.get("")
 async def list_conversations(source: Optional[str] = None):
     """Get all conversations, optionally filtered by source."""
