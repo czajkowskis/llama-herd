@@ -13,6 +13,7 @@ import { MessageActions, CopyButton } from '../conversation/MessageActions';
 import { RawJSONModal } from '../conversation/RawJSONModal';
 import { ConnectionStatus, ConnectionStatusType } from '../ui/ConnectionStatus';
 import { DebugPanel, DebugMessage } from '../ui/DebugPanel';
+import { ViewModeIndicator, HistoricalViewBanner } from './ViewModeIndicator';
 
 interface LiveExperimentViewProps {
   experimentId: string;
@@ -41,8 +42,10 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
   const [selectedMessageForJSON, setSelectedMessageForJSON] = useState<Message | null>(null);
   const [starredMessages, setStarredMessages] = useState<Set<string>>(new Set());
   const [exportSelection, setExportSelection] = useState<Set<string>>(new Set());
+  const [newlyArrivedMessages, setNewlyArrivedMessages] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pendingMessagesRef = useRef<Message[]>([]);
+  const previousMessageCountRef = useRef<number>(0);
 
   // Load starred messages when conversation changes
   useEffect(() => {
@@ -52,10 +55,34 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
     }
   }, [viewConversation]);
 
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll to bottom when messages change (only in live view)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [viewConversation?.messages]);
+    if (isViewingLive) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [viewConversation?.messages, isViewingLive]);
+
+  // Track newly arrived messages for animation (only in live view)
+  useEffect(() => {
+    if (isViewingLive && viewConversation) {
+      const currentCount = viewConversation.messages.length;
+      const previousCount = previousMessageCountRef.current;
+      
+      if (currentCount > previousCount) {
+        // New messages arrived - mark them for animation
+        const newMessages = viewConversation.messages.slice(previousCount);
+        const newIds = new Set(newMessages.map(m => m.id));
+        setNewlyArrivedMessages(newIds);
+        
+        // Clear the animation class after animation completes
+        setTimeout(() => {
+          setNewlyArrivedMessages(new Set());
+        }, 1500);
+      }
+      
+      previousMessageCountRef.current = currentCount;
+    }
+  }, [viewConversation?.messages, isViewingLive]);
 
   useEffect(() => {
     let mounted = true;
@@ -286,6 +313,15 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
     });
   };
 
+  const handleResumeLive = () => {
+    if (liveConversation) {
+      setIsViewingLive(true);
+      setViewConversation(liveConversation);
+      // Reset message count to enable animations for any new messages
+      previousMessageCountRef.current = liveConversation.messages.length;
+    }
+  };
+
   const getStatusColor = (status: string): string => {
     switch (status) {
       case 'running':
@@ -380,6 +416,10 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
               </svg>
             </Icon>
             <h2 className="text-xl font-semibold text-white">{viewConversation.title}</h2>
+            <ViewModeIndicator
+              isViewingLive={isViewingLive}
+              viewTitle={viewConversation.title}
+            />
             <div className={`flex items-center space-x-2 px-3 py-1 rounded-full bg-gray-700 ${getStatusColor(status)}`}>
               {getStatusIcon(status)}
               <span className="text-sm font-medium capitalize">{status}</span>
@@ -439,8 +479,8 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
           </div>
         )}
 
-        {/* Debug Panel */}
-        {debugMessages.length > 0 && (
+        {/* Debug Panel - only show in live view */}
+        {debugMessages.length > 0 && isViewingLive && (
           <div className="mb-4">
             <DebugPanel
               messages={debugMessages}
@@ -449,8 +489,16 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
           </div>
         )}
 
+        {/* Historical View Banner */}
+        {!isViewingLive && liveConversation && (
+          <HistoricalViewBanner
+            runTitle={viewConversation.title}
+            onResumeLive={handleResumeLive}
+          />
+        )}
+
         {/* Chat Messages */}
-        <div className="bg-gray-900 rounded-xl p-4 h-[600px] overflow-y-auto space-y-4">
+        <div className={`bg-gray-900 rounded-xl p-4 h-[600px] overflow-y-auto space-y-4 ${!isViewingLive ? 'historical-view-dimmed' : ''}`}>
           {viewConversation.messages.map((message) => {
             const agent = getAgentById(message.agentId);
             if (!agent) return null;
@@ -458,9 +506,10 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
             const textColor = getContrastColor(agent.color);
             const isStarred = starredMessages.has(message.id);
             const isInExportSelection = exportSelection.has(message.id);
+            const isNewlyArrived = isViewingLive && newlyArrivedMessages.has(message.id);
             
             return (
-              <div key={message.id} className="flex space-x-3 group">
+              <div key={message.id} className={`flex space-x-3 group ${isNewlyArrived ? 'animate-message-arrive' : ''}`}>
                 <div className="flex-shrink-0">
                   <div
                     className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold"
