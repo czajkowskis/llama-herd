@@ -45,7 +45,7 @@ export interface Conversation {
 export interface ExperimentStatusResponse {
   experiment_id: string;
   status: string;
-  conversation: Conversation; // current conversation stream
+  conversation: Conversation | null; // current conversation stream (null for completed experiments)
   conversations?: Conversation[]; // completed runs/items
   iterations?: number;
   current_iteration?: number;

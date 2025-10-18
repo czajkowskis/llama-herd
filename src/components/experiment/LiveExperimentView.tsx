@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Conversation, ConversationAgent, Message, ExperimentStatusResponse } from '../../types/index.d';
 import { experimentService } from '../../services/experimentService';
-import { WebSocketMessage } from '../../types/api';
+import { WebSocketMessage, isMessageData, isStatusData, isConversationData } from '../../types/api';
 import { backendStorageService } from '../../services/backendStorageService';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
@@ -46,18 +46,29 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
         if (!mounted) return;
 
         // Set initial conversation/status/error
-        const base = experimentData.conversation as Conversation;
-        const merged: Conversation = pendingMessagesRef.current.length > 0
+        const base = experimentData.conversation as Conversation | null;
+        const merged: Conversation | null = base && pendingMessagesRef.current.length > 0
           ? { ...base, messages: [...base.messages, ...pendingMessagesRef.current] }
           : base;
         pendingMessagesRef.current = [];
-        setLiveConversation(merged);
-        setViewConversation(merged);
-        setIsViewingLive(true);
-        setStatus(experimentData.status);
-        setError(experimentData.error || null);
+        
         const initialCompleted = experimentData.conversations || [];
         setCompletedConversations(initialCompleted);
+        
+        // For completed experiments with no live conversation, show the most recent completed conversation
+        if (!merged && initialCompleted.length > 0) {
+          setLiveConversation(null);
+          setViewConversation(initialCompleted[initialCompleted.length - 1]);
+          setIsViewingLive(false);
+        } else {
+          setLiveConversation(merged);
+          setViewConversation(merged);
+          setIsViewingLive(true);
+        }
+        
+        setStatus(experimentData.status);
+        setError(experimentData.error || null);
+        
         if (initialCompleted.length > 0) {
           setCurrentRunIndex(initialCompleted.length - 1);
           const lastPage = Math.max(0, Math.ceil(initialCompleted.length / RUNS_PER_PAGE) - 1);
@@ -84,66 +95,65 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
               return updated;
             }
             // Buffer until conversation is loaded
-            pendingMessagesRef.current.push(message.data as Message);
+            if (isMessageData(message.data)) {
+              pendingMessagesRef.current.push(message.data as Message);
+            }
             return prev;
           });
           break;
         case 'status':
-          setStatus(message.data.status);
-          
-          // If experiment completed, update local storage
-          if (message.data.status === 'completed' && liveConversation) {
-            backendStorageService.saveExperiment({
-              id: experimentId,
-              title: `Experiment: ${liveConversation.title}`,
-              task: { id: '', prompt: liveConversation.title, iterations: 1, datasetItems: [] },
-              agents: liveConversation.agents.map(agent => ({
-                id: agent.id,
-                name: agent.name,
-                prompt: '',
-                color: agent.color,
-                model: agent.model
-              })),
-              status: 'completed',
-              createdAt: liveConversation.createdAt,
-              completedAt: new Date().toISOString(),
-              iterations: 1,
-              currentIteration: 1
-            });
+          if (isStatusData(message.data)) {
+            setStatus(message.data.status);
+            
+            // If experiment completed, update local storage
+            if (message.data.status === 'completed' && liveConversation) {
+              backendStorageService.saveExperiment({
+                id: experimentId,
+                title: `Experiment: ${liveConversation.title}`,
+                task: { id: '', prompt: liveConversation.title, iterations: 1, datasetItems: [] },
+                agents: liveConversation.agents.map(agent => ({
+                  id: agent.id,
+                  name: agent.name,
+                  prompt: '',
+                  color: agent.color,
+                  model: agent.model
+                })),
+                status: 'completed',
+                createdAt: liveConversation.createdAt,
+                completedAt: new Date().toISOString(),
+                iterations: 1,
+                currentIteration: 1
+              });
+            }
           }
           break;
         case 'error':
-          setError(message.data.error);
+          if (typeof message.data === 'object' && message.data !== null && 'error' in message.data) {
+            setError((message.data as { error: string }).error);
+          }
           break;
         case 'conversation':
-          setCompletedConversations(prev => {
-            const updated = [...prev, message.data as Conversation];
-            const lastPage = Math.max(0, Math.ceil(updated.length / RUNS_PER_PAGE) - 1);
-            setRunsPage(lastPage);
-            // When first completed run arrives, switch the view chips on
-            if (prev.length === 0 && !isViewingLive && liveConversation) {
-              setViewConversation(updated[updated.length - 1]);
-            }
-            
-            // Save completed conversation to local storage
-            const completedConversation = message.data as Conversation;
-            const storedConversation = {
-              id: completedConversation.id,
-              title: completedConversation.title,
-              agents: completedConversation.agents,
-              messages: completedConversation.messages,
-              createdAt: completedConversation.createdAt,
-              importedAt: new Date().toISOString(),
-              source: 'experiment' as const,
-              experimentId: experimentId
-            };
-            backendStorageService.saveConversation(storedConversation);
-            
-            return updated;
-          });
+          if (isConversationData(message.data)) {
+            setCompletedConversations(prev => {
+              const updated = [...prev, message.data as Conversation];
+              const lastPage = Math.max(0, Math.ceil(updated.length / RUNS_PER_PAGE) - 1);
+              setRunsPage(lastPage);
+              // When first completed run arrives, switch the view chips on
+              if (prev.length === 0 && !isViewingLive && liveConversation) {
+                setViewConversation(updated[updated.length - 1]);
+              }
+              
+              // Note: Experiment conversations are automatically saved by the backend
+              // via save_experiment_conversation, so we don't need to save them here
+              
+              return updated;
+            });
+          }
           break;
         case 'agents':
-          setAgentInfos(message.data as { name: string; model: string }[]);
+          if (Array.isArray(message.data)) {
+            setAgentInfos(message.data as { name: string; model: string }[]);
+          }
           break;
       }
     };
