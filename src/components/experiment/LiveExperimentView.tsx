@@ -7,6 +7,7 @@ import { backendStorageService } from '../../services/backendStorageService';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { ExportPanel } from '../conversation/ExportPanel';
+import { RunSelector } from './RunSelector';
 
 interface LiveExperimentViewProps {
   experimentId: string;
@@ -24,9 +25,6 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [agentInfos, setAgentInfos] = useState<{ name: string; model: string }[]>([]);
-  const [currentRunIndex, setCurrentRunIndex] = useState<number>(-1);
-  const [runsPage, setRunsPage] = useState<number>(0);
-  const RUNS_PER_PAGE = 8;
   const [isViewingLive, setIsViewingLive] = useState<boolean>(true);
   const [showExportPanel, setShowExportPanel] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -68,12 +66,6 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
         
         setStatus(experimentData.status);
         setError(experimentData.error || null);
-        
-        if (initialCompleted.length > 0) {
-          setCurrentRunIndex(initialCompleted.length - 1);
-          const lastPage = Math.max(0, Math.ceil(initialCompleted.length / RUNS_PER_PAGE) - 1);
-          setRunsPage(lastPage);
-        }
       } catch (err: any) {
         if (mounted) {
           setError(err.message);
@@ -136,8 +128,6 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
           if (isConversationData(message.data)) {
             setCompletedConversations(prev => {
               const updated = [...prev, message.data as Conversation];
-              const lastPage = Math.max(0, Math.ceil(updated.length / RUNS_PER_PAGE) - 1);
-              setRunsPage(lastPage);
               // When first completed run arrives, switch the view chips on
               if (prev.length === 0 && !isViewingLive && liveConversation) {
                 setViewConversation(updated[updated.length - 1]);
@@ -323,58 +313,17 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
         </div>
 
         {/* Run selector (also visible during first run) */}
-        {(true) && (
-          <div className="mb-4 flex items-center space-x-2">
-            <span className="text-gray-300 text-sm">Browse runs:</span>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => {
-                  // Show the live conversation stream
-                  setIsViewingLive(true);
-                  setViewConversation(liveConversation);
-                }}
-                className={`px-3 py-1 rounded text-sm ${status === 'running' && isViewingLive ? 'bg-green-700 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-              >
-                Live
-              </button>
-              {completedConversations.length === 0 && (
-                <button className="px-3 py-1 rounded text-sm bg-gray-800 text-gray-500 cursor-default" disabled>
-                  Run 1 (in progress)
-                </button>
-              )}
-              <button
-                onClick={() => setRunsPage(Math.max(0, runsPage - 1))}
-                disabled={runsPage === 0}
-                className={`px-2 py-1 rounded text-sm ${runsPage === 0 ? 'bg-gray-800 text-gray-600' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                title="Previous page"
-              >
-                ‹
-              </button>
-              {completedConversations
-                .slice(runsPage * RUNS_PER_PAGE, runsPage * RUNS_PER_PAGE + RUNS_PER_PAGE)
-                .map((conv) => (
-                <button
-                  key={conv.id}
-                  onClick={() => { setIsViewingLive(false); setViewConversation(conv); }}
-                  className={`px-3 py-1 rounded text-sm ${!isViewingLive && viewConversation?.id === conv.id ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                >
-                  {conv.title}
-                </button>
-              ))}
-              <button
-                onClick={() => setRunsPage(Math.min(Math.ceil(completedConversations.length / RUNS_PER_PAGE) - 1, runsPage + 1))}
-                disabled={runsPage >= Math.ceil(completedConversations.length / RUNS_PER_PAGE) - 1}
-                className={`px-2 py-1 rounded text-sm ${runsPage >= Math.ceil(completedConversations.length / RUNS_PER_PAGE) - 1 ? 'bg-gray-800 text-gray-600' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                title="Next page"
-              >
-                ›
-              </button>
-              <span className="text-xs text-gray-400 ml-2">
-                Page {runsPage + 1} of {Math.max(1, Math.ceil(Math.max(1, completedConversations.length) / RUNS_PER_PAGE))}
-              </span>
-            </div>
-          </div>
-        )}
+        <RunSelector
+          completedConversations={completedConversations}
+          selectedConversation={viewConversation}
+          isViewingLive={isViewingLive}
+          status={status}
+          liveConversation={liveConversation}
+          onSelectRun={(conversation, isLive) => {
+            setIsViewingLive(isLive);
+            setViewConversation(conversation);
+          }}
+        />
 
         {/* Agents debug info */}
         {agentInfos.length > 0 && (
