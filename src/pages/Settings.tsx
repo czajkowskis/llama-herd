@@ -149,9 +149,30 @@ export const Settings: React.FC = () => {
             href="#/models" 
             className={`inline-flex items-center px-4 py-2 rounded-xl transition-colors ${
               testResultMessage && !testError && !isTesting
-                ? 'bg-purple-600 hover:bg-purple-700 text-white cursor-pointer' 
-                : 'bg-gray-400 text-gray-200 cursor-not-allowed opacity-50'
+                ? 'cursor-pointer' 
+                : 'cursor-not-allowed opacity-50'
             }`}
+            style={{
+              backgroundColor: testResultMessage && !testError && !isTesting 
+                ? 'var(--color-bg-tertiary)' 
+                : '#9ca3af',
+              color: testResultMessage && !testError && !isTesting 
+                ? 'var(--color-text-primary)' 
+                : '#e5e7eb',
+              border: testResultMessage && !testError && !isTesting 
+                ? '1px solid var(--color-border)' 
+                : '1px solid #9ca3af'
+            }}
+            onMouseEnter={(e) => {
+              if (testResultMessage && !testError && !isTesting) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (testResultMessage && !testError && !isTesting) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+              }
+            }}
             aria-label="Manage models"
             onClick={(e) => {
               if (!testResultMessage || testError || isTesting) {
@@ -171,7 +192,7 @@ export const Settings: React.FC = () => {
       </div>
 
       {/* UI Preferences Section */}
-      <div className="mt-6 p-4 rounded-xl max-w-2xl mx-auto text-left" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
+      <div className="mt-10 p-4 rounded-xl max-w-2xl mx-auto text-left" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
         <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--color-text-primary)' }}>UI Preferences</h3>
         <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
           Customize the appearance and layout of the interface to improve readability and accessibility.
