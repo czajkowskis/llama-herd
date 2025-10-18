@@ -219,24 +219,24 @@ export const AgentForm: React.FC<AgentFormProps> = ({
           <select
             value={agentModel}
             onChange={(e) => setAgentModel(e.target.value)}
-            className="w-full p-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200"
+            className="custom-themed w-full p-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200"
             style={{
               backgroundColor: 'var(--color-bg-tertiary)',
               color: 'var(--color-text-primary)',
               borderColor: 'var(--color-border)'
             }}
           >
-            <option value="">Select a model</option>
+            <option value="" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>Select a model</option>
             {isLoadingOllamaModels ? (
-              <option disabled>Loading models...</option>
+              <option disabled style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>Loading models...</option>
             ) : ollamaError ? (
-              <option disabled>Error loading models</option>
+              <option disabled style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>Error loading models</option>
             ) : ollamaModels.length > 0 ? (
               ollamaModels.map((model, index) => (
-                <option key={index} value={model}>{model}</option>
+                <option key={index} value={model} style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>{model}</option>
               ))
             ) : (
-              <option disabled>No models available</option>
+              <option disabled style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>No models available</option>
             )}
           </select>
         </div>
