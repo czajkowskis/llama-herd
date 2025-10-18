@@ -5,6 +5,7 @@ import { NewExperiment } from './pages/NewExperiment';
 import { ConversationViewer } from './pages/ConversationViewer';
 import { About } from './pages/About';
 import { Settings } from './pages/Settings';
+import { Models } from './pages/Models';
 import { LiveExperimentView } from './components/experiment/LiveExperimentView';
 import { History } from './pages/History';
 import { useUIPreferences } from './hooks/useUIPreferences';
@@ -13,7 +14,12 @@ const App: React.FC = () => {
   // Initialize UI preferences (applies theme/mode classes to DOM)
   useUIPreferences();
 
-  const [currentPage, setCurrentPage] = useState<'newExperiment' | 'history' | 'explore' | 'conversations' | 'settings' | 'about' | 'liveExperiment'>('newExperiment');
+  const [currentPage, setCurrentPage] = useState<'newExperiment' | 'history' | 'explore' | 'conversations' | 'settings' | 'about' | 'liveExperiment' | 'models'>(() => {
+    // Simple hash-based routing to support direct /models
+    const hash = typeof window !== 'undefined' ? window.location.hash : '';
+    if (hash === '#/models') return 'models';
+    return 'newExperiment';
+  });
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const [currentExperimentId, setCurrentExperimentId] = useState<string | null>(null);
 
@@ -47,6 +53,8 @@ const App: React.FC = () => {
         ) : null;
       case 'settings':
         return <Settings />;
+      case 'models':
+        return <Models />;
       case 'about':
         return <About />;
       default:

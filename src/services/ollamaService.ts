@@ -12,6 +12,18 @@ export interface ListModelsResponse {
   models: ModelTag[];
 }
 
+export interface PullProgress {
+  status?: string; // e.g., "pulling", "success", "error"
+  total?: number; // total bytes
+  completed?: number; // completed bytes
+  digest?: string;
+  error?: string;
+}
+
+export interface VersionResponse {
+  version: string;
+}
+
 /**
  * Fetches the list of available models from the Ollama server.
  * @returns A promise that resolves with an array of model names as strings, or rejects with an error.
@@ -28,6 +40,65 @@ export const listModels = async (baseUrl?: string): Promise<string[]> => {
     return data.models.map(model => model.name);
   } catch (error) {
     console.error('Error fetching model list:', error);
+    throw error;
+  }
+};
+
+/**
+ * Returns Ollama server version (and implicitly connectivity).
+ */
+export const getVersion = async (baseUrl?: string): Promise<string> => {
+  const urlBase = baseUrl || OLLAMA_BASE_URL;
+  const res = await fetch(`${urlBase}/api/version`);
+  if (!res.ok) throw new Error(`API call failed with status: ${res.status}`);
+  const data: VersionResponse = await res.json();
+  return data.version;
+};
+
+/**
+ * Deletes a local model by name/tag.
+ */
+export const deleteModel = async (name: string, baseUrl?: string): Promise<void> => {
+  const urlBase = baseUrl || OLLAMA_BASE_URL;
+  const res = await fetch(`${urlBase}/api/delete`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) throw new Error(`Delete failed with status: ${res.status}`);
+};
+
+/**
+ * Pulls a model by tag. Streams progress via callback. Returns when done or aborted.
+ */
+export const pullModel = async (
+  name: string,
+  onProgress?: (p: PullProgress) => void,
+  signal?: AbortSignal,
+  baseUrl?: string
+): Promise<void> => {
+  const urlBase = baseUrl || OLLAMA_BASE_URL;
+  const res = await fetch(`${urlBase}/api/pull`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, stream: true }),
+    signal,
+  });
+  if (!res.ok || !res.body) {
+    throw new Error(`Pull failed with status: ${res.status}`);
+  }
+  const reader = res.body.getReader();
+  try {
+    // Reuse stream helper
+    await streamJsonLinesToObject<PullProgress>(reader, (obj) => {
+      onProgress?.(obj);
+    }, signal);
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      // Stream was aborted - this is expected, rethrow so caller knows
+      throw error;
+    }
+    // Other errors should also be thrown
     throw error;
   }
 };
@@ -94,14 +165,26 @@ async function streamJsonLinesToObject<T>(
     }
   };
 
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    if (signal?.aborted) {
-      await reader.cancel('Stream reading was aborted.');
-      break;
-    }
+  // Set up abort listener to immediately cancel the reader
+  const abortHandler = () => {
+    reader.cancel('Stream reading was aborted.').catch(() => {
+      // Ignore cancel errors - reader might already be closed
+    });
+  };
+  
+  if (signal) {
+    signal.addEventListener('abort', abortHandler);
+  }
 
-    try {
+  try {
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      // Check if already aborted before reading
+      if (signal?.aborted) {
+        await reader.cancel('Stream reading was aborted.');
+        throw new DOMException('Stream reading was aborted.', 'AbortError');
+      }
+
       const { value, done } = await reader.read();
       if (done) {
         // If there's any remaining data in the buffer, try to process it
@@ -118,14 +201,20 @@ async function streamJsonLinesToObject<T>(
       }
       buffer += decoder.decode(value, { stream: true });
       processBuffer();
-    } catch (error) {
-      if (signal?.aborted) {
-        // This is an expected error when the stream is aborted.
-        console.log('Stream reading aborted as requested.');
-      } else {
-        console.error('Error reading from stream:', error);
-      }
-      break;
+    }
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      // This is an expected error when the stream is aborted.
+      console.log('Stream reading aborted as requested.');
+      throw error; // Re-throw so caller knows it was aborted
+    } else {
+      console.error('Error reading from stream:', error);
+      throw error;
+    }
+  } finally {
+    // Clean up abort listener
+    if (signal) {
+      signal.removeEventListener('abort', abortHandler);
     }
   }
 }
@@ -183,5 +272,8 @@ export const generateCompletion = async (
 // Export the service object for easy importing
 export const ollamaService = {
   listModels,
+  getVersion,
+  deleteModel,
+  pullModel,
   generateCompletion,
 };

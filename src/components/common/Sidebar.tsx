@@ -3,8 +3,8 @@ import { Icon } from '../ui/Icon';
 
 // This component represents the main navigation sidebar.
 interface SidebarProps {
-  currentPage: 'newExperiment' | 'history' | 'explore' | 'conversations' | 'settings' | 'about' | 'liveExperiment';
-  setCurrentPage: (page: 'newExperiment' | 'history' | 'explore' | 'conversations' | 'settings' | 'about' | 'liveExperiment') => void;
+  currentPage: 'newExperiment' | 'history' | 'explore' | 'conversations' | 'settings' | 'about' | 'liveExperiment' | 'models';
+  setCurrentPage: (page: 'newExperiment' | 'history' | 'explore' | 'conversations' | 'settings' | 'about' | 'liveExperiment' | 'models') => void;
   isExpanded: boolean;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
@@ -49,6 +49,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, i
         </button>
       </nav>
       <div className={`mt-auto flex flex-col space-y-6`}>
+        <button onClick={() => setCurrentPage('models')} className={linkClass('models')} style={linkStyle('models')} title="Models">
+          <Icon className="text-xl shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-database"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg></Icon>
+          <span className={`font-medium whitespace-nowrap transition-all duration-300 overflow-hidden text-left ${isExpanded ? 'w-40 opacity-100' : 'w-0 opacity-0'}`}>Models</span>
+        </button>
         <button onClick={() => setCurrentPage('settings')} className={linkClass('settings')} style={linkStyle('settings')} title="Settings">
           <Icon className="text-xl shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-settings"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.09.15a2 2 0 0 1 0 2.73l-.09.15a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.09-.15a2 2 0 0 1 0-2.73l.09-.15a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></Icon>
           <span className={`font-medium whitespace-nowrap transition-all duration-300 overflow-hidden text-left ${isExpanded ? 'w-40 opacity-100' : 'w-0 opacity-0'}`}>Settings</span>
