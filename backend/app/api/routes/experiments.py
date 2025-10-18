@@ -2,9 +2,9 @@ from fastapi import APIRouter, HTTPException
 from datetime import datetime
 
 from ...schemas.experiment import ExperimentRequest
-from ...schemas.conversation import Conversation
-from ...core.exceptions import AppException, ValidationError, NotFoundError, ExperimentError
+from ...core.exceptions import ValidationError, NotFoundError, ExperimentError
 from ...services.experiment_service import ExperimentService
+from ...services.conversation_service import ConversationService
 from ...services.autogen_service import autogen_service
 from ...storage import get_storage
 from ...utils.logging import get_logger, log_with_context, set_experiment_context
@@ -89,7 +89,7 @@ async def get_experiment(experiment_id: str):
         # First check active experiments (for running experiments)
         try:
             experiment = ExperimentService.get_experiment(experiment_id)
-        except ValidationError:
+        except (ValidationError, NotFoundError):
             # If not in active experiments, check persistent storage
             stored_experiment = storage.get_experiment(experiment_id)
             if not stored_experiment:
@@ -117,30 +117,25 @@ async def get_experiment(experiment_id: str):
                 "conversations": conversations,
                 "iterations": stored_experiment.get('iterations', 1),
                 "current_iteration": stored_experiment.get('current_iteration', 0),
+                "agents": stored_experiment.get('agents', []),
+                "created_at": stored_experiment.get('created_at'),
                 "error": None
             }
         
-        # Generate title from task prompt (truncate only if longer than 100 chars)
-        title = experiment['task'].prompt
-        if len(title) > 100:
-            title = title[:100] + "..."
+        # For active experiments, get live conversation from service
+        live_conversation = ConversationService.get_live_conversation(experiment_id)
         
-        conversation = Conversation(
-            id=experiment_id,
-            title=title,
-            agents=experiment['conversation_agents'],
-            messages=experiment['messages'],
-            createdAt=experiment['created_at']
-        )
-
         return {
             "experiment_id": experiment_id,
-            "status": experiment['status'],
-            "conversation": conversation.dict(),
-            "conversations": [c.dict() if hasattr(c, 'dict') else c for c in experiment.get('conversations', [])],
-            "iterations": experiment.get('iterations', 1),
-            "current_iteration": experiment.get('current_iteration', 0),
-            "error": experiment.get('error')
+            "title": experiment.task.prompt[:100] + ("..." if len(experiment.task.prompt) > 100 else ""),
+            "status": experiment.status,
+            "conversation": live_conversation,
+            "conversations": [c.model_dump() if hasattr(c, 'model_dump') else c for c in experiment.conversations],
+            "iterations": experiment.iterations,
+            "current_iteration": experiment.current_iteration,
+            "agents": [a.model_dump() if hasattr(a, 'model_dump') else a for a in experiment.agents],
+            "created_at": experiment.created_at,
+            "error": experiment.error
         }
         
     except (NotFoundError, ValidationError, ExperimentError) as e:
@@ -164,7 +159,10 @@ async def get_experiment(experiment_id: str):
 async def list_experiments():
     """List all experiments."""
     try:
-        experiments = ExperimentService.list_experiments()
+        experiments_list = ExperimentService.list_experiments()
+        
+        # Convert Pydantic objects to dictionaries
+        experiments = [exp.model_dump() for exp in experiments_list]
         
         # Get stored experiments (excluding active ones)
         stored_experiments = storage.get_experiments()
@@ -198,25 +196,27 @@ async def list_experiments():
 
 @router.delete("/{experiment_id}")
 async def delete_experiment(experiment_id: str):
-    """Delete an experiment and its conversations."""
+    """Delete an experiment and its associated data."""
     try:
         set_experiment_context(experiment_id)
         
         # Remove from active experiments if running
         ExperimentService.delete_experiment(experiment_id)
         
-        # Remove from persistent storage
+        # Get associated conversations before deleting experiment
+        conversations = storage.get_experiment_conversations(experiment_id)
+        
+        # Delete experiment from persistent storage
         storage.delete_experiment(experiment_id)
         
-        # Also delete associated conversations
-        conversations = storage.get_experiment_conversations(experiment_id)
+        # Delete associated conversations from storage
         for conversation in conversations:
             storage.delete_conversation(conversation['id'])
 
         log_with_context(
             logger,
             'info',
-            f"Deleted experiment",
+            f"Deleted experiment and associated data",
             experiment_id=experiment_id,
             deleted_conversations=len(conversations)
         )
@@ -281,5 +281,53 @@ async def update_experiment_status(experiment_id: str, status: str):
         )
         raise ExperimentError(
             f"Failed to update experiment status",
+            experiment_id=experiment_id
+        )
+
+
+@router.put("/{experiment_id}")
+async def update_experiment(experiment_id: str, experiment: dict):
+    """Update experiment metadata (title, status, etc.) in persistent storage."""
+    try:
+        set_experiment_context(experiment_id)
+        
+        # Normalize camelCase keys to snake_case
+        normalized_experiment = normalize_dict_to_snake(experiment, deep=True)
+        
+        # Extract only updatable fields to prevent overwriting system fields
+        updatable_fields = ['title', 'status', 'completed_at']
+        updates = {k: v for k, v in normalized_experiment.items() if k in updatable_fields}
+        
+        # Update in persistent storage
+        storage_success = storage.update_experiment(experiment_id, updates)
+        if not storage_success:
+            raise NotFoundError(
+                f"Experiment not found in persistent storage",
+                resource_type="experiment",
+                resource_id=experiment_id
+            )
+        
+        log_with_context(
+            logger,
+            'info',
+            f"Updated experiment metadata",
+            experiment_id=experiment_id,
+            updated_fields=list(updates.keys())
+        )
+        
+        return {"message": "Experiment updated", "id": experiment_id}
+        
+    except NotFoundError as e:
+        raise
+    except Exception as e:
+        log_with_context(
+            logger,
+            'error',
+            f"Error updating experiment: {str(e)}",
+            experiment_id=experiment_id,
+            exception_type=type(e).__name__
+        )
+        raise ExperimentError(
+            f"Failed to update experiment",
             experiment_id=experiment_id
         )
