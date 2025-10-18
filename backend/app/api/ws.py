@@ -1,7 +1,6 @@
-from fastapi import APIRouter, WebSocket
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import asyncio
 import json
-import queue
 
 from ..core.state import state_manager
 
@@ -32,21 +31,41 @@ async def websocket_endpoint(websocket: WebSocket, experiment_id: str):
             await websocket.close(code=4004, reason="Experiment message queue not found")
             return
 
-        # Listen for messages
+        # Listen for messages with proper async handling
         while True:
             try:
-                message_data = message_queue.get_nowait()
+                # Use asyncio.wait_for to implement timeout and check experiment status
+                message_data = await asyncio.wait_for(message_queue.get(), timeout=0.5)
                 await websocket.send_text(json.dumps(message_data))
-            except queue.Empty:
-                # Check if experiment is completed
+            except asyncio.TimeoutError:
+                # Check if experiment is completed during timeout
                 current_experiment = state_manager.get_experiment(experiment_id)
                 if current_experiment and current_experiment.status in ['completed', 'error']:
+                    # Send final status and exit gracefully
+                    await websocket.send_text(json.dumps({
+                        "type": "status",
+                        "data": {"status": current_experiment.status}
+                    }))
                     break
-                await asyncio.sleep(0.1)
+                # Continue listening if experiment is still running
+                continue
+            except asyncio.CancelledError:
+                # Handle task cancellation (e.g., client disconnect)
+                break
 
-    except Exception:
+    except WebSocketDisconnect:
+        # Client disconnected normally
+        pass
+    except Exception as e:
+        # Handle unexpected errors
         try:
-            await websocket.close(code=1011, reason="Internal error")
+            await websocket.close(code=1011, reason=f"Internal error: {str(e)}")
+        except Exception:
+            pass
+    finally:
+        # Ensure proper cleanup
+        try:
+            await websocket.close()
         except Exception:
             pass
 

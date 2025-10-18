@@ -335,15 +335,13 @@ class AutogenService:
     
     def _notify_status(self, experiment_id: str, status: str, iteration: int = None):
         """Notify about status change."""
-        queue = state_manager.get_message_queue(experiment_id)
-        if queue:
-            try:
-                data = {"status": status}
-                if iteration:
-                    data["current_iteration"] = iteration
-                queue.put({"type": "status", "data": data})
-            except Exception:
-                pass
+        try:
+            data = {"status": status}
+            if iteration:
+                data["current_iteration"] = iteration
+            state_manager.put_message_threadsafe(experiment_id, {"type": "status", "data": data})
+        except Exception:
+            pass
     
     def _notify_completion(self, experiment_id: str):
         """Notify about experiment completion."""
@@ -351,12 +349,10 @@ class AutogenService:
     
     def _notify_error(self, experiment_id: str, error: str):
         """Notify about experiment error."""
-        queue = state_manager.get_message_queue(experiment_id)
-        if queue:
-            try:
-                queue.put({"type": "error", "data": {"error": error}})
-            except Exception:
-                pass
+        try:
+            state_manager.put_message_threadsafe(experiment_id, {"type": "error", "data": {"error": error}})
+        except Exception:
+            pass
     
     def start_experiment_background(
         self,

@@ -2,7 +2,7 @@
 Centralized application state management.
 """
 from typing import Dict, Any, Optional
-import queue
+import asyncio
 from datetime import datetime
 from ..schemas.conversation import ConversationAgent, Message
 
@@ -56,13 +56,18 @@ class StateManager:
     
     def __init__(self):
         self._active_experiments: Dict[str, ExperimentState] = {}
-        self._message_queues: Dict[str, queue.Queue] = {}
+        self._message_queues: Dict[str, asyncio.Queue] = {}
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
+    
+    def set_event_loop(self, loop: asyncio.AbstractEventLoop):
+        """Set the event loop for async operations."""
+        self._loop = loop
     
     def create_experiment(self, experiment_id: str, task: Any, agents: list) -> ExperimentState:
         """Create a new experiment state."""
         experiment_state = ExperimentState(experiment_id, task, agents)
         self._active_experiments[experiment_id] = experiment_state
-        self._message_queues[experiment_id] = queue.Queue()
+        self._message_queues[experiment_id] = asyncio.Queue()
         return experiment_state
     
     def get_experiment(self, experiment_id: str) -> Optional[ExperimentState]:
@@ -82,9 +87,33 @@ class StateManager:
             return True
         return False
     
-    def get_message_queue(self, experiment_id: str) -> Optional[queue.Queue]:
+    def get_message_queue(self, experiment_id: str) -> Optional[asyncio.Queue]:
         """Get message queue for experiment."""
         return self._message_queues.get(experiment_id)
+    
+    def put_message_threadsafe(self, experiment_id: str, message: Dict[str, Any]) -> bool:
+        """
+        Put a message into the queue from a synchronous/threaded context.
+        This is thread-safe and can be called from background threads.
+        """
+        queue = self._message_queues.get(experiment_id)
+        if not queue:
+            return False
+        
+        # If we have an event loop, use call_soon_threadsafe
+        if self._loop and not self._loop.is_closed():
+            try:
+                self._loop.call_soon_threadsafe(queue.put_nowait, message)
+                return True
+            except Exception:
+                return False
+        
+        # Fallback: try to put directly (only works if called from async context)
+        try:
+            queue.put_nowait(message)
+            return True
+        except Exception:
+            return False
     
     def update_experiment_status(self, experiment_id: str, status: str, **kwargs) -> bool:
         """Update experiment status."""

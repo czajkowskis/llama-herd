@@ -161,25 +161,21 @@ class ConversationService:
     @staticmethod
     def _notify_message(experiment_id: str, message: Message):
         """Notify about new message via message queue."""
-        queue = state_manager.get_message_queue(experiment_id)
-        if queue:
-            try:
-                queue.put({
-                    "type": "message",
-                    "data": message.dict()
-                })
-            except Exception as e:
-                logger.warning(f"Failed to notify about message: {str(e)}")
+        try:
+            state_manager.put_message_threadsafe(experiment_id, {
+                "type": "message",
+                "data": message.dict()
+            })
+        except Exception as e:
+            logger.warning(f"Failed to notify about message: {str(e)}")
     
     @staticmethod
     def _notify_conversation(experiment_id: str, conversation: Conversation):
         """Notify about new conversation via message queue."""
-        queue = state_manager.get_message_queue(experiment_id)
-        if queue:
-            try:
-                queue.put({
-                    "type": "conversation",
-                    "data": conversation.dict()
-                })
-            except Exception as e:
-                logger.warning(f"Failed to notify about conversation: {str(e)}") 
+        try:
+            state_manager.put_message_threadsafe(experiment_id, {
+                "type": "conversation",
+                "data": conversation.dict()
+            })
+        except Exception as e:
+            logger.warning(f"Failed to notify about conversation: {str(e)}") 
