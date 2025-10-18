@@ -41,7 +41,7 @@ export const ExperimentStatus: React.FC<ExperimentStatusProps> = ({
             isExperimentReady ? 'text-gray-300' : 'text-gray-500'
           }`}>
             {isExperimentReady 
-              ? `Task: ${currentTask?.prompt.substring(0, 30)}... | Agents: ${agents.length}`
+              ? `Agents: ${agents.length}`
               : getExperimentStatusMessage()
             }
           </p>
@@ -55,7 +55,7 @@ export const ExperimentStatus: React.FC<ExperimentStatusProps> = ({
                 type="text"
                 value={experimentName}
                 onChange={(e) => onExperimentNameChange(e.target.value)}
-                placeholder="Experiment name..."
+                placeholder="Experiment name"
                 className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
               />
             </div>
