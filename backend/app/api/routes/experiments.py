@@ -9,6 +9,7 @@ from ...services.autogen_service import autogen_service
 from ...storage import get_storage
 from ...utils.logging import get_logger, log_with_context, set_experiment_context
 from ...utils.case_converter import normalize_dict_to_snake
+from ...core.state import state_manager
 
 storage = get_storage()
 logger = get_logger(__name__)
@@ -161,22 +162,46 @@ async def list_experiments():
     try:
         experiments_list = ExperimentService.list_experiments()
         
-        # Convert Pydantic objects to dictionaries
-        experiments = [exp.model_dump() for exp in experiments_list]
+        # Convert Pydantic objects to dictionaries and add agents for active experiments
+        experiments = []
+        for exp in experiments_list:
+            exp_dict = exp.model_dump()
+            # Get the full experiment state to include agents
+            experiment_state = state_manager.get_experiment(exp.experiment_id)
+            if experiment_state:
+                exp_dict['agents'] = [agent.model_dump() for agent in experiment_state.agents]
+            else:
+                exp_dict['agents'] = []
+            experiments.append(exp_dict)
         
         # Get stored experiments (excluding active ones)
         stored_experiments = storage.get_experiments()
         for stored_exp in stored_experiments:
             # Skip if already in active experiments
             if not any(exp['experiment_id'] == stored_exp['id'] for exp in experiments):
-                experiments.append({
-                    "experiment_id": stored_exp['id'],
-                    "title": stored_exp['title'],
-                    "status": stored_exp.get('status', 'unknown'),
-                    "created_at": stored_exp['created_at'],
-                    "agent_count": len(stored_exp.get('agents', [])),
-                    "message_count": 0  # We don't store message count in persistent storage
-                })
+                # Load full experiment data to get agents
+                full_experiment = storage.get_experiment(stored_exp['id'])
+                if full_experiment:
+                    experiments.append({
+                        "experiment_id": stored_exp['id'],
+                        "title": stored_exp['title'],
+                        "status": stored_exp.get('status', 'unknown'),
+                        "created_at": stored_exp['created_at'],
+                        "agents": full_experiment.get('agents', []),
+                        "agent_count": len(full_experiment.get('agents', [])),
+                        "message_count": 0  # We don't store message count in persistent storage
+                    })
+                else:
+                    # Fallback to index data if full experiment can't be loaded
+                    experiments.append({
+                        "experiment_id": stored_exp['id'],
+                        "title": stored_exp['title'],
+                        "status": stored_exp.get('status', 'unknown'),
+                        "created_at": stored_exp['created_at'],
+                        "agents": [],
+                        "agent_count": 0,
+                        "message_count": 0
+                    })
         
         # Sort by created_at (newest first)
         experiments.sort(key=lambda x: x['created_at'], reverse=True)
