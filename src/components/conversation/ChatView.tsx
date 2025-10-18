@@ -2,8 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Icon } from '../ui/Icon';
 import { Button } from '../ui/Button';
-import { Conversation, ConversationAgent } from '../../types/index.d';
+import { Conversation, ConversationAgent, Message } from '../../types/index.d';
 import { ExportPanel } from './ExportPanel';
+import { MessageActions, CopyButton } from './MessageActions';
+import { RawJSONModal } from './RawJSONModal';
+import { getStarredMessages, toggleStarredMessage } from '../../services/uiPreferencesService';
 
 interface ChatViewProps {
   conversation: Conversation;
@@ -22,11 +25,47 @@ export const ChatView: React.FC<ChatViewProps> = ({
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showExportPanel, setShowExportPanel] = useState(false);
+  const [showRawJSONModal, setShowRawJSONModal] = useState(false);
+  const [selectedMessageForJSON, setSelectedMessageForJSON] = useState<Message | null>(null);
+  const [starredMessages, setStarredMessages] = useState<Set<string>>(() => getStarredMessages(conversation.id));
+  const [exportSelection, setExportSelection] = useState<Set<string>>(new Set());
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversation.messages]);
+
+  // Message action handlers
+  const handleCopyText = async (message: Message) => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+    }
+  };
+
+  const handleViewRawJSON = (message: Message) => {
+    setSelectedMessageForJSON(message);
+    setShowRawJSONModal(true);
+  };
+
+  const handleStarMessage = (messageId: string) => {
+    toggleStarredMessage(conversation.id, messageId);
+    // Update local state to reflect the change
+    setStarredMessages(getStarredMessages(conversation.id));
+  };
+
+  const handleCreateExportSelection = (messageId: string) => {
+    setExportSelection(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(messageId)) {
+        newSet.delete(messageId);
+      } else {
+        newSet.add(messageId);
+      }
+      return newSet;
+    });
+  };
 
   return (
     <div className="p-8 space-y-6 animate-fade-in">
@@ -70,9 +109,11 @@ export const ChatView: React.FC<ChatViewProps> = ({
             if (!agent) return null;
 
             const textColor = getContrastColor(agent.color);
+            const isStarred = starredMessages.has(message.id);
+            const isInExportSelection = exportSelection.has(message.id);
             
             return (
-              <div key={message.id} className="message-container flex space-x-3">
+              <div key={message.id} className="message-container flex space-x-3 group">
                 <div className="flex-shrink-0">
                   <div
                     className="agent-avatar w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold"
@@ -82,10 +123,60 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   </div>
                 </div>
                 <div className="flex-1">
-                  <div className="flex items-center mb-1">
-                    <span className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>{agent.name}</span>
-                    <span className="text-xs ml-2" style={{ color: 'var(--color-text-tertiary)' }}>{formatTimestamp(message.timestamp)}</span>
-                    <span className="text-xs ml-2" style={{ color: 'var(--color-text-tertiary)' }}>• {agent.model}</span>
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center">
+                      <span className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>{agent.name}</span>
+                      <span className="text-xs ml-2" style={{ color: 'var(--color-text-tertiary)' }}>{formatTimestamp(message.timestamp)}</span>
+                      <span className="text-xs ml-2" style={{ color: 'var(--color-text-tertiary)' }}>• {agent.model}</span>
+                      {isStarred && (
+                        <span className="ml-2 text-yellow-400" title="Starred message">
+                          <Icon>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                            </svg>
+                          </Icon>
+                        </span>
+                      )}
+                      {isInExportSelection && (
+                        <span className="ml-2 text-purple-400" title="Selected for export">
+                          <Icon>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          </Icon>
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <CopyButton onCopyText={() => handleCopyText(message)} />
+                      <MessageActions
+                        message={message}
+                        agent={agent}
+                        onViewRawJSON={() => handleViewRawJSON(message)}
+                        onStarMessage={() => handleStarMessage(message.id)}
+                        onCreateExportSelection={() => handleCreateExportSelection(message.id)}
+                      />
+                    </div>
                   </div>
                   <div className="rounded-lg p-3" style={{ backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)' }}>
                     <ReactMarkdown
@@ -152,6 +243,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
           getAgentById={getAgentById}
           formatTimestamp={formatTimestamp}
           onClose={() => setShowExportPanel(false)}
+          preselectedMessages={exportSelection}
+        />
+      )}
+
+      {/* Raw JSON Modal */}
+      {showRawJSONModal && selectedMessageForJSON && (
+        <RawJSONModal
+          message={selectedMessageForJSON}
+          agent={getAgentById(selectedMessageForJSON.agentId)}
+          onClose={() => {
+            setShowRawJSONModal(false);
+            setSelectedMessageForJSON(null);
+          }}
         />
       )}
     </div>

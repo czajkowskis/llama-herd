@@ -13,6 +13,7 @@ interface ExportPanelProps {
   getAgentById: (agentId: string) => ConversationAgent | undefined;
   formatTimestamp: (timestamp: string) => string;
   onClose: () => void;
+  preselectedMessages?: Set<string>;
 }
 
 export const ExportPanel: React.FC<ExportPanelProps> = ({
@@ -21,6 +22,7 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
   getAgentById,
   formatTimestamp,
   onClose,
+  preselectedMessages,
 }) => {
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
   const [exportStyle, setExportStyle] = useState<ExportStyle>(defaultExportStyle);
@@ -48,10 +50,14 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
   const [templateToDelete, setTemplateToDelete] = useState<string>('');
   const previewRef = useRef<HTMLDivElement>(null);
 
-  // Select all messages by default
+  // Select messages: preselected ones if provided, otherwise all messages
   useEffect(() => {
-    setSelectedMessages(new Set(messages.map(m => m.id)));
-  }, [messages]);
+    if (preselectedMessages && preselectedMessages.size > 0) {
+      setSelectedMessages(new Set(preselectedMessages));
+    } else {
+      setSelectedMessages(new Set(messages.map(m => m.id)));
+    }
+  }, [messages, preselectedMessages]);
 
   // Load saved templates and export history from localStorage
   useEffect(() => {

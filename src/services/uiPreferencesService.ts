@@ -19,6 +19,7 @@ const STORAGE_KEY_PREFIX = 'llama-herd-ui-';
 const STORAGE_KEY_THEME = `${STORAGE_KEY_PREFIX}theme`;
 const STORAGE_KEY_COMPACT = `${STORAGE_KEY_PREFIX}compact-mode`;
 const STORAGE_KEY_DENSITY = `${STORAGE_KEY_PREFIX}message-density`;
+const STORAGE_KEY_STARRED = `${STORAGE_KEY_PREFIX}starred-messages`;
 
 // Default values
 const DEFAULT_THEME: Theme = 'dark';
@@ -128,4 +129,110 @@ export function getEffectiveTheme(): 'light' | 'dark' {
     return 'dark'; // fallback
   }
   return theme;
+}
+
+// ============================================================================
+// Starred Messages Management
+// ============================================================================
+
+interface StarredMessagesStorage {
+  [conversationId: string]: string[]; // conversation/experiment ID -> array of message IDs
+}
+
+/**
+ * Load starred messages from localStorage
+ */
+function loadStarredStorage(): StarredMessagesStorage {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY_STARRED);
+    if (!data) return {};
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('Failed to load starred messages:', error);
+    return {};
+  }
+}
+
+/**
+ * Save starred messages to localStorage
+ */
+function saveStarredStorage(storage: StarredMessagesStorage): void {
+  try {
+    localStorage.setItem(STORAGE_KEY_STARRED, JSON.stringify(storage));
+  } catch (error) {
+    console.error('Failed to save starred messages:', error);
+  }
+}
+
+/**
+ * Get all starred message IDs for a specific conversation/experiment
+ */
+export function getStarredMessages(conversationId: string): Set<string> {
+  try {
+    const storage = loadStarredStorage();
+    const messageIds = storage[conversationId] || [];
+    return new Set(messageIds);
+  } catch (error) {
+    console.error('Failed to get starred messages:', error);
+    return new Set();
+  }
+}
+
+/**
+ * Toggle starred state for a message
+ * Returns true if message is now starred, false if unstarred
+ */
+export function toggleStarredMessage(conversationId: string, messageId: string): boolean {
+  try {
+    const storage = loadStarredStorage();
+    const messageIds = storage[conversationId] || [];
+    const index = messageIds.indexOf(messageId);
+
+    if (index > -1) {
+      // Remove from starred
+      messageIds.splice(index, 1);
+      if (messageIds.length === 0) {
+        delete storage[conversationId];
+      } else {
+        storage[conversationId] = messageIds;
+      }
+      saveStarredStorage(storage);
+      return false; // Not starred
+    } else {
+      // Add to starred
+      storage[conversationId] = [...messageIds, messageId];
+      saveStarredStorage(storage);
+      return true; // Starred
+    }
+  } catch (error) {
+    console.error('Failed to toggle starred message:', error);
+    return false;
+  }
+}
+
+/**
+ * Check if a message is starred
+ */
+export function isMessageStarred(conversationId: string, messageId: string): boolean {
+  try {
+    const storage = loadStarredStorage();
+    const messageIds = storage[conversationId] || [];
+    return messageIds.includes(messageId);
+  } catch (error) {
+    console.error('Failed to check starred status:', error);
+    return false;
+  }
+}
+
+/**
+ * Clear all starred messages for a conversation/experiment
+ */
+export function clearStarredMessages(conversationId: string): void {
+  try {
+    const storage = loadStarredStorage();
+    delete storage[conversationId];
+    saveStarredStorage(storage);
+  } catch (error) {
+    console.error('Failed to clear starred messages:', error);
+  }
 }
