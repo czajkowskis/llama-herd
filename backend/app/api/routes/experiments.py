@@ -21,6 +21,20 @@ async def start_experiment(request: ExperimentRequest):
         # Create experiment using service
         experiment_id = ExperimentService.create_experiment(request)
         
+        # Persist initial experiment metadata immediately
+        experiment_metadata = {
+            'id': experiment_id,
+            'title': f"Experiment: {request.task.prompt[:50]}...",
+            'status': 'running',
+            'created_at': datetime.now().isoformat(),
+            'agents': [agent.dict() for agent in request.agents],
+            'task': request.task.dict(),
+            'iterations': request.iterations
+        }
+        
+        storage.save_experiment(experiment_metadata)
+        logger.info(f"Persisted initial metadata for experiment {experiment_id}")
+        
         # Start experiment in background
         autogen_service.start_experiment_background(
             experiment_id,

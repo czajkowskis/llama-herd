@@ -15,7 +15,10 @@ from ..core.config import settings
 from ..core.state import state_manager
 from ..services.agent_service import AgentService
 from ..services.conversation_service import ConversationService
+from ..storage import get_storage
 from ..utils.logging import logger
+
+storage = get_storage()
 
 
 class AutogenService:
@@ -266,8 +269,17 @@ class AutogenService:
             
             logger.info(f"Experiment {experiment_id} iterations completed, marking as completed")
             
-            # Mark as completed
+            # Mark as completed in memory
             state_manager.update_experiment_status(experiment_id, 'completed')
+            
+            # Persist status change to storage
+            from datetime import datetime
+            storage.update_experiment(experiment_id, {
+                'status': 'completed',
+                'completed_at': datetime.now().isoformat()
+            })
+            logger.info(f"Persisted completion status for experiment {experiment_id}")
+            
             self._notify_completion(experiment_id)
             
         except Exception as e:
@@ -275,7 +287,19 @@ class AutogenService:
             logger.error(f"Exception type: {type(e).__name__}")
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
+            
+            # Mark as error in memory
             state_manager.update_experiment_status(experiment_id, 'error', error=str(e))
+            
+            # Persist error status to storage
+            from datetime import datetime
+            storage.update_experiment(experiment_id, {
+                'status': 'error',
+                'error': str(e),
+                'completed_at': datetime.now().isoformat()
+            })
+            logger.info(f"Persisted error status for experiment {experiment_id}")
+            
             self._notify_error(experiment_id, str(e))
     
     def _run_dataset_iterations(self, experiment_id: str, dataset_items: List, agents: List[AgentModel]):
