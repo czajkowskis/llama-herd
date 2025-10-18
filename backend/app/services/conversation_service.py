@@ -179,6 +179,30 @@ class ConversationService:
             })
         except Exception as e:
             logger.warning(f"Failed to notify about conversation: {str(e)}")
+
+    @staticmethod
+    def notify_conversation_started(experiment_id: str, title: str) -> None:
+        """Emit a conversation-start signal before any messages are sent for a new run.
+        Sends a 'conversation' payload with a new id and empty messages so the frontend can switch context immediately.
+        """
+        try:
+            experiment = state_manager.get_experiment(experiment_id)
+            if not experiment:
+                raise ValidationError(f"Experiment {experiment_id} not found")
+
+            conv = Conversation(
+                id=str(uuid.uuid4()),
+                title=title,
+                agents=experiment.conversation_agents,
+                messages=[],
+                createdAt=datetime.now().isoformat(),
+                experiment_id=experiment_id,
+                iteration=experiment.current_iteration or None,
+            )
+            # Notify only (do not append to experiment.conversations yet)
+            ConversationService._notify_conversation(experiment_id, conv)
+        except Exception as e:
+            logger.warning(f"Failed to emit conversation-start: {str(e)}")
     
     @staticmethod
     def get_live_conversation(experiment_id: str) -> Optional[dict]:

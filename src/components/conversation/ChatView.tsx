@@ -106,8 +106,16 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
         {/* Chat Messages */}
         <div className="message-list rounded-xl p-4 h-[600px] overflow-y-auto space-y-4" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-          {conversation.messages.map((message, index) => {
-            const agent = getAgentById(message.agentId);
+          {(() => {
+            const displayMessages = conversation.messages.filter((m) => {
+              const a = getAgentById(m.agentId);
+              if (!a) return false;
+              const name = (a.name || '').toLowerCase();
+              const model = (a.model || '').toLowerCase();
+              return !(name === 'system' || model === 'system');
+            });
+            return displayMessages.map((message, index) => {
+              const agent = getAgentById(message.agentId);
             if (!agent) return null;
 
             const textColor = getContrastColor(agent.color);
@@ -118,7 +126,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             const agentModel = (agent.model || '').toLowerCase();
             const isRightAligned = agentName === 'user' || agentName === 'system' || agentModel === 'user' || agentModel === 'system';
             
-            const showDateSeparator = index > 0 && !isSameLocalDate(conversation.messages[index - 1].timestamp, message.timestamp);
+            const showDateSeparator = index > 0 && !isSameLocalDate(displayMessages[index - 1].timestamp, message.timestamp);
             return (
               <React.Fragment key={`wrap-${message.id}`}>
                 {showDateSeparator && (
@@ -237,7 +245,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
               </div>
               </React.Fragment>
             );
-          })}
+          });
+          })()}
           <div ref={messagesEndRef} />
         </div>
       </div>

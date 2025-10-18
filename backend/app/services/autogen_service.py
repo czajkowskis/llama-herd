@@ -363,6 +363,13 @@ class AutogenService:
         experiment = state_manager.get_experiment(experiment_id)
         if experiment:
             experiment.messages = []
+
+        # Announce conversation start for this iteration before any messages
+        try:
+            title = f"Run {iteration}"
+            ConversationService.notify_conversation_started(experiment_id, title)
+        except Exception as e:
+            logger.warning(f"Failed to notify conversation start for {experiment_id} iter {iteration}: {str(e)}")
         
         # Create message handler and run conversation
         message_handler = MessageHandler(experiment_id)

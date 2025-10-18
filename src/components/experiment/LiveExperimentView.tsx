@@ -193,18 +193,33 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
           break;
         case 'conversation':
           if (isConversationData(message.data)) {
-            setCompletedConversations(prev => {
-              const updated = [...prev, message.data as Conversation];
-              // When first completed run arrives, switch the view chips on
-              if (prev.length === 0 && !isViewingLive && liveConversation) {
-                setViewConversation(updated[updated.length - 1]);
+            const incoming = message.data as Conversation;
+            const isStartSignal = Array.isArray(incoming.messages) && incoming.messages.length === 0;
+
+            if (isStartSignal) {
+              // Conversation start for a new run/iteration: switch context to this new live conversation
+              setLiveConversation(incoming);
+              if (isViewingLive) {
+                setViewConversation(incoming);
               }
-              
-              // Note: Experiment conversations are automatically saved by the backend
-              // via save_experiment_conversation, so we don't need to save them here
-              
-              return updated;
-            });
+              // Clear any pending/buffered messages and reset counters to avoid cross-run mixing
+              pendingMessagesRef.current = [];
+              previousMessageCountRef.current = 0;
+              setNewlyArrivedMessages(new Set());
+              addDebugMessage('info', 'Switched to new live conversation (start signal)', incoming);
+            } else {
+              // Completed snapshot conversation - append to list
+              setCompletedConversations(prev => {
+                const updated = [...prev, incoming];
+                // When first completed run arrives, switch the view chips on
+                if (prev.length === 0 && !isViewingLive && liveConversation) {
+                  setViewConversation(updated[updated.length - 1]);
+                }
+                // Note: Experiment conversations are automatically saved by the backend
+                // via save_experiment_conversation, so we don't need to save them here
+                return updated;
+              });
+            }
           }
           break;
         case 'agents':
@@ -508,8 +523,17 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
 
   {/* Chat Messages */}
   <div className={`message-list bg-gray-900 rounded-xl p-4 h-[600px] overflow-y-auto space-y-4 ${!isViewingLive ? 'historical-view-dimmed' : ''}`}>
-          {viewConversation.messages.map((message, index) => {
-            const agent = getAgentById(message.agentId);
+          {(() => {
+            // Filter out System messages from display
+            const displayMessages = viewConversation.messages.filter((m) => {
+              const a = getAgentById(m.agentId);
+              if (!a) return false;
+              const name = (a.name || '').toLowerCase();
+              const model = (a.model || '').toLowerCase();
+              return !(name === 'system' || model === 'system');
+            });
+            return displayMessages.map((message, index) => {
+              const agent = getAgentById(message.agentId);
             if (!agent) return null;
 
             const textColor = getContrastColor(agent.color);
@@ -521,7 +545,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
             const agentModel = (agent.model || '').toLowerCase();
             const isRightAligned = agentName === 'user' || agentName === 'system' || agentModel === 'user' || agentModel === 'system';
             
-            const showDateSeparator = index > 0 && !isSameLocalDate(viewConversation.messages[index - 1].timestamp, message.timestamp);
+            const showDateSeparator = index > 0 && !isSameLocalDate(displayMessages[index - 1].timestamp, message.timestamp);
             return (
               <React.Fragment key={`wrap-${message.id}`}>
                 {showDateSeparator && (
@@ -640,7 +664,8 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
               </div>
               </React.Fragment>
             );
-          })}
+          });
+          })()}
           <div ref={messagesEndRef} />
         </div>
       </div>
