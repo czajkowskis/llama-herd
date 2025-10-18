@@ -178,4 +178,36 @@ class ConversationService:
                 "data": conversation.model_dump()
             })
         except Exception as e:
-            logger.warning(f"Failed to notify about conversation: {str(e)}") 
+            logger.warning(f"Failed to notify about conversation: {str(e)}")
+    
+    @staticmethod
+    def get_live_conversation(experiment_id: str) -> Optional[dict]:
+        """
+        Build a live conversation view from an active experiment's current messages.
+        Returns None if experiment is not active.
+        Returns an empty conversation if experiment exists but has no messages yet.
+        """
+        experiment = state_manager.get_experiment(experiment_id)
+        if not experiment:
+            logger.debug(f"get_live_conversation: No experiment found in state for {experiment_id}")
+            return None
+        
+        logger.debug(f"get_live_conversation: Building live conversation with {len(experiment.messages)} messages")
+        
+        # Build conversation object from current state (even if empty messages)
+        # This allows frontend to accumulate messages as they arrive via WebSocket
+        return {
+            "id": experiment_id,
+            "title": "Live",
+            "agents": [
+                a.model_dump() if hasattr(a, 'model_dump') else a 
+                for a in experiment.conversation_agents
+            ],
+            "messages": [
+                m.model_dump() if hasattr(m, 'model_dump') else m 
+                for m in experiment.messages
+            ],
+            "createdAt": experiment.created_at,
+            "experiment_id": experiment_id,
+            "iteration": None
+        } 
