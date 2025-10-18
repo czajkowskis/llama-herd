@@ -4,4 +4,5 @@ export { ConversationTile } from './ConversationTile';
 export { ExportPanel } from './ExportPanel';
 export { MessageActions } from './MessageActions';
 export { RawJSONModal } from './RawJSONModal';
-export { CodeBlock } from './CodeBlock'; 
+export { CodeBlock } from './CodeBlock';
+export { HistoricalChatView } from './HistoricalChatView'; 

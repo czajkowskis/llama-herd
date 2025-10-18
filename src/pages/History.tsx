@@ -5,6 +5,7 @@ import { ConfirmationPopup } from '../components/ui/ConfirmationPopup';
 import { backendStorageService, StoredExperiment, StoredConversation } from '../services/backendStorageService';
 import { experimentService } from '../services/experimentService';
 import { ExperimentConversationViewer } from '../components/conversation/ExperimentConversationViewer';
+import { HistoricalExperimentView } from '../components/experiment/HistoricalExperimentView';
 
 export const History: React.FC = () => {
   const [experiments, setExperiments] = useState<StoredExperiment[]>([]);
@@ -367,23 +368,12 @@ export const History: React.FC = () => {
     if (!experiment) return null;
 
     return (
-      <div className="p-8 animate-fade-in">
-        <div className="p-6 rounded-2xl shadow-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
-          <div className="flex items-center justify-between mb-6">
-            <Button onClick={handleBackToExperiments}>
-              ← Back to Experiments
-            </Button>
-            <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>{experiment.title}</h2>
-          </div>
-          <div className="flex-1 overflow-auto">
-            <ExperimentConversationsList 
-              experimentId={viewingExperimentConversations}
-              getExperimentConversations={getExperimentConversations}
-              onViewConversation={handleViewConversation}
-              onDeleteConversation={handleDeleteConversation}
-            />
-          </div>
-        </div>
+      <div className="h-full animate-fade-in">
+        <HistoricalExperimentView
+          experimentId={viewingExperimentConversations}
+          experiment={experiment}
+          onBack={handleBackToExperiments}
+        />
       </div>
     );
   }
@@ -717,112 +707,5 @@ export const History: React.FC = () => {
         type="danger"
       />
     </>
-  );
-};
-
-// Component for displaying experiment conversations
-interface ExperimentConversationsListProps {
-  experimentId: string;
-  getExperimentConversations: (experimentId: string) => Promise<StoredConversation[]>;
-  onViewConversation: (conversation: StoredConversation, source?: 'import' | 'experiment') => void;
-  onDeleteConversation: (conversation: StoredConversation, source?: 'import' | 'experiment') => void;
-}
-
-const ExperimentConversationsList: React.FC<ExperimentConversationsListProps> = ({
-  experimentId,
-  getExperimentConversations,
-  onViewConversation,
-  onDeleteConversation
-}) => {
-  const [conversations, setConversations] = useState<StoredConversation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadConversations = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const convs = await getExperimentConversations(experimentId);
-        setConversations(convs);
-      } catch (error) {
-        console.error('Failed to load experiment conversations:', error);
-        setError('Failed to load conversations.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadConversations();
-  }, [experimentId, getExperimentConversations]);
-
-  if (loading) {
-    return <div className="text-center py-8" style={{ color: 'var(--color-text-secondary)' }}>Loading conversations...</div>;
-  }
-
-  if (error) {
-    return <div className="text-center py-8 text-red-400">{error}</div>;
-  }
-
-  if (conversations.length === 0) {
-    return <div className="text-center py-8" style={{ color: 'var(--color-text-tertiary)' }}>No conversations found for this experiment</div>;
-  }
-
-  return (
-    <div className="space-y-4">
-      {conversations.map((conversation) => (
-        <div
-          key={conversation.id}
-          className="rounded-lg border p-4 hover:shadow-md transition-shadow"
-          style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                {conversation.title}
-              </h3>
-              <div className="flex items-center space-x-4 mt-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                <span className="inline-flex items-center space-x-1">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                  </svg>
-                  <span>{new Date(conversation.createdAt).toLocaleDateString()}</span>
-                </span>
-                <span className="inline-flex items-center space-x-1">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clipRule="evenodd" />
-                  </svg>
-                  <span>{conversation.agents.length} agents</span>
-                </span>
-                <span className="inline-flex items-center space-x-1 text-sm text-blue-400">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.002z" clipRule="evenodd" />
-                  </svg>
-                  <span>Experiment</span>
-                </span>
-              </div>
-            </div>
-            <div className="flex space-x-2">
-              <Button onClick={() => onViewConversation(conversation, 'experiment')}>
-                View
-              </Button>
-              <button
-                onClick={() => onDeleteConversation(conversation, 'experiment')}
-                className="text-gray-400 hover:text-red-400 p-1.5 rounded-full transition-all duration-200 hover:bg-red-500/20 hover:scale-110 hover:shadow-lg"
-                title="Delete conversation"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trash-2">
-                  <path d="M3 6h18"/>
-                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-                  <line x1="10" x2="10" y1="11" y2="17"/>
-                  <line x1="14" x2="14" y1="11" y2="17"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
   );
 };
