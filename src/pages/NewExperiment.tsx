@@ -90,18 +90,29 @@ export const NewExperiment: React.FC<NewExperimentProps> = ({ onExperimentStart 
       try {
         const response = await experimentService.startExperiment(currentTask, agents, Math.max(1, currentTask.iterations || 1));
         
-        // Save experiment to local storage
-        const storedExperiment = {
-          id: response.experiment_id,
-          title: experimentName.trim() || `Experiment: ${currentTask.prompt.substring(0, 50)}${currentTask.prompt.length > 50 ? '...' : ''}`,
-          task: currentTask,
-          agents: agents,
-          status: 'running',
-          createdAt: new Date().toISOString(),
-          iterations: Math.max(1, currentTask.iterations || 1),
-          currentIteration: 0
-        };
-        await backendStorageService.saveExperiment(storedExperiment);
+        // Only update the title if user provided a custom experiment name
+        // The backend already saves the experiment with a default title
+        if (experimentName.trim()) {
+          const customTitle = experimentName.trim();
+          // Wait a bit to ensure the backend has finished creating the experiment
+          setTimeout(async () => {
+            try {
+              const storedExperiment = {
+                id: response.experiment_id,
+                title: customTitle,
+                task: currentTask,
+                agents: agents,
+                status: 'running',
+                createdAt: new Date().toISOString(),
+                iterations: Math.max(1, currentTask.iterations || 1),
+                currentIteration: 0
+              };
+              await backendStorageService.saveExperiment(storedExperiment);
+            } catch (err) {
+              console.warn('Failed to update experiment title:', err);
+            }
+          }, 500);
+        }
         
         onExperimentStart(response.experiment_id);
       } catch (err: any) {
