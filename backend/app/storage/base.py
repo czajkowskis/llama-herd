@@ -1,8 +1,67 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
+import os
+import json
+import tempfile
+from pathlib import Path
+
 
 class BaseStorage(ABC):
     """Abstract base class for storage implementations."""
+
+    @staticmethod
+    def atomic_write_json(file_path: Path, data: Dict[str, Any], validate_model=None) -> bool:
+        """
+        Atomically write JSON data to a file using temp file + fsync + os.replace.
+        
+        Args:
+            file_path: Target file path
+            data: Data to write
+            validate_model: Optional Pydantic model to validate data before writing
+            
+        Returns:
+            True if successful
+            
+        Raises:
+            ValueError: If validation fails
+            IOError: If write operation fails
+        """
+        # Validate with Pydantic model if provided
+        if validate_model is not None:
+            try:
+                validate_model(**data)
+            except Exception as e:
+                raise ValueError(f"Data validation failed: {e}")
+        
+        # Ensure parent directory exists
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Write to temporary file in same directory (ensures same filesystem for atomic replace)
+        temp_fd, temp_path = tempfile.mkstemp(
+            dir=file_path.parent,
+            prefix=f".{file_path.name}.",
+            suffix='.tmp'
+        )
+        
+        try:
+            # Write JSON data to temp file
+            with os.fdopen(temp_fd, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False, default=str)
+                f.flush()
+                # Ensure data is written to disk
+                os.fsync(f.fileno())
+            
+            # Atomically replace target file with temp file
+            os.replace(temp_path, file_path)
+            return True
+            
+        except Exception as e:
+            # Clean up temp file on error
+            try:
+                os.unlink(temp_path)
+            except (OSError, FileNotFoundError):
+                pass
+            raise IOError(f"Error writing {file_path}: {e}")
 
     @abstractmethod
     def save_experiment(self, experiment: Dict[str, Any]) -> bool:
