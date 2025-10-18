@@ -11,6 +11,7 @@ import { ExportPanel } from '../conversation/ExportPanel';
 import { RunSelector } from './RunSelector';
 import { MessageActions, CopyButton } from '../conversation/MessageActions';
 import { RawJSONModal } from '../conversation/RawJSONModal';
+import { CodeBlock } from '../conversation/CodeBlock';
 import { ConnectionStatus, ConnectionStatusType } from '../ui/ConnectionStatus';
 import { DebugPanel, DebugMessage } from '../ui/DebugPanel';
 import { ViewModeIndicator, HistoricalViewBanner } from './ViewModeIndicator';
@@ -499,7 +500,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
 
         {/* Chat Messages */}
         <div className={`bg-gray-900 rounded-xl p-4 h-[600px] overflow-y-auto space-y-4 ${!isViewingLive ? 'historical-view-dimmed' : ''}`}>
-          {viewConversation.messages.map((message) => {
+          {viewConversation.messages.map((message, index) => {
             const agent = getAgentById(message.agentId);
             if (!agent) return null;
 
@@ -507,9 +508,10 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
             const isStarred = starredMessages.has(message.id);
             const isInExportSelection = exportSelection.has(message.id);
             const isNewlyArrived = isViewingLive && newlyArrivedMessages.has(message.id);
+            const isOddMessage = index % 2 === 1;
             
             return (
-              <div key={message.id} className={`flex space-x-3 group ${isNewlyArrived ? 'animate-message-arrive' : ''}`}>
+              <div key={message.id} className={`flex space-x-3 group ${isNewlyArrived ? 'animate-message-arrive' : ''} ${isOddMessage ? 'flex-row-reverse space-x-reverse' : ''}`}>
                 <div className="flex-shrink-0">
                   <div
                     className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold"
@@ -518,12 +520,12 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
                     {agent.name.charAt(0).toUpperCase()}
                   </div>
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center">
+                <div className="flex-1 message-content-wrapper">
+                  <div className={`flex items-center justify-between mb-1 message-header ${isOddMessage ? 'flex-row-reverse' : ''}`}>
+                    <div className="flex items-center flex-wrap gap-2">
                       <span className="font-semibold text-white">{agent.name}</span>
-                      <span className="text-xs text-gray-400 ml-2">{formatTimestamp(message.timestamp)}</span>
-                      <span className="text-xs text-gray-500 ml-2">• {agent.model}</span>
+                      <span className="message-timestamp">{formatTimestamp(message.timestamp)}</span>
+                      <span className="message-model-badge">{agent.model}</span>
                       {isStarred && (
                         <span className="ml-2 text-yellow-400" title="Starred message">
                           <Icon>
@@ -574,7 +576,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
                       />
                     </div>
                   </div>
-                  <div className="bg-gray-800 rounded-lg p-3 text-gray-200">
+                  <div className="rounded-lg p-4 text-gray-200 message-content">
                     <ReactMarkdown
                       components={{
                         h1: (props: any) => (
@@ -587,37 +589,28 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
                           <h3 className="text-base font-semibold text-white mt-2 mb-2" {...props} />
                         ),
                         p: (props: any) => (
-                          <p className="mb-2" {...props} />
+                          <p className="mb-2 leading-relaxed" {...props} />
                         ),
                         ul: (props: any) => (
-                          <ul className="list-disc ml-6 mb-2" {...props} />
+                          <ul className="list-disc ml-6 mb-2 space-y-1" {...props} />
                         ),
                         ol: (props: any) => (
-                          <ol className="list-decimal ml-6 mb-2" {...props} />
+                          <ol className="list-decimal ml-6 mb-2 space-y-1" {...props} />
                         ),
                         li: (props: any) => (
                           <li className="mb-1" {...props} />
                         ),
                         a: (props: any) => (
-                          <a className="text-blue-400 underline" target="_blank" rel="noreferrer" {...props} />
+                          <a className="text-blue-400 underline hover:text-blue-300" target="_blank" rel="noreferrer" {...props} />
                         ),
                         hr: (props: any) => (
-                          <hr className="border-gray-700 my-3" {...props} />
+                          <hr className="border-gray-700 my-4" {...props} />
                         ),
-                        code: ({ node, inline, className, children, ...props }: any) => {
-                          if (inline) {
-                            return (
-                              <code className="bg-gray-900 rounded px-1 py-0.5 text-sm" {...props}>
-                                {children}
-                              </code>
-                            );
-                          }
-                          return (
-                            <pre className="bg-gray-900 rounded-md p-3 overflow-x-auto text-sm">
-                              <code className={className} {...props}>{children}</code>
-                            </pre>
-                          );
-                        },
+                        code: ({ node, inline, className, children, ...props }: any) => (
+                          <CodeBlock inline={inline} className={className}>
+                            {children}
+                          </CodeBlock>
+                        ),
                       }}
                     >
                       {message.content}

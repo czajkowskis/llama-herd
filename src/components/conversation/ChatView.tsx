@@ -6,6 +6,7 @@ import { Conversation, ConversationAgent, Message } from '../../types/index.d';
 import { ExportPanel } from './ExportPanel';
 import { MessageActions, CopyButton } from './MessageActions';
 import { RawJSONModal } from './RawJSONModal';
+import { CodeBlock } from './CodeBlock';
 import { getStarredMessages, toggleStarredMessage } from '../../services/uiPreferencesService';
 
 interface ChatViewProps {
@@ -104,16 +105,17 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
         {/* Chat Messages */}
         <div className="rounded-xl p-4 h-[600px] overflow-y-auto space-y-4" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-          {conversation.messages.map((message) => {
+          {conversation.messages.map((message, index) => {
             const agent = getAgentById(message.agentId);
             if (!agent) return null;
 
             const textColor = getContrastColor(agent.color);
             const isStarred = starredMessages.has(message.id);
             const isInExportSelection = exportSelection.has(message.id);
+            const isOddMessage = index % 2 === 1;
             
             return (
-              <div key={message.id} className="message-container flex space-x-3 group">
+              <div key={message.id} className={`message-container flex space-x-3 group ${isOddMessage ? 'flex-row-reverse space-x-reverse' : ''}`}>
                 <div className="flex-shrink-0">
                   <div
                     className="agent-avatar w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold"
@@ -122,12 +124,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     {agent.name.charAt(0).toUpperCase()}
                   </div>
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center">
+                <div className="flex-1 message-content-wrapper">
+                  <div className={`flex items-center justify-between mb-1 message-header ${isOddMessage ? 'flex-row-reverse' : ''}`}>
+                    <div className="flex items-center flex-wrap gap-2">
                       <span className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>{agent.name}</span>
-                      <span className="text-xs ml-2" style={{ color: 'var(--color-text-tertiary)' }}>{formatTimestamp(message.timestamp)}</span>
-                      <span className="text-xs ml-2" style={{ color: 'var(--color-text-tertiary)' }}>• {agent.model}</span>
+                      <span className="message-timestamp">{formatTimestamp(message.timestamp)}</span>
+                      <span className="message-model-badge">{agent.model}</span>
                       {isStarred && (
                         <span className="ml-2 text-yellow-400" title="Starred message">
                           <Icon>
@@ -178,7 +180,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                       />
                     </div>
                   </div>
-                  <div className="rounded-lg p-3" style={{ backgroundColor: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)' }}>
+                  <div className="rounded-lg p-4 message-content" style={{ color: 'var(--color-text-secondary)' }}>
                     <ReactMarkdown
                       components={{
                         h1: (props: any) => (
@@ -191,37 +193,28 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           <h3 className="text-base font-semibold mt-2 mb-2" style={{ color: 'var(--color-text-primary)' }} {...props} />
                         ),
                         p: (props: any) => (
-                          <p className="mb-2" {...props} />
+                          <p className="mb-2 leading-relaxed" {...props} />
                         ),
                         ul: (props: any) => (
-                          <ul className="list-disc ml-6 mb-2" {...props} />
+                          <ul className="list-disc ml-6 mb-2 space-y-1" {...props} />
                         ),
                         ol: (props: any) => (
-                          <ol className="list-decimal ml-6 mb-2" {...props} />
+                          <ol className="list-decimal ml-6 mb-2 space-y-1" {...props} />
                         ),
                         li: (props: any) => (
                           <li className="mb-1" {...props} />
                         ),
                         a: (props: any) => (
-                          <a className="text-blue-400 underline" target="_blank" rel="noreferrer" {...props} />
+                          <a className="text-blue-400 underline hover:text-blue-300" target="_blank" rel="noreferrer" {...props} />
                         ),
                         hr: (props: any) => (
-                          <hr className="border-gray-700 my-3" {...props} />
+                          <hr className="my-4" style={{ borderColor: 'var(--color-border)' }} {...props} />
                         ),
-                        code: ({ node, inline, className, children, ...props }: any) => {
-                          if (inline) {
-                            return (
-                              <code className="rounded px-1 py-0.5 text-sm" style={{ backgroundColor: 'var(--color-bg-primary)' }} {...props}>
-                                {children}
-                              </code>
-                            );
-                          }
-                          return (
-                            <pre className="rounded-md p-3 overflow-x-auto text-sm" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
-                              <code className={className} {...props}>{children}</code>
-                            </pre>
-                          );
-                        },
+                        code: ({ node, inline, className, children, ...props }: any) => (
+                          <CodeBlock inline={inline} className={className}>
+                            {children}
+                          </CodeBlock>
+                        ),
                       }}
                     >
                       {message.content}
