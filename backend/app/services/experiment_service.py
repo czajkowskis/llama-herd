@@ -7,10 +7,12 @@ from typing import List
 from ..schemas.experiment import ExperimentRequest, ExperimentResponse, ExperimentListItem
 from ..schemas.task import TaskModel
 from ..schemas.agent import AgentModel
-from ..core.exceptions import ExperimentError, ValidationError
+from ..core.exceptions import ExperimentError, ValidationError, NotFoundError
 from ..core.state import state_manager
 from ..services.agent_service import AgentService
-from ..utils.logging import logger
+from ..utils.logging import get_logger, log_with_context, set_experiment_context
+
+logger = get_logger(__name__)
 
 
 class ExperimentService:
@@ -26,6 +28,9 @@ class ExperimentService:
             # Generate experiment ID
             experiment_id = str(uuid.uuid4())
             
+            # Set context for logging
+            set_experiment_context(experiment_id)
+            
             # Create experiment state
             experiment_state = state_manager.create_experiment(
                 experiment_id=experiment_id,
@@ -37,12 +42,26 @@ class ExperimentService:
             iterations = ExperimentService._calculate_iterations(request)
             experiment_state.iterations = iterations
             
-            logger.info(f"Created experiment {experiment_id} with {len(request.agents)} agents")
+            log_with_context(
+                logger,
+                'info',
+                f"Created experiment",
+                experiment_id=experiment_id,
+                agent_count=len(request.agents),
+                iterations=iterations
+            )
             
             return experiment_id
             
+        except ValidationError:
+            raise
         except Exception as e:
-            logger.error(f"Failed to create experiment: {str(e)}")
+            log_with_context(
+                logger,
+                'error',
+                f"Failed to create experiment: {str(e)}",
+                exception_type=type(e).__name__
+            )
             raise ExperimentError(f"Failed to create experiment: {str(e)}")
     
     @staticmethod
@@ -50,7 +69,11 @@ class ExperimentService:
         """Get experiment by ID."""
         experiment = state_manager.get_experiment(experiment_id)
         if not experiment:
-            raise ValidationError(f"Experiment {experiment_id} not found")
+            raise NotFoundError(
+                f"Experiment not found",
+                resource_type="experiment",
+                resource_id=experiment_id
+            )
         
         return ExperimentResponse(
             experiment_id=experiment.experiment_id,
@@ -64,6 +87,7 @@ class ExperimentService:
             completed_at=experiment.completed_at,
             error=experiment.error
         )
+
     
     @staticmethod
     def list_experiments() -> List[ExperimentListItem]:
