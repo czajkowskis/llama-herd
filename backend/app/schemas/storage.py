@@ -26,7 +26,7 @@ class StoredAgent(BaseModel):
     
     id: str
     name: str
-    prompt: str
+    prompt: Optional[str] = None  # Optional for backward compatibility with conversations
     color: str
     model: str
     temperature: Optional[float] = None
