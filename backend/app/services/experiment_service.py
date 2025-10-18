@@ -3,8 +3,8 @@ Service for managing experiments.
 """
 import uuid
 from datetime import datetime
-from typing import List, Dict, Any
-from ..schemas.experiment import ExperimentRequest
+from typing import List
+from ..schemas.experiment import ExperimentRequest, ExperimentResponse, ExperimentListItem
 from ..schemas.task import TaskModel
 from ..schemas.agent import AgentModel
 from ..core.exceptions import ExperimentError, ValidationError
@@ -46,16 +46,27 @@ class ExperimentService:
             raise ExperimentError(f"Failed to create experiment: {str(e)}")
     
     @staticmethod
-    def get_experiment(experiment_id: str) -> Dict[str, Any]:
+    def get_experiment(experiment_id: str) -> ExperimentResponse:
         """Get experiment by ID."""
         experiment = state_manager.get_experiment(experiment_id)
         if not experiment:
             raise ValidationError(f"Experiment {experiment_id} not found")
         
-        return experiment.to_dict()
+        return ExperimentResponse(
+            experiment_id=experiment.experiment_id,
+            task=experiment.task,
+            agents=experiment.agents,
+            conversations=experiment.conversations,
+            iterations=experiment.iterations,
+            current_iteration=experiment.current_iteration,
+            status=experiment.status,
+            created_at=experiment.created_at,
+            completed_at=experiment.completed_at,
+            error=experiment.error
+        )
     
     @staticmethod
-    def list_experiments() -> List[Dict[str, Any]]:
+    def list_experiments() -> List[ExperimentListItem]:
         """List all experiments."""
         experiments = []
         
@@ -65,17 +76,17 @@ class ExperimentService:
             if len(title) > 100:
                 title = title[:100] + "..."
             
-            experiments.append({
-                "experiment_id": experiment_id,
-                "title": title,
-                "status": experiment.status,
-                "created_at": experiment.created_at,
-                "agent_count": len(experiment.agents),
-                "message_count": len(experiment.messages)
-            })
+            experiments.append(ExperimentListItem(
+                experiment_id=experiment_id,
+                title=title,
+                status=experiment.status,
+                created_at=experiment.created_at,
+                agent_count=len(experiment.agents),
+                message_count=len(experiment.messages)
+            ))
         
         # Sort by created_at (newest first)
-        experiments.sort(key=lambda x: x['created_at'], reverse=True)
+        experiments.sort(key=lambda x: x.created_at, reverse=True)
         return experiments
     
     @staticmethod

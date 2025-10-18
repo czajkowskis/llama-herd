@@ -3,7 +3,7 @@ Service for managing conversations.
 """
 import uuid
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Optional
 from ..schemas.conversation import Message, ConversationAgent, Conversation
 from ..core.exceptions import ValidationError
 from ..core.state import state_manager
@@ -88,7 +88,7 @@ class ConversationService:
                     from ..storage import get_storage
                     storage = get_storage()
                     # Convert to dict format for storage
-                    conversation_dict = conversation.dict()
+                    conversation_dict = conversation.model_dump()
                     
                     # Extract iteration number from title (e.g., "Run 1" -> 1, "Dataset item 3" -> 3)
                     current_iteration = 1  # Default fallback
@@ -159,23 +159,23 @@ class ConversationService:
         return agent_id
     
     @staticmethod
-    def _notify_message(experiment_id: str, message: Message):
+    def _notify_message(experiment_id: str, message: Message) -> None:
         """Notify about new message via message queue."""
         try:
             state_manager.put_message_threadsafe(experiment_id, {
                 "type": "message",
-                "data": message.dict()
+                "data": message.model_dump()
             })
         except Exception as e:
             logger.warning(f"Failed to notify about message: {str(e)}")
     
     @staticmethod
-    def _notify_conversation(experiment_id: str, conversation: Conversation):
+    def _notify_conversation(experiment_id: str, conversation: Conversation) -> None:
         """Notify about new conversation via message queue."""
         try:
             state_manager.put_message_threadsafe(experiment_id, {
                 "type": "conversation",
-                "data": conversation.dict()
+                "data": conversation.model_dump()
             })
         except Exception as e:
             logger.warning(f"Failed to notify about conversation: {str(e)}") 

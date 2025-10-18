@@ -89,7 +89,7 @@ class BaseStorage(ABC):
         pass
 
     @abstractmethod
-    def save_experiment_conversation(self, experiment_id: str, iteration: int, title: str, conversation: Dict[str, Any], experiment_title: str = None) -> bool:
+    def save_experiment_conversation(self, experiment_id: str, iteration: int, title: str, conversation: Dict[str, Any], experiment_title: Optional[str] = None) -> bool:
         """Save an experiment conversation."""
         pass
 

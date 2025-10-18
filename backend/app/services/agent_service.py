@@ -1,7 +1,7 @@
 """
 Service for managing AI agents.
 """
-from typing import List
+from typing import List, Dict, Any
 from ..schemas.agent import AgentModel
 from ..core.exceptions import AgentError
 from ..core.config import settings
@@ -29,7 +29,7 @@ class AgentService:
         return True
     
     @staticmethod
-    def create_agent_config(agent: AgentModel) -> dict:
+    def create_agent_config(agent: AgentModel) -> Dict[str, Any]:
         """Create agent configuration for LLM."""
         config_list = [{
             "model": agent.model,
@@ -37,7 +37,7 @@ class AgentService:
             "api_key": settings.ollama_api_key,
         }]
         
-        llm_config = {
+        llm_config: Dict[str, Any] = {
             "config_list": config_list,
             "temperature": agent.temperature if agent.temperature is not None else settings.default_temperature,
             "timeout": settings.ollama_timeout,
@@ -46,7 +46,7 @@ class AgentService:
         return llm_config
     
     @staticmethod
-    def get_agent_summary(agent: AgentModel) -> dict:
+    def get_agent_summary(agent: AgentModel) -> Dict[str, Any]:
         """Get a summary of agent configuration."""
         return {
             "id": agent.id,

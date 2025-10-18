@@ -1,28 +1,30 @@
 """
 Centralized application state management.
 """
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import asyncio
 from datetime import datetime
-from ..schemas.conversation import ConversationAgent, Message
+from ..schemas.conversation import ConversationAgent, Message, Conversation
+from ..schemas.task import TaskModel
+from ..schemas.agent import AgentModel
 
 
 class ExperimentState:
     """Represents the state of a single experiment."""
     
-    def __init__(self, experiment_id: str, task: Any, agents: list):
-        self.experiment_id = experiment_id
-        self.task = task
-        self.agents = agents
-        self.conversation_agents = []
-        self.messages = []
-        self.conversations = []
-        self.iterations = 1
-        self.current_iteration = 0
-        self.status = 'running'
-        self.created_at = datetime.now().isoformat()
-        self.completed_at = None
-        self.error = None
+    def __init__(self, experiment_id: str, task: TaskModel, agents: List[AgentModel]):
+        self.experiment_id: str = experiment_id
+        self.task: TaskModel = task
+        self.agents: List[AgentModel] = agents
+        self.conversation_agents: List[ConversationAgent] = []
+        self.messages: List[Message] = []
+        self.conversations: List[Conversation] = []
+        self.iterations: int = 1
+        self.current_iteration: int = 0
+        self.status: str = 'running'
+        self.created_at: str = datetime.now().isoformat()
+        self.completed_at: Optional[str] = None
+        self.error: Optional[str] = None
         
         # Initialize conversation agents
         for agent in agents:
@@ -37,11 +39,11 @@ class ExperimentState:
         """Convert state to dictionary."""
         return {
             'experiment_id': self.experiment_id,
-            'task': self.task,
-            'agents': self.agents,
-            'conversation_agents': self.conversation_agents,
-            'messages': self.messages,
-            'conversations': self.conversations,
+            'task': self.task.model_dump() if hasattr(self.task, 'model_dump') else self.task,
+            'agents': [agent.model_dump() if hasattr(agent, 'model_dump') else agent for agent in self.agents],
+            'conversation_agents': [agent.model_dump() if hasattr(agent, 'model_dump') else agent for agent in self.conversation_agents],
+            'messages': [msg.model_dump() if hasattr(msg, 'model_dump') else msg for msg in self.messages],
+            'conversations': [conv.model_dump() if hasattr(conv, 'model_dump') else conv for conv in self.conversations],
             'iterations': self.iterations,
             'current_iteration': self.current_iteration,
             'status': self.status,
@@ -63,7 +65,7 @@ class StateManager:
         """Set the event loop for async operations."""
         self._loop = loop
     
-    def create_experiment(self, experiment_id: str, task: Any, agents: list) -> ExperimentState:
+    def create_experiment(self, experiment_id: str, task: TaskModel, agents: List[AgentModel]) -> ExperimentState:
         """Create a new experiment state."""
         experiment_state = ExperimentState(experiment_id, task, agents)
         self._active_experiments[experiment_id] = experiment_state
@@ -136,7 +138,7 @@ class StateManager:
             return True
         return False
     
-    def add_conversation(self, experiment_id: str, conversation: Any) -> bool:
+    def add_conversation(self, experiment_id: str, conversation: Conversation) -> bool:
         """Add conversation to experiment."""
         experiment = self.get_experiment(experiment_id)
         if experiment:
