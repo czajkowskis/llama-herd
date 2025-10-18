@@ -43,8 +43,8 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
     switch (status) {
       case 'connected':
         return (
-          <div className="flex items-center space-x-2 px-3 py-1 rounded-full bg-gray-700 text-green-400">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+          <div className="flex items-center space-x-2 px-3 py-1 rounded-full bg-green-700 text-white">
+            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
             <span className="text-xs font-medium">Connected</span>
           </div>
         );

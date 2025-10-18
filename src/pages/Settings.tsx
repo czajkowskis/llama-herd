@@ -4,10 +4,10 @@ import { OLLAMA_BASE_URL as DEFAULT_OLLAMA_BASE } from '../config';
 import { Button } from '../components/ui/Button';
 import { useUIPreferences } from '../hooks/useUIPreferences';
 import { Theme, MessageDensity, getTimeFormatPreference, setTimeFormatPreference, TimeFormatPreference } from '../services/uiPreferencesService';
+import { ConnectionStatus, ConnectionStatusType } from '../components/ui/ConnectionStatus';
 
 // Keys for localStorage
 const STORAGE_KEY_BASE = 'llama-herd-ollama-base-url';
-const STORAGE_KEY_MODEL = 'llama-herd-default-ollama-model';
 
 // This page component handles application settings, particularly the Ollama connection.
 export const Settings: React.FC = () => {
@@ -31,10 +31,7 @@ export const Settings: React.FC = () => {
   const [isTesting, setIsTesting] = useState<boolean>(false);
   const [testResultMessage, setTestResultMessage] = useState<string | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
-
-  const [selectedModel, setSelectedModel] = useState<string>(() => {
-    return localStorage.getItem(STORAGE_KEY_MODEL) || '';
-  });
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatusType>('disconnected');
 
   // Time format preference state
   const [timeFormat, setTimeFormat] = useState<TimeFormatPreference>(getTimeFormatPreference);
@@ -55,6 +52,26 @@ export const Settings: React.FC = () => {
     setEndpointError(err);
   }, [endpoint]);
 
+  // Update connection status based on testing state
+  useEffect(() => {
+    if (isTesting) {
+      setConnectionStatus('reconnecting');
+    } else if (testError) {
+      setConnectionStatus('error');
+    } else if (testResultMessage) {
+      setConnectionStatus('connected');
+    } else {
+      setConnectionStatus('disconnected');
+    }
+  }, [isTesting, testError, testResultMessage]);
+
+  // Automatically test connection on page load
+  useEffect(() => {
+    if (!endpointError && endpoint) {
+      handleTest();
+    }
+  }, []); // Empty dependency array to run only on mount
+
   const handleTest = async () => {
     setIsTesting(true);
     setTestError(null);
@@ -67,11 +84,7 @@ export const Settings: React.FC = () => {
     try {
       const models = await ollamaService.listModels(base);
       setOllamaModels(models);
-      setTestResultMessage(`Connected — ${models.length} models`);
-      // If there's a previously selected model, keep it; otherwise pick first
-      if (!selectedModel && models.length > 0) {
-        setSelectedModel(models[0]);
-      }
+      setTestResultMessage('Connected');
     } catch (err: any) {
       setTestError(err?.message || String(err) || 'Failed to connect');
     } finally {
@@ -81,11 +94,6 @@ export const Settings: React.FC = () => {
 
   const handleSave = () => {
     localStorage.setItem(STORAGE_KEY_BASE, endpoint.replace(/\/$/, ''));
-    if (selectedModel) {
-      localStorage.setItem(STORAGE_KEY_MODEL, selectedModel);
-    } else {
-      localStorage.removeItem(STORAGE_KEY_MODEL);
-    }
     setTestResultMessage('Saved');
     setTimeout(() => setTestResultMessage(null), 1500);
   };
@@ -95,7 +103,13 @@ export const Settings: React.FC = () => {
       <h2 className="text-2xl font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>Settings</h2>
       <p>Configure your Ollama connection and other preferences.</p>
       <div className="mt-6 p-4 rounded-xl max-w-2xl mx-auto text-left" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
-        <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--color-text-primary)' }}>Ollama Connection</h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-lg font-medium" style={{ color: 'var(--color-text-primary)' }}>Ollama Connection</h3>
+          <ConnectionStatus
+            status={connectionStatus}
+            errorMessage={testError || undefined}
+          />
+        </div>
 
         <label className="block text-sm mb-1" style={{ color: 'var(--color-text-secondary)' }}>Ollama API endpoint</label>
         <div className="flex space-x-3">
@@ -130,35 +144,28 @@ export const Settings: React.FC = () => {
         </div>
         {endpointError && <p className="text-red-500 mt-2 font-medium">{endpointError}</p>}
 
-        <div className="mt-4">
-          {isTesting && <p className="text-purple-600 font-medium">Testing connection…</p>}
-          {testError && <p className="text-red-500 mt-2 font-medium">Error: {testError}</p>}
-          {testResultMessage && !testError && (
-            <p className="text-green-600 mt-2 font-medium">{testResultMessage}</p>
-          )}
-        </div>
-
-        <div className="mt-4">
-          <label className="block text-sm mb-1" style={{ color: 'var(--color-text-secondary)' }}>Default model (optional)</label>
-          <select
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-            className="w-full p-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-purple-500"
-            style={{ 
-              backgroundColor: 'var(--color-bg-tertiary)', 
-              color: 'var(--color-text-primary)',
-              borderColor: 'var(--color-border)'
+        <div className="mt-4 flex flex-col items-center space-y-4">
+          <a 
+            href="#/models" 
+            className={`inline-flex items-center px-4 py-2 rounded-xl transition-colors ${
+              testResultMessage && !testError && !isTesting
+                ? 'bg-purple-600 hover:bg-purple-700 text-white cursor-pointer' 
+                : 'bg-gray-400 text-gray-200 cursor-not-allowed opacity-50'
+            }`}
+            aria-label="Manage models"
+            onClick={(e) => {
+              if (!testResultMessage || testError || isTesting) {
+                e.preventDefault();
+              }
             }}
           >
-            <option value="">(no default)</option>
-            {isTesting ? (
-              <option disabled>Testing models…</option>
-            ) : ollamaModels.length > 0 ? (
-              ollamaModels.map((m, i) => <option key={i} value={m}>{m}</option>)
-            ) : (
-              <option disabled>No models — test connection to populate</option>
-            )}
-          </select>
+            Manage Models
+          </a>
+          {(!testResultMessage || testError || isTesting) && (
+            <p className="text-xs text-center" style={{ color: 'var(--color-text-tertiary)' }}>
+              Test connection first to access model management
+            </p>
+          )}
         </div>
 
       </div>

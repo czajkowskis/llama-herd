@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import { Sidebar } from './components/common/Sidebar';
 import { NewExperiment } from './pages/NewExperiment';
@@ -22,6 +22,31 @@ const App: React.FC = () => {
   });
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const [currentExperimentId, setCurrentExperimentId] = useState<string | null>(null);
+
+  // Listen for hash changes to support navigation via links
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      if (hash === '#/models') {
+        setCurrentPage('models');
+      } else if (hash === '#/settings') {
+        setCurrentPage('settings');
+      } else if (hash === '#/history') {
+        setCurrentPage('history');
+      } else if (hash === '#/explore') {
+        setCurrentPage('explore');
+      } else if (hash === '#/conversations') {
+        setCurrentPage('conversations');
+      } else if (hash === '#/about') {
+        setCurrentPage('about');
+      } else {
+        setCurrentPage('newExperiment');
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   const renderContent = () => {
     switch (currentPage) {
