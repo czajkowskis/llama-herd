@@ -20,6 +20,9 @@ export const History: React.FC = () => {
   const [showDeleteConversationConfirmation, setShowDeleteConversationConfirmation] = useState<boolean>(false);
   const [conversationToDelete, setConversationToDelete] = useState<{ conversation: StoredConversation; source?: 'import' | 'experiment' } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [showBulkDeleteConfirmation, setShowBulkDeleteConfirmation] = useState(false);
 
   useEffect(() => {
     loadHistory();
@@ -29,6 +32,11 @@ export const History: React.FC = () => {
   useEffect(() => {
     console.log('History: conversations state updated:', conversations);
   }, [conversations]);
+
+  // Clear selection when switching tabs
+  useEffect(() => {
+    setSelectedItems(new Set());
+  }, [activeTab]);
 
   const loadHistory = async () => {
     setLoading(true);
@@ -201,6 +209,53 @@ export const History: React.FC = () => {
     setConversationToDelete(null);
   };
 
+  const handleSelectItem = (id: string) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    const currentItems = activeTab === 'experiments' ? experiments : conversations;
+    if (selectedItems.size === currentItems.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(currentItems.map(item => item.id)));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    setShowBulkDeleteConfirmation(true);
+  };
+
+  const confirmBulkDelete = async () => {
+    try {
+      const deletePromises = Array.from(selectedItems).map(async (id) => {
+        if (activeTab === 'experiments') {
+          await backendStorageService.deleteExperiment(id);
+        } else {
+          await backendStorageService.deleteConversation(id);
+        }
+      });
+      await Promise.all(deletePromises);
+      setSelectedItems(new Set());
+      setSelectMode(false);
+      await loadHistory();
+    } catch (error) {
+      console.error('Failed to bulk delete items:', error);
+      setError('Failed to delete selected items. Please try again later.');
+    }
+    setShowBulkDeleteConfirmation(false);
+  };
+
+  const cancelBulkDelete = () => {
+    setShowBulkDeleteConfirmation(false);
+  };
+
   const getExperimentConversations = async (experimentId: string): Promise<StoredConversation[]> => {
     try {
       return await backendStorageService.getExperimentConversations(experimentId);
@@ -340,47 +395,85 @@ export const History: React.FC = () => {
         <div className="p-6 rounded-2xl shadow-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>History</h1>
-            <div className="flex space-x-2">
+            <div className="flex items-center space-x-4">
+              {selectMode && (
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                    {selectedItems.size} selected
+                  </span>
+                  <Button
+                    onClick={handleSelectAll}
+                    variant="secondary"
+                  >
+                    {selectedItems.size === (activeTab === 'experiments' ? experiments.length : conversations.length) ? 'Clear All' : 'Select All'}
+                  </Button>
+                  <Button
+                    onClick={handleBulkDelete}
+                    disabled={selectedItems.size === 0}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    Delete Selected ({selectedItems.size})
+                  </Button>
+                </div>
+              )}
               <button
-                onClick={() => setActiveTab('experiments')}
-                className="px-4 py-2 rounded-lg font-medium transition-colors"
+                onClick={() => {
+                  setSelectMode(!selectMode);
+                  if (selectMode) {
+                    setSelectedItems(new Set());
+                  }
+                }}
+                className="px-3 py-2 rounded-lg font-medium transition-colors"
                 style={{
-                  backgroundColor: activeTab === 'experiments' ? '#9333ea' : 'var(--color-bg-tertiary)',
-                  color: activeTab === 'experiments' ? 'white' : 'var(--color-text-secondary)'
+                  backgroundColor: selectMode ? '#dc2626' : 'var(--color-bg-tertiary)',
+                  color: selectMode ? 'white' : 'var(--color-text-secondary)'
                 }}
-                onMouseEnter={(e) => {
-                  if (activeTab !== 'experiments') {
-                    e.currentTarget.style.backgroundColor = 'var(--color-border)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (activeTab !== 'experiments') {
-                    e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                  }
-                }}
+                title={selectMode ? 'Exit selection mode' : 'Enter selection mode'}
               >
-                Experiments ({experiments.length})
+                {selectMode ? 'Cancel' : 'Select'}
               </button>
-              <button
-                onClick={() => setActiveTab('conversations')}
-                className="px-4 py-2 rounded-lg font-medium transition-colors"
-                style={{
-                  backgroundColor: activeTab === 'conversations' ? '#9333ea' : 'var(--color-bg-tertiary)',
-                  color: activeTab === 'conversations' ? 'white' : 'var(--color-text-secondary)'
-                }}
-                onMouseEnter={(e) => {
-                  if (activeTab !== 'conversations') {
-                    e.currentTarget.style.backgroundColor = 'var(--color-border)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (activeTab !== 'conversations') {
-                    e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                  }
-                }}
-              >
-                Imported Conversations ({conversations.length})
-              </button>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setActiveTab('experiments')}
+                  className="px-4 py-2 rounded-lg font-medium transition-colors"
+                  style={{
+                    backgroundColor: activeTab === 'experiments' ? '#9333ea' : 'var(--color-bg-tertiary)',
+                    color: activeTab === 'experiments' ? 'white' : 'var(--color-text-secondary)'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeTab !== 'experiments') {
+                      e.currentTarget.style.backgroundColor = 'var(--color-border)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeTab !== 'experiments') {
+                      e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                    }
+                  }}
+                >
+                  Experiments ({experiments.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab('conversations')}
+                  className="px-4 py-2 rounded-lg font-medium transition-colors"
+                  style={{
+                    backgroundColor: activeTab === 'conversations' ? '#9333ea' : 'var(--color-bg-tertiary)',
+                    color: activeTab === 'conversations' ? 'white' : 'var(--color-text-secondary)'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeTab !== 'conversations') {
+                      e.currentTarget.style.backgroundColor = 'var(--color-border)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeTab !== 'conversations') {
+                      e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                    }
+                  }}
+                >
+                  Imported Conversations ({conversations.length})
+                </button>
+              </div>
             </div>
           </div>
 
@@ -395,10 +488,22 @@ export const History: React.FC = () => {
                   experiments.map((experiment) => (
                     <div
                       key={experiment.id}
-                      className="rounded-lg border p-4 hover:shadow-md transition-shadow"
+                      className={`rounded-lg border p-4 hover:shadow-md transition-shadow ${
+                        selectedItems.has(experiment.id) ? 'ring-2 ring-purple-500' : ''
+                      }`}
                       style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)' }}
                     >
                       <div className="flex items-center justify-between">
+                        {selectMode && (
+                          <div className="flex items-center mr-4">
+                            <input
+                              type="checkbox"
+                              checked={selectedItems.has(experiment.id)}
+                              onChange={() => handleSelectItem(experiment.id)}
+                              className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 focus:ring-2"
+                            />
+                          </div>
+                        )}
                         <div className="flex-1">
                           <h3 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                             {editingExperimentId === experiment.id ? (
@@ -510,10 +615,22 @@ export const History: React.FC = () => {
                   conversations.map((conversation) => (
                     <div
                       key={conversation.id}
-                      className="rounded-lg border p-4 hover:shadow-md transition-shadow"
+                      className={`rounded-lg border p-4 hover:shadow-md transition-shadow ${
+                        selectedItems.has(conversation.id) ? 'ring-2 ring-purple-500' : ''
+                      }`}
                       style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)' }}
                     >
                       <div className="flex items-center justify-between">
+                        {selectMode && (
+                          <div className="flex items-center mr-4">
+                            <input
+                              type="checkbox"
+                              checked={selectedItems.has(conversation.id)}
+                              onChange={() => handleSelectItem(conversation.id)}
+                              className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 focus:ring-2"
+                            />
+                          </div>
+                        )}
                         <div className="flex-1">
                           <h3 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                             {conversation.title}
@@ -586,6 +703,17 @@ export const History: React.FC = () => {
         cancelText="Cancel"
         onConfirm={confirmDeleteConversation}
         onCancel={cancelDeleteConversation}
+        type="danger"
+      />
+
+      <ConfirmationPopup
+        isOpen={showBulkDeleteConfirmation}
+        title="Delete Selected Items"
+        message={`Are you sure you want to delete ${selectedItems.size} selected ${activeTab === 'experiments' ? 'experiment' : 'conversation'}${selectedItems.size === 1 ? '' : 's'}? This action cannot be undone.`}
+        confirmText="Delete All"
+        cancelText="Cancel"
+        onConfirm={confirmBulkDelete}
+        onCancel={cancelBulkDelete}
         type="danger"
       />
     </>
