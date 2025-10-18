@@ -16,6 +16,8 @@ export const History: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [editingExperimentId, setEditingExperimentId] = useState<string | null>(null);
   const [editingExperimentName, setEditingExperimentName] = useState<string>('');
+  const [editingConversationId, setEditingConversationId] = useState<string | null>(null);
+  const [editingConversationName, setEditingConversationName] = useState<string>('');
   const [showDeleteExperimentConfirmation, setShowDeleteExperimentConfirmation] = useState<boolean>(false);
   const [experimentToDelete, setExperimentToDelete] = useState<StoredExperiment | null>(null);
   const [showDeleteConversationConfirmation, setShowDeleteConversationConfirmation] = useState<boolean>(false);
@@ -177,6 +179,48 @@ export const History: React.FC = () => {
       handleSaveExperimentName();
     } else if (e.key === 'Escape') {
       handleCancelEditExperimentName();
+    }
+  };
+
+  const handleStartEditConversationName = (conversation: StoredConversation) => {
+    setEditingConversationId(conversation.id);
+    setEditingConversationName(conversation.title);
+  };
+
+  const handleSaveConversationName = async () => {
+    if (editingConversationName.trim() && editingConversationId) {
+      try {
+        const updatedConversations = conversations.map(conv => 
+          conv.id === editingConversationId 
+            ? { ...conv, title: editingConversationName.trim() }
+            : conv
+        );
+        setConversations(updatedConversations);
+        
+        // Save updated conversation to backend storage
+        const updatedConversation = updatedConversations.find(conv => conv.id === editingConversationId);
+        if (updatedConversation) {
+          await backendStorageService.saveConversation(updatedConversation);
+        }
+      } catch (error) {
+        console.error('Failed to save conversation name:', error);
+        setError('Failed to save conversation name. Please try again later.');
+      }
+    }
+    setEditingConversationId(null);
+    setEditingConversationName('');
+  };
+
+  const handleCancelEditConversationName = () => {
+    setEditingConversationId(null);
+    setEditingConversationName('');
+  };
+
+  const handleConversationNameKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSaveConversationName();
+    } else if (e.key === 'Escape') {
+      handleCancelEditConversationName();
     }
   };
 
@@ -564,8 +608,13 @@ export const History: React.FC = () => {
                           </Button>
                           <button
                             onClick={() => handleStartEditExperimentName(experiment)}
-                            className="text-gray-400 hover:text-purple-400 p-1.5 rounded-full transition-all duration-200 hover:bg-purple-500/20 hover:scale-110 hover:shadow-lg"
-                            title="Edit experiment name"
+                            disabled={editingExperimentId !== null || editingConversationId !== null}
+                            className={`p-1.5 rounded-full transition-all duration-200 hover:scale-110 hover:shadow-lg ${
+                              editingExperimentId !== null || editingConversationId !== null
+                                ? 'text-gray-300 cursor-not-allowed'
+                                : 'text-gray-400 hover:text-purple-400 hover:bg-purple-500/20'
+                            }`}
+                            title={editingExperimentId !== null || editingConversationId !== null ? 'Finish editing first' : 'Edit experiment name'}
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-edit">
                               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -619,7 +668,48 @@ export const History: React.FC = () => {
                         )}
                         <div className="flex-1">
                           <h3 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                            {conversation.title}
+                            {editingConversationId === conversation.id ? (
+                              <div className="flex items-center space-x-2">
+                                <input
+                                  type="text"
+                                  value={editingConversationName}
+                                  onChange={(e) => setEditingConversationName(e.target.value)}
+                                  onBlur={handleSaveConversationName}
+                                  onKeyPress={handleConversationNameKeyPress}
+                                  autoFocus
+                                  className="rounded px-2 py-1 text-lg font-semibold focus:outline-none focus:border-purple-400"
+                                  style={{
+                                    backgroundColor: 'var(--color-bg-secondary)',
+                                    borderColor: 'var(--color-border)',
+                                    borderWidth: '1px',
+                                    color: 'var(--color-text-primary)'
+                                  }}
+                                />
+                                <div className="flex items-center space-x-1">
+                                  <button
+                                    onClick={handleSaveConversationName}
+                                    className="text-green-400 hover:text-green-300 p-1 rounded-full transition-colors duration-200"
+                                    title="Save name"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check">
+                                      <path d="M20 6 9 17l-5-5"/>
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={handleCancelEditConversationName}
+                                    className="text-gray-400 hover:text-red-400 p-1 rounded-full transition-colors duration-200"
+                                    title="Cancel edit"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x">
+                                      <path d="M18 6 6 18"/>
+                                      <path d="m6 6 12 12"/>
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              conversation.title
+                            )}
                           </h3>
                           <div className="flex items-center space-x-4 mt-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                             <span className="inline-flex items-center space-x-1">
@@ -646,6 +736,21 @@ export const History: React.FC = () => {
                           <Button onClick={() => handleViewConversation(conversation)}>
                             View
                           </Button>
+                          <button
+                            onClick={() => handleStartEditConversationName(conversation)}
+                            disabled={editingConversationId !== null || editingExperimentId !== null}
+                            className={`p-1.5 rounded-full transition-all duration-200 hover:scale-110 hover:shadow-lg ${
+                              editingConversationId !== null || editingExperimentId !== null
+                                ? 'text-gray-300 cursor-not-allowed'
+                                : 'text-gray-400 hover:text-purple-400 hover:bg-purple-500/20'
+                            }`}
+                            title={editingConversationId !== null || editingExperimentId !== null ? 'Finish editing first' : 'Edit conversation name'}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-edit">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 2-2v-7"/>
+                              <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/>
+                            </svg>
+                          </button>
                           <button
                             onClick={() => handleDeleteConversation(conversation, 'import')}
                             className="text-gray-400 hover:text-red-400 p-1.5 rounded-full transition-all duration-200 hover:bg-red-500/20 hover:scale-110 hover:shadow-lg"
