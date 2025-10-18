@@ -60,9 +60,14 @@ class ExperimentService:
         experiments = []
         
         for experiment_id, experiment in state_manager.get_all_experiments().items():
+            # Generate title from task prompt (truncate only if longer than 100 chars)
+            title = experiment.task.prompt
+            if len(title) > 100:
+                title = title[:100] + "..."
+            
             experiments.append({
                 "experiment_id": experiment_id,
-                "title": f"Experiment: {experiment.task.prompt[:50]}...",
+                "title": title,
                 "status": experiment.status,
                 "created_at": experiment.created_at,
                 "agent_count": len(experiment.agents),

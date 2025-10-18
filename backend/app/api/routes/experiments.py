@@ -22,9 +22,14 @@ async def start_experiment(request: ExperimentRequest):
         experiment_id = ExperimentService.create_experiment(request)
         
         # Persist initial experiment metadata immediately
+        # Generate title from task prompt (truncate only if longer than 100 chars)
+        title = request.task.prompt
+        if len(title) > 100:
+            title = title[:100] + "..."
+        
         experiment_metadata = {
             'id': experiment_id,
-            'title': f"Experiment: {request.task.prompt[:50]}...",
+            'title': title,
             'status': 'running',
             'created_at': datetime.now().isoformat(),
             'agents': [agent.dict() for agent in request.agents],
@@ -60,9 +65,14 @@ async def get_experiment(experiment_id: str):
         # First check active experiments (for running experiments)
         experiment = ExperimentService.get_experiment(experiment_id)
         
+        # Generate title from task prompt (truncate only if longer than 100 chars)
+        title = experiment['task'].prompt
+        if len(title) > 100:
+            title = title[:100] + "..."
+        
         conversation = Conversation(
             id=experiment_id,
-            title=f"Experiment: {experiment['task'].prompt[:50]}...",
+            title=title,
             agents=experiment['conversation_agents'],
             messages=experiment['messages'],
             createdAt=experiment['created_at']
