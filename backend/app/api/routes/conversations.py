@@ -4,6 +4,7 @@ from datetime import datetime
 
 from ...storage import get_storage
 from ...utils.logging import logger
+from ...utils.case_converter import normalize_dict_to_snake
 
 storage = get_storage()
 
@@ -15,9 +16,12 @@ router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 async def save_conversation(conversation: dict):
     """Save a conversation to persistent storage."""
     try:
-        success = storage.save_conversation(conversation)
+        # Normalize camelCase keys to snake_case
+        normalized_conversation = normalize_dict_to_snake(conversation, deep=True)
+        
+        success = storage.save_conversation(normalized_conversation)
         if success:
-            return {"message": "Conversation saved", "id": conversation.get('id')}
+            return {"message": "Conversation saved", "id": normalized_conversation.get('id')}
         else:
             raise HTTPException(status_code=500, detail="Failed to save conversation")
     except Exception as e:

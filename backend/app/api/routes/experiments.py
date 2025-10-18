@@ -8,6 +8,7 @@ from ...services.experiment_service import ExperimentService
 from ...services.autogen_service import autogen_service
 from ...storage import get_storage
 from ...utils.logging import logger
+from ...utils.case_converter import normalize_dict_to_snake
 
 storage = get_storage()
 
