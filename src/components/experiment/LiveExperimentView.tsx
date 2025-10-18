@@ -11,6 +11,8 @@ import { ExportPanel } from '../conversation/ExportPanel';
 import { RunSelector } from './RunSelector';
 import { MessageActions, CopyButton } from '../conversation/MessageActions';
 import { RawJSONModal } from '../conversation/RawJSONModal';
+import { ConnectionStatus, ConnectionStatusType } from '../ui/ConnectionStatus';
+import { DebugPanel, DebugMessage } from '../ui/DebugPanel';
 
 interface LiveExperimentViewProps {
   experimentId: string;
@@ -26,7 +28,12 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
   const [completedConversations, setCompletedConversations] = useState<Conversation[]>([]);
   const [status, setStatus] = useState<string>('loading');
   const [error, setError] = useState<string | null>(null);
-  const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatusType>('disconnected');
+  const [reconnectAttempt, setReconnectAttempt] = useState<number>(0);
+  const [reconnectIn, setReconnectIn] = useState<number>(0);
+  const [maxReconnectAttempts, setMaxReconnectAttempts] = useState<number | undefined>(undefined);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [debugMessages, setDebugMessages] = useState<DebugMessage[]>([]);
   const [agentInfos, setAgentInfos] = useState<{ name: string; model: string }[]>([]);
   const [isViewingLive, setIsViewingLive] = useState<boolean>(true);
   const [showExportPanel, setShowExportPanel] = useState(false);
@@ -88,8 +95,21 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
       }
     };
 
+    const addDebugMessage = (type: DebugMessage['type'], content: string, data?: any) => {
+      const debugMsg: DebugMessage = {
+        timestamp: new Date().toISOString(),
+        type,
+        content,
+        data,
+      };
+      setDebugMessages(prev => [...prev, debugMsg].slice(-50)); // Keep last 50 messages
+    };
+
     const handleWebSocketMessage = (message: WebSocketMessage) => {
       if (!mounted) return;
+
+      // Log received message to debug panel
+      addDebugMessage('received', `${message.type}`, message);
 
       switch (message.type) {
         case 'message':
@@ -136,7 +156,10 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
           break;
         case 'error':
           if (typeof message.data === 'object' && message.data !== null && 'error' in message.data) {
-            setError((message.data as { error: string }).error);
+            const errorMsg = (message.data as { error: string }).error;
+            setError(errorMsg);
+            setServerError(errorMsg);
+            addDebugMessage('error', `Server error: ${errorMsg}`, message.data);
           }
           break;
         case 'conversation':
@@ -168,11 +191,41 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
 
     // Connect to WebSocket for real-time updates
     const unsubscribe = experimentService.connectToExperiment(experimentId, handleWebSocketMessage);
-    setIsConnected(true);
+    
+    // Get the WebSocket connection to subscribe to state changes
+    const wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/ws/experiments/${experimentId}`;
+    const conn = experimentService['connections'].get(experimentId);
+    
+    let unsubscribeState: (() => void) | undefined;
+    if (conn) {
+      setMaxReconnectAttempts(conn.getMaxReconnectAttempts());
+      unsubscribeState = conn.onStateChange((state, attempts, delaySeconds) => {
+        if (!mounted) return;
+        
+        addDebugMessage('info', `Connection state: ${state}, attempt: ${attempts}, next in: ${delaySeconds}s`);
+        
+        switch (state) {
+          case 'connected':
+            setConnectionStatus('connected');
+            setReconnectAttempt(0);
+            break;
+          case 'reconnecting':
+            setConnectionStatus('reconnecting');
+            setReconnectAttempt(attempts);
+            setReconnectIn(delaySeconds);
+            break;
+          case 'disconnected':
+            setConnectionStatus('disconnected');
+            setReconnectAttempt(attempts);
+            break;
+        }
+      });
+    }
 
     return () => {
       mounted = false;
       unsubscribe();
+      unsubscribeState?.();
     };
   }, [experimentId]);
 
@@ -331,12 +384,17 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
               {getStatusIcon(status)}
               <span className="text-sm font-medium capitalize">{status}</span>
             </div>
-            {isConnected && (
-              <div className="flex items-center space-x-1 text-green-400">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span className="text-xs">Live</span>
-              </div>
-            )}
+            <ConnectionStatus
+              status={connectionStatus}
+              reconnectAttempt={reconnectAttempt}
+              maxReconnectAttempts={maxReconnectAttempts}
+              reconnectIn={reconnectIn}
+              errorMessage={serverError || undefined}
+              onRetry={() => {
+                const conn = experimentService['connections'].get(experimentId);
+                conn?.retry();
+              }}
+            />
           </div>
           <div className="flex space-x-3">
             {/* Only show export button for completed experiments or when viewing completed conversations */}
@@ -378,6 +436,16 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
         {agentInfos.length > 0 && (
           <div className="mb-4 text-xs text-gray-400">
             Agents: {agentInfos.map((a) => `${a.name} (${a.model})`).join(', ')}
+          </div>
+        )}
+
+        {/* Debug Panel */}
+        {debugMessages.length > 0 && (
+          <div className="mb-4">
+            <DebugPanel
+              messages={debugMessages}
+              serverError={serverError || undefined}
+            />
           </div>
         )}
 

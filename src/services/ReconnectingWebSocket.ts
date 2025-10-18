@@ -1,6 +1,7 @@
 import { WebSocketMessage, ConnectionState } from '../types/api';
 
 type Subscriber = (msg: WebSocketMessage) => void;
+type StateChangeListener = (state: ConnectionState, reconnectAttempts: number, nextReconnectDelay: number) => void;
 
 export interface ReconnectingWebSocketOptions {
   maxReconnectAttempts?: number; // undefined = infinite
@@ -16,10 +17,13 @@ export class ReconnectingWebSocket {
   private opts: ReconnectingWebSocketOptions;
   private ws: WebSocket | null = null;
   private subscribers: Set<Subscriber> = new Set();
+  private stateListeners: Set<StateChangeListener> = new Set();
   private reconnectAttempts = 0;
   private shouldStop = false;
   private heartbeatTimer: number | null = null;
   private idleTimer: number | null = null;
+  private reconnectTimer: number | null = null;
+  private nextReconnectDelay = 0;
   private state: ConnectionState = 'disconnected';
 
   constructor(url: string, opts?: ReconnectingWebSocketOptions) {
@@ -64,7 +68,17 @@ export class ReconnectingWebSocket {
 
   private setState(s: ConnectionState) {
     this.state = s;
-    // optionally could notify subscribers about state changes via a special message
+    this.notifyStateListeners();
+  }
+
+  private notifyStateListeners() {
+    this.stateListeners.forEach(listener => {
+      try {
+        listener(this.state, this.reconnectAttempts, Math.ceil(this.nextReconnectDelay / 1000));
+      } catch (e) {
+        console.error('State listener threw:', e);
+      }
+    });
   }
 
   private onOpen() {
@@ -106,16 +120,23 @@ export class ReconnectingWebSocket {
   private scheduleReconnect() {
     if (this.opts.maxReconnectAttempts !== undefined && this.reconnectAttempts >= this.opts.maxReconnectAttempts) {
       console.warn('Max reconnect attempts reached');
+      this.setState('disconnected');
       return;
     }
     this.reconnectAttempts += 1;
-    const backoff = Math.min(
+    this.nextReconnectDelay = Math.min(
       this.opts.initialBackoffMs! * Math.pow(2, this.reconnectAttempts - 1),
       this.opts.maxBackoffMs!
     );
-    setTimeout(() => {
+    this.setState('reconnecting');
+    this.notifyStateListeners(); // Notify with current reconnect delay
+    
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+    }
+    this.reconnectTimer = window.setTimeout(() => {
       if (!this.shouldStop) this.open();
-    }, backoff);
+    }, this.nextReconnectDelay);
   }
 
   subscribe(handler: Subscriber): () => void {
@@ -167,6 +188,10 @@ export class ReconnectingWebSocket {
   close() {
     this.shouldStop = true;
     this.stopHeartbeat();
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     if (this.ws) {
       try {
         this.ws.close();
@@ -179,6 +204,36 @@ export class ReconnectingWebSocket {
 
   getState(): ConnectionState {
     return this.state;
+  }
+
+  getReconnectAttempts(): number {
+    return this.reconnectAttempts;
+  }
+
+  getNextReconnectDelay(): number {
+    return Math.ceil(this.nextReconnectDelay / 1000);
+  }
+
+  getMaxReconnectAttempts(): number | undefined {
+    return this.opts.maxReconnectAttempts;
+  }
+
+  onStateChange(listener: StateChangeListener): () => void {
+    this.stateListeners.add(listener);
+    // Call immediately with current state
+    listener(this.state, this.reconnectAttempts, Math.ceil(this.nextReconnectDelay / 1000));
+    
+    return () => {
+      this.stateListeners.delete(listener);
+    };
+  }
+
+  retry() {
+    if (this.state === 'disconnected') {
+      this.reconnectAttempts = 0;
+      this.shouldStop = false;
+      this.open();
+    }
   }
 }
 
