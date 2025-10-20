@@ -608,13 +608,8 @@ export const History: React.FC = () => {
                           </Button>
                           <button
                             onClick={() => handleStartEditExperimentName(experiment)}
-                            disabled={editingExperimentId !== null || editingConversationId !== null}
-                            className={`p-1.5 rounded-full transition-all duration-200 hover:scale-110 hover:shadow-lg ${
-                              editingExperimentId !== null || editingConversationId !== null
-                                ? 'text-gray-300 cursor-not-allowed'
-                                : 'text-gray-400 hover:text-purple-400 hover:bg-purple-500/20'
-                            }`}
-                            title={editingExperimentId !== null || editingConversationId !== null ? 'Finish editing first' : 'Edit experiment name'}
+                            className="text-gray-400 hover:text-purple-400 p-1.5 rounded-full transition-all duration-200 hover:bg-purple-500/20 hover:scale-110 hover:shadow-lg"
+                            title="Edit experiment name"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-edit">
                               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>

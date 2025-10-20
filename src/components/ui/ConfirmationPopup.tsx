@@ -72,7 +72,7 @@ export const ConfirmationPopup: React.FC<ConfirmationPopupProps> = ({
       case 'info':
         return 'bg-blue-600 hover:bg-blue-700 text-white';
       default:
-        return 'bg-yellow-600 hover:bg-yellow-700 text-white';
+        return 'btn-accent shadow-lg';
     }
   };
 
@@ -96,12 +96,12 @@ export const ConfirmationPopup: React.FC<ConfirmationPopupProps> = ({
             >
               {cancelText}
             </Button>
-            <Button
+            <button
               onClick={onConfirm}
-              className={`${getConfirmButtonStyle()} px-6 py-2`}
+              className={`${getConfirmButtonStyle()} px-6 py-2 rounded-xl font-semibold transition-all duration-200 ease-in-out`}
             >
               {confirmText}
-            </Button>
+            </button>
           </div>
         </div>
       </div>

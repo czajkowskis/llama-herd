@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ollamaService } from '../services/ollamaService';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
+import { ConfirmationPopup } from '../components/ui/ConfirmationPopup';
 
 type TabKey = 'installed' | 'discover';
 
@@ -17,20 +18,30 @@ type CatalogItem = {
 type PullingState = {
   progress?: number;
   total?: number;
+  completed?: number;
   error?: string;
   controller?: AbortController; // Not persisted, recreated on mount
+  startTime?: number;
+  lastUpdateTime?: number;
+  speed?: number; // bytes per second
 };
 
 const SIZE_CONFIRM_THRESHOLD = 2 * 1024 * 1024 * 1024; // 2GB
 const PULLING_STATE_KEY = 'llama-herd-pulling-models';
 
-// Helper to save pulling state to localStorage (without controllers)
+// Connection retry configuration
+const INITIAL_RETRY_DELAY = 5000; // 5 seconds
+const MAX_RETRY_DELAY = 300000; // 5 minutes
+const MAX_RETRY_ATTEMPTS = 10;
+
+// Helper to save pulling state to localStorage (without controllers and runtime data)
 const savePullingState = (state: Record<string, PullingState>) => {
-  const persistable: Record<string, Omit<PullingState, 'controller'>> = {};
+  const persistable: Record<string, Omit<PullingState, 'controller' | 'startTime' | 'lastUpdateTime' | 'speed'>> = {};
   Object.entries(state).forEach(([tag, data]) => {
     persistable[tag] = {
       progress: data.progress,
       total: data.total,
+      completed: data.completed,
       error: data.error,
     };
   });
@@ -49,6 +60,7 @@ const loadPullingState = (): Record<string, PullingState> => {
       state[tag] = {
         progress: data.progress,
         total: data.total,
+        completed: data.completed,
         error: data.error,
       };
     });
@@ -59,18 +71,90 @@ const loadPullingState = (): Record<string, PullingState> => {
   }
 };
 
+// Custom hook for Ollama connection with retry logic
+const useOllamaConnection = () => {
+  const [connected, setConnected] = useState<boolean>(false);
+  const [version, setVersion] = useState<string>('');
+  const [connectionError, setConnectionError] = useState<string>('');
+  const [isRetrying, setIsRetrying] = useState<boolean>(false);
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const retryCountRef = useRef<number>(0);
+
+  const checkConnection = async () => {
+    try {
+      const v = await ollamaService.getVersion();
+      setConnected(true);
+      setVersion(v);
+      setConnectionError('');
+      retryCountRef.current = 0; // Reset retry count on success
+      setIsRetrying(false);
+    } catch (error: any) {
+      setConnected(false);
+      setVersion('');
+      setConnectionError(error.message || 'Connection failed');
+      scheduleRetry();
+    }
+  };
+
+  const scheduleRetry = () => {
+    if (retryCountRef.current >= MAX_RETRY_ATTEMPTS) {
+      setConnectionError('Maximum retry attempts reached. Please check Ollama installation.');
+      setIsRetrying(false);
+      return;
+    }
+
+    setIsRetrying(true);
+    const delay = Math.min(INITIAL_RETRY_DELAY * Math.pow(2, retryCountRef.current), MAX_RETRY_DELAY);
+    retryCountRef.current += 1;
+
+    retryTimeoutRef.current = setTimeout(() => {
+      checkConnection();
+    }, delay);
+  };
+
+  const manualRetry = () => {
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+    retryCountRef.current = 0;
+    checkConnection();
+  };
+
+  useEffect(() => {
+    checkConnection();
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  return {
+    connected,
+    version,
+    connectionError,
+    isRetrying,
+    manualRetry,
+  };
+};
+
 export const Models: React.FC = () => {
   const [active, setActive] = useState<TabKey>('installed');
   const [installed, setInstalled] = useState<string[]>([]);
   const [defaultModel, setDefaultModel] = useState<string>(() => localStorage.getItem('llama-herd-default-ollama-model') || '');
-  const [connected, setConnected] = useState<boolean>(false);
-  const [version, setVersion] = useState<string>('');
   const [query, setQuery] = useState('');
   const [family, setFamily] = useState('');
   const [quant, setQuant] = useState('');
   const [addTag, setAddTag] = useState('');
   const [pulling, setPulling] = useState<Record<string, PullingState>>(() => loadPullingState());
   const [resetCounter, setResetCounter] = useState(0);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [showConfirmPopup, setShowConfirmPopup] = useState(false);
+  const [pendingPull, setPendingPull] = useState<{ tag: string; sizeHint?: number } | null>(null);
+
+  // Use the connection hook
+  const { connected, version, connectionError, isRetrying, manualRetry } = useOllamaConnection();
 
   // Heuristic name derivation for tags not in the curated catalog
   const deriveModelName = (tag: string): string => {
@@ -103,12 +187,87 @@ export const Models: React.FC = () => {
     return name || tag;
   };
 
-  // Minimal curated catalog for MVP; in future, fetch from backend/catalog service
-  const catalog: CatalogItem[] = useMemo(() => [
-    { name: 'Llama 3 8B Instruct', tag: 'llama3:8b-instruct-q4_0', size: 1_900_000_000, family: 'llama', quant: 'q4_0', notes: 'Good general chat' },
-    { name: 'Code Llama 7B', tag: 'codellama:7b-instruct-q4_0', size: 1_800_000_000, family: 'codellama', quant: 'q4_0', notes: 'Coding tasks' },
-    { name: 'Mistral 7B Instruct', tag: 'mistral:7b-instruct-q5_1', size: 1_700_000_000, family: 'mistral', quant: 'q5_1', notes: 'Compact and fast' },
-  ], []);
+  // Default in-memory catalog used as fallback if backend catalog is unavailable
+  const defaultCatalog: CatalogItem[] = [
+    // Llama family
+    { name: 'Llama 3 8B Instruct', tag: 'llama3:8b-instruct-q4_0', size: 1_900_000_000, family: 'llama', quant: 'q4_0', notes: 'Latest Llama 3 model, great for general chat' },
+    { name: 'Llama 3 8B Instruct Q5', tag: 'llama3:8b-instruct-q5_0', size: 2_400_000_000, family: 'llama', quant: 'q5_0', notes: 'Higher quality quantization for better responses' },
+    { name: 'Llama 3 8B Instruct FP16', tag: 'llama3:8b-instruct-fp16', size: 6_000_000_000, family: 'llama', quant: 'fp16', notes: 'Full precision for maximum quality' },
+    { name: 'Llama 3 70B Instruct', tag: 'llama3:70b-instruct-q4_0', size: 15_000_000_000, family: 'llama', quant: 'q4_0', notes: 'Large 70B model for complex tasks' },
+
+    // Code Llama family
+    { name: 'Code Llama 7B', tag: 'codellama:7b-instruct-q4_0', size: 1_800_000_000, family: 'codellama', quant: 'q4_0', notes: 'Specialized for coding tasks' },
+    { name: 'Code Llama 13B', tag: 'codellama:13b-instruct-q4_0', size: 3_500_000_000, family: 'codellama', quant: 'q4_0', notes: 'Larger Code Llama for complex coding' },
+    { name: 'Code Llama 34B', tag: 'codellama:34b-instruct-q4_0', size: 8_000_000_000, family: 'codellama', quant: 'q4_0', notes: 'Very large Code Llama model' },
+
+    // Mistral family
+    { name: 'Mistral 7B Instruct', tag: 'mistral:7b-instruct-q5_1', size: 1_700_000_000, family: 'mistral', quant: 'q5_1', notes: 'Fast and efficient 7B model' },
+    { name: 'Mistral 7B Instruct v0.2', tag: 'mistral:7b-instruct-v0.2-q5_1', size: 1_700_000_000, family: 'mistral', quant: 'q5_1', notes: 'Updated Mistral v0.2' },
+    { name: 'Mixtral 8x7B Instruct', tag: 'mixtral:8x7b-instruct-v0.1-q3_K_M', size: 7_500_000_000, family: 'mistral', quant: 'q3_K_M', notes: 'Mixture of experts model' },
+
+    // Other popular models
+    { name: 'Phi-3 Mini 3.8B', tag: 'phi3:3.8b-mini-instruct-4k-q4_0', size: 900_000_000, family: 'phi', quant: 'q4_0', notes: 'Microsoft Phi-3, efficient and capable' },
+    { name: 'Gemma 7B', tag: 'gemma:7b-instruct-q4_0', size: 1_800_000_000, family: 'gemma', quant: 'q4_0', notes: 'Google Gemma model' },
+    { name: 'Qwen 7B Chat', tag: 'qwen:7b-chat-q4_0', size: 1_900_000_000, family: 'qwen', quant: 'q4_0', notes: 'Alibaba Qwen model' },
+    { name: 'Vicuna 13B', tag: 'vicuna:13b-q4_0', size: 3_000_000_000, family: 'vicuna', quant: 'q4_0', notes: 'Fine-tuned Llama-based model' },
+    { name: 'Orca Mini 7B', tag: 'orca-mini:7b-q4_0', size: 1_800_000_000, family: 'orca', quant: 'q4_0', notes: 'Microsoft Orca model' },
+  ];
+
+  // Catalog cache (24 hours TTL)
+  const CATALOG_CACHE_KEY = 'llama-herd-catalog-v1';
+  const CATALOG_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+  const [catalog, setCatalog] = useState<CatalogItem[]>(defaultCatalog);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    const tryLoadCached = () => {
+      try {
+        const raw = localStorage.getItem(CATALOG_CACHE_KEY);
+        if (!raw) return false;
+        const parsed = JSON.parse(raw);
+        if (Date.now() - (parsed._ts || 0) > CATALOG_CACHE_TTL) return false;
+        if (mounted) setCatalog(parsed.models || defaultCatalog);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    };
+
+    const loadRemote = async () => {
+      setCatalogLoading(true);
+      try {
+        const res = await fetch('/api/models/catalog');
+        if (!res.ok) throw new Error('catalog fetch failed');
+        const data = await res.json();
+        const models = data.models || defaultCatalog;
+        if (mounted) setCatalog(models);
+        try {
+          localStorage.setItem(CATALOG_CACHE_KEY, JSON.stringify({ _ts: Date.now(), models }));
+        } catch (e) {
+          // ignore storage errors
+        }
+      } catch (e) {
+        // fallback to cached or default
+        tryLoadCached();
+      } finally {
+        if (mounted) setCatalogLoading(false);
+      }
+    };
+
+    if (!tryLoadCached()) {
+      loadRemote();
+    }
+
+    return () => { mounted = false; };
+  }, []);
+
+  // Initialize expanded groups when catalog changes
+  useEffect(() => {
+    const groups = groupModelsByBaseName(catalog);
+    setExpandedGroups(new Set());
+  }, [catalog]);
 
   // Derived discover list with basic search/filter
   const discoverFiltered = useMemo(() => {
@@ -121,19 +280,15 @@ export const Models: React.FC = () => {
     });
   }, [catalog, query, family, quant]);
 
-  // Connection and installed models
+  // Installed models
   useEffect(() => {
+    if (!connected) {
+      setInstalled([]);
+      return;
+    }
+
     let mounted = true;
     (async () => {
-      try {
-        const v = await ollamaService.getVersion();
-        if (!mounted) return;
-        setConnected(true);
-        setVersion(v);
-      } catch {
-        if (!mounted) return;
-        setConnected(false);
-      }
       try {
         const models = await ollamaService.listModels();
         if (!mounted) return;
@@ -200,12 +355,22 @@ export const Models: React.FC = () => {
   const startPull = (tag: string, sizeHint?: number) => {
     if (installed.includes(tag)) return; // prevent duplicate pull
     if (!connected) return;
-    if (sizeHint && sizeHint > SIZE_CONFIRM_THRESHOLD) {
-      const ok = window.confirm(`This model may download ~${(sizeHint / (1024**3)).toFixed(1)} GB. Continue?`);
-      if (!ok) return;
-    }
+    
+    // Show confirmation popup with storage requirements
+    setPendingPull({ tag, sizeHint });
+    setShowConfirmPopup(true);
+  };
+
+  const confirmPull = () => {
+    if (!pendingPull) return;
+    
+    const { tag, sizeHint } = pendingPull;
+    setShowConfirmPopup(false);
+    setPendingPull(null);
+    
     const controller = new AbortController();
-    setPulling(prev => ({ ...prev, [tag]: { controller, progress: 0 } }));
+    const startTime = Date.now();
+    setPulling(prev => ({ ...prev, [tag]: { controller, progress: 0, startTime } }));
     
     // Run the pull operation in the background without blocking the UI
     // Use setTimeout to ensure this runs after the current call stack clears
@@ -227,7 +392,27 @@ export const Models: React.FC = () => {
               const total = p.total ?? prev[tag]?.total;
               const completed = p.completed ?? 0;
               const progress = total && total > 0 ? Math.min(100, Math.floor((completed / total) * 100)) : undefined;
-              return { ...prev, [tag]: { ...prev[tag], controller, total, progress, error: p.error } };
+              
+              // Calculate speed and ETA
+              const currentTime = Date.now();
+              const startTime = prev[tag]?.startTime || currentTime;
+              const elapsed = (currentTime - startTime) / 1000; // seconds
+              const speed = elapsed > 0 ? completed / elapsed : 0; // bytes per second
+              const remaining = total && total > completed ? (total - completed) / speed : 0;
+              
+              return { 
+                ...prev, 
+                [tag]: { 
+                  ...prev[tag], 
+                  controller, 
+                  total, 
+                  completed,
+                  progress, 
+                  error: p.error,
+                  lastUpdateTime: currentTime,
+                  speed: speed > 0 ? speed : prev[tag]?.speed
+                } 
+              };
             });
           }, controller.signal);
           // refresh installed after pull success
@@ -250,11 +435,30 @@ export const Models: React.FC = () => {
               return rest;
             });
           } else {
-            setPulling(prev => ({ ...prev, [tag]: { ...prev[tag], controller, error: e?.message || 'Pull failed' } }));
+            // Check if it was a network error that might be recoverable
+            const networkError = /network|timeout|connection|fetch/i.test(e?.message || '');
+            const errorMessage = networkError 
+              ? 'Download interrupted due to network issues. You can retry to continue downloading.'
+              : e?.message || 'Pull failed';
+            
+            setPulling(prev => ({ 
+              ...prev, 
+              [tag]: { 
+                ...prev[tag], 
+                controller: undefined, // Clear controller so it's not considered active
+                error: errorMessage,
+                completed: prev[tag]?.completed || 0 // Preserve progress
+              } 
+            }));
           }
         }
       })();
     }, 0);
+  };
+
+  const cancelConfirmPull = () => {
+    setShowConfirmPopup(false);
+    setPendingPull(null);
   };
 
   const cancelPull = (tag: string) => {
@@ -276,6 +480,54 @@ export const Models: React.FC = () => {
     if (defaultModel === tag) setDefaultModel('');
   };
 
+  // function to pull all models in a family
+  const pullAllInFamily = (familyName: string) => {
+    const familyModels = catalog.filter(item => item.family === familyName && !installed.includes(item.tag));
+    if (familyModels.length === 0) return;
+    
+    const totalSize = familyModels.reduce((sum, item) => sum + (item.size || 0), 0);
+    const confirmMessage = `Pull all ${familyModels.length} ${familyName} models? Total size: ~${(totalSize / (1024**3)).toFixed(1)} GB`;
+    
+    if (window.confirm(confirmMessage)) {
+      familyModels.forEach(item => {
+        setTimeout(() => startPull(item.tag, item.size), Math.random() * 1000); // Stagger starts
+      });
+    }
+  };
+
+  // Group models by base name (excluding size and quantization)
+  const groupModelsByBaseName = (models: CatalogItem[]) => {
+    const groups: Record<string, CatalogItem[]> = {};
+    
+    models.forEach(item => {
+      // Create base name by removing size and quantization info
+      const baseName = item.name
+        .replace(/\s+\d+B?\s*/i, ' ')  // Remove size patterns like "8B", "70B", "7B", etc.
+        .replace(/\s+(q\d+_\d+|q\d+|fp\d+|f\d+)$/i, '')  // Remove quantization
+        .replace(/\s+$/, '')  // Trim trailing spaces
+        .trim();
+      if (!groups[baseName]) {
+        groups[baseName] = [];
+      }
+      groups[baseName].push(item);
+    });
+    
+    return groups;
+  };
+
+  // Toggle expanded state of a group
+  const toggleGroupExpanded = (baseName: string) => {
+    setExpandedGroups(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(baseName)) {
+        newSet.delete(baseName);
+      } else {
+        newSet.add(baseName);
+      }
+      return newSet;
+    });
+  };
+
   // UI helpers
   const renderProgress = (tag: string, opts?: { showCancel?: boolean }) => {
     const p = pulling[tag];
@@ -284,12 +536,37 @@ export const Models: React.FC = () => {
     const showCancel = opts?.showCancel ?? true;
     const hasActiveController = !!p.controller;
     
+    // Format speed and ETA
+    const formatSpeed = (speed?: number) => {
+      if (!speed || speed === 0) return '';
+      if (speed >= 1024 * 1024) return `${(speed / (1024 * 1024)).toFixed(1)} MB/s`;
+      if (speed >= 1024) return `${(speed / 1024).toFixed(1)} KB/s`;
+      return `${speed.toFixed(0)} B/s`;
+    };
+    
+    const formatETA = (remaining?: number) => {
+      if (!remaining || remaining === 0 || !isFinite(remaining)) return '';
+      if (remaining < 60) return `${Math.ceil(remaining)}s`;
+      if (remaining < 3600) return `${Math.ceil(remaining / 60)}m`;
+      return `${Math.ceil(remaining / 3600)}h`;
+    };
+    
+    const speed = p.speed ? formatSpeed(p.speed) : '';
+    const eta = p.total && p.completed && p.speed ? formatETA((p.total - p.completed) / p.speed) : '';
+    
     return (
       <div className="mt-2">
         <div role="progressbar" {...aria} className="w-full h-2 bg-gray-700 rounded-full overflow-hidden" aria-label={`Downloading ${tag}`}>
           <div className="h-2 bg-purple-600 transition-all" style={{ width: `${p.progress ?? 0}%` }} />
         </div>
-        <span className="sr-only" aria-live="polite">{p.progress !== undefined ? `${p.progress}%` : 'Downloading'}</span>
+        <div className="flex justify-between items-center mt-1 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+          <span aria-live="polite">{p.progress !== undefined ? `${p.progress}%` : 'Downloading'}</span>
+          <div className="flex gap-2">
+            {speed && <span>{speed}</span>}
+            {eta && <span>ETA: {eta}</span>}
+          </div>
+        </div>
+        <span className="sr-only" aria-live="polite">{p.progress !== undefined ? `${p.progress}% complete${speed ? ` at ${speed}` : ''}${eta ? `, ${eta} remaining` : ''}` : 'Downloading'}</span>
         {showCancel && (
           <div className="flex items-center gap-2 mt-2">
             {hasActiveController && <Button variant="secondary" onClick={() => cancelPull(tag)} aria-label={`Cancel ${tag}`}>Cancel</Button>}
@@ -327,6 +604,26 @@ export const Models: React.FC = () => {
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: connected ? '#22c55e' : '#ef4444' }} />
             Ollama: {connected ? `Connected${version ? ` (${version})` : ''}` : 'Disconnected'}
           </span>
+          {!connected && (
+            <div className="mt-2 text-xs">
+              {connectionError && <div className="text-red-400 mb-1">{connectionError}</div>}
+              {isRetrying ? (
+                <div className="text-yellow-400">Retrying connection...</div>
+              ) : (
+                <div className="space-y-1">
+                  <div>Troubleshooting:</div>
+                  <ul className="list-disc list-inside ml-2 space-y-1">
+                    <li>Ensure Ollama is installed and running</li>
+                    <li>Check that it's accessible at http://localhost:11434</li>
+                    <li>Try restarting Ollama service</li>
+                  </ul>
+                  <Button variant="secondary" onClick={manualRetry} className="mt-2">
+                    Retry Connection
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
       <div className="flex gap-2">
@@ -438,14 +735,21 @@ export const Models: React.FC = () => {
             style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)', borderColor: 'var(--color-border)' }}
           />
         <select value={family} onChange={(e) => setFamily(e.target.value)} aria-label="Filter by family" className="p-2 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)', borderColor: 'var(--color-border)' }}>
-          <option value="">Family</option>
+          <option value="">All Families</option>
           <option value="llama">Llama</option>
+          <option value="codellama">Code Llama</option>
           <option value="mistral">Mistral</option>
-          <option value="codellama">CodeLlama</option>
+          <option value="phi">Phi</option>
+          <option value="gemma">Gemma</option>
+          <option value="qwen">Qwen</option>
+          <option value="vicuna">Vicuna</option>
+          <option value="orca">Orca</option>
         </select>
         <select value={quant} onChange={(e) => setQuant(e.target.value)} aria-label="Filter by quantization" className="p-2 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)', borderColor: 'var(--color-border)' }}>
-          <option value="">Quant</option>
+          <option value="">All Quants</option>
+          <option value="q3_K_M">q3_K_M</option>
           <option value="q4_0">q4_0</option>
+          <option value="q5_0">q5_0</option>
           <option value="q5_1">q5_1</option>
           <option value="fp16">fp16</option>
         </select>
@@ -454,36 +758,93 @@ export const Models: React.FC = () => {
           )}
         </div>
 
-        <div key={`discover-${resetCounter}`} className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {discoverFiltered.map(item => {
-          const isInstalled = (installed?.includes(item.tag)) ?? false;
-          const isPulling = !!pulling[item.tag];
-          return (
-            <div key={item.tag} className="p-3 rounded-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="font-medium" style={{ color: 'var(--color-text-primary)' }}>{item.name}</div>
-                  <div className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>{item.tag} • {item.quant} {(item.size && `• ${(item.size/(1024**3)).toFixed(1)} GB`) || ''}</div>
-                  {renderProgress(item.tag, { showCancel: false })}
-                </div>
-                <div className="flex flex-col gap-2 items-end">
-                  <Button
-                    onClick={() => startPull(item.tag, item.size)}
-                    disabled={isInstalled || isPulling || !connected}
-                    title={!connected ? 'Ollama is not connected.' : (isInstalled ? 'Installed' : 'Pull model')}
-                    aria-label={isInstalled ? `Installed ${item.tag}` : `Pull ${item.tag}`}
-                  >
-                    {isInstalled ? 'Installed' : isPulling ? 'Pulling…' : 'Pull'}
-                  </Button>
-                  {/* Cancel action available in Active downloads; avoid duplicate buttons here */}
+        <div key={`discover-${resetCounter}`} className="space-y-4">
+          {Object.entries(groupModelsByBaseName(discoverFiltered)).map(([baseName, variants]) => {
+            const allInstalled = variants.every(item => (installed?.includes(item.tag)) ?? false);
+            const somePulling = variants.some(item => !!pulling[item.tag]);
+            const familyName = variants[0].family;
+            const isExpanded = expandedGroups.has(baseName);
+            
+            return (
+              <div key={baseName} className="p-4 rounded-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div 
+                      className="flex items-center gap-2 cursor-pointer mb-2" 
+                      onClick={() => toggleGroupExpanded(baseName)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          toggleGroupExpanded(baseName);
+                        }
+                      }}
+                      aria-expanded={isExpanded}
+                      aria-label={`Toggle ${baseName} variants`}
+                    >
+                      <div className="font-medium text-lg" style={{ color: 'var(--color-text-primary)' }}>{baseName}</div>
+                      <Icon className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-90' : ''}`}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="9,18 15,12 9,6"/>
+                        </svg>
+                      </Icon>
+                    </div>
+                    <div className="text-sm mb-3" style={{ color: 'var(--color-text-tertiary)' }}>
+                      {familyName && <span className="capitalize">{familyName} family • </span>}
+                      {variants.length} variant{variants.length !== 1 ? 's' : ''} available
+                    </div>
+                    
+                    {isExpanded && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {variants.map(item => {
+                          const isInstalled = (installed?.includes(item.tag)) ?? false;
+                          const isPulling = !!pulling[item.tag];
+                          
+                          return (
+                            <div key={item.tag} className="p-3 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)' }}>
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                                  {item.name}
+                                </div>
+                                <div className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                                  {item.size && `${(item.size/(1024**3)).toFixed(1)} GB`}
+                                </div>
+                              </div>
+                              
+                              <div className="text-xs mb-2" style={{ color: 'var(--color-text-tertiary)' }}>
+                                {item.tag}
+                              </div>
+                              
+                              {renderProgress(item.tag, { showCancel: false })}
+                              
+                              <div className="flex justify-end mt-2">
+                                <Button
+                                  className="px-3 py-1 text-sm"
+                                  onClick={() => startPull(item.tag, item.size)}
+                                  disabled={isInstalled || isPulling || !connected}
+                                  title={!connected ? 'Ollama is not connected.' : (isInstalled ? 'Installed' : 'Pull model')}
+                                  aria-label={isInstalled ? `Installed ${item.tag}` : `Pull ${item.tag}`}
+                                >
+                                  {isInstalled ? '✓' : isPulling ? 'Pulling…' : 'Pull'}
+                                </Button>
+                              </div>
+                              
+                              {pulling[item.tag]?.error && (
+                                <div className="text-red-500 text-xs mt-2" role="alert">
+                                  {pulling[item.tag]?.error} <a className="underline" href="#" onClick={(e) => { e.preventDefault(); startPull(item.tag); }}>Retry</a>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-              {pulling[item.tag]?.error && (
-                <div className="text-red-500 text-sm mt-2" role="alert">{pulling[item.tag]?.error} <a className="underline" href="#" onClick={(e) => { e.preventDefault(); startPull(item.tag); }}>Retry</a></div>
-              )}
-            </div>
-          );
-        })}
+            );
+          })}
         </div>
       </div>
     );
@@ -510,6 +871,18 @@ export const Models: React.FC = () => {
       >
         <Discover />
       </div>
+      
+      {/* Confirmation Popup */}
+      <ConfirmationPopup
+        isOpen={showConfirmPopup}
+        title="Confirm Model Download"
+        message={pendingPull ? `This will download the model and use approximately ${(pendingPull.sizeHint ? (pendingPull.sizeHint / (1024**3)).toFixed(1) : 'unknown')} GB of storage. Continue?` : ''}
+        onConfirm={confirmPull}
+        onCancel={cancelConfirmPull}
+        confirmText="Download"
+        cancelText="Cancel"
+        type="warning"
+      />
     </div>
   );
 };

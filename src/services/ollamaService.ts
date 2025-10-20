@@ -1,4 +1,4 @@
-import { OLLAMA_BASE_URL } from '../config';
+import { API_BASE_URL, OLLAMA_BASE_URL } from '../config';
 
 // Interface for the response when listing available models.
 export interface ModelTag {
@@ -25,14 +25,14 @@ export interface VersionResponse {
 }
 
 /**
- * Fetches the list of available models from the Ollama server.
+ * Fetches the list of available models from the backend API.
  * @returns A promise that resolves with an array of model names as strings, or rejects with an error.
  */
 // Accept an optional baseUrl so callers (Settings) can test arbitrary endpoints.
 export const listModels = async (baseUrl?: string): Promise<string[]> => {
-  const urlBase = baseUrl || OLLAMA_BASE_URL;
+  const urlBase = baseUrl || API_BASE_URL;
   try {
-    const response = await fetch(`${urlBase}/api/tags`);
+    const response = await fetch(`${urlBase}/api/models/list`);
     if (!response.ok) {
       throw new Error(`API call failed with status: ${response.status}`);
     }
@@ -48,8 +48,8 @@ export const listModels = async (baseUrl?: string): Promise<string[]> => {
  * Returns Ollama server version (and implicitly connectivity).
  */
 export const getVersion = async (baseUrl?: string): Promise<string> => {
-  const urlBase = baseUrl || OLLAMA_BASE_URL;
-  const res = await fetch(`${urlBase}/api/version`);
+  const urlBase = baseUrl || API_BASE_URL;
+  const res = await fetch(`${urlBase}/api/models/version`);
   if (!res.ok) throw new Error(`API call failed with status: ${res.status}`);
   const data: VersionResponse = await res.json();
   return data.version;
@@ -59,8 +59,8 @@ export const getVersion = async (baseUrl?: string): Promise<string> => {
  * Deletes a local model by name/tag.
  */
 export const deleteModel = async (name: string, baseUrl?: string): Promise<void> => {
-  const urlBase = baseUrl || OLLAMA_BASE_URL;
-  const res = await fetch(`${urlBase}/api/delete`, {
+  const urlBase = baseUrl || API_BASE_URL;
+  const res = await fetch(`${urlBase}/api/models/delete`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name }),
@@ -77,28 +77,62 @@ export const pullModel = async (
   signal?: AbortSignal,
   baseUrl?: string
 ): Promise<void> => {
-  const urlBase = baseUrl || OLLAMA_BASE_URL;
-  const res = await fetch(`${urlBase}/api/pull`, {
+  const urlBase = baseUrl || API_BASE_URL;
+  const res = await fetch(`${urlBase}/api/models/pull`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, stream: true }),
+    body: JSON.stringify({ name }),
     signal,
   });
   if (!res.ok || !res.body) {
     throw new Error(`Pull failed with status: ${res.status}`);
   }
+
+  // Handle Server-Sent Events
   const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+
   try {
-    // Reuse stream helper
-    await streamJsonLinesToObject<PullProgress>(reader, (obj) => {
-      onProgress?.(obj);
-    }, signal);
+    let buffer = '';
+
+    const processEvent = (eventData: string) => {
+      try {
+        const progress: PullProgress = JSON.parse(eventData);
+        onProgress?.(progress);
+      } catch (error) {
+        console.error('Failed to parse progress event:', eventData, error);
+      }
+    };
+
+    while (true) {
+      if (signal?.aborted) {
+        await reader.cancel('Stream reading was aborted.');
+        throw new DOMException('Stream reading was aborted.', 'AbortError');
+      }
+
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // Process complete SSE messages
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const eventData = line.slice(6).trim(); // Remove 'data: ' prefix
+          if (eventData) {
+            processEvent(eventData);
+          }
+        }
+      }
+    }
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       // Stream was aborted - this is expected, rethrow so caller knows
       throw error;
     }
-    // Other errors should also be thrown
     throw error;
   }
 };

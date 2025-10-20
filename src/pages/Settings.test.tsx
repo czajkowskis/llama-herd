@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { Settings } from './Settings';
 import * as uiPreferencesService from '../services/uiPreferencesService';
@@ -12,7 +12,7 @@ import * as uiPreferencesService from '../services/uiPreferencesService';
 // Mock the ollama service to avoid network calls
 jest.mock('../services/ollamaService', () => ({
   ollamaService: {
-    listModels: jest.fn().mockResolvedValue(['llama2', 'codellama']),
+    listModels: jest.fn(() => ['llama2', 'codellama']),
   },
 }));
 
@@ -366,6 +366,46 @@ describe('Settings - UI Preferences', () => {
       expect(uiPreferencesService.getTheme()).toBe('light');
       expect(uiPreferencesService.getCompactMode()).toBe(true);
       expect(uiPreferencesService.getMessageDensity()).toBe('sparse');
+    });
+  });
+
+  describe('Time Format Preference', () => {
+    it('renders time format buttons and shows default 24h', () => {
+      render(<Settings />);
+      expect(screen.getByTestId('time-format-12h')).toBeInTheDocument();
+      expect(screen.getByTestId('time-format-24h')).toBeInTheDocument();
+      expect(screen.getByTestId('current-time-format')).toHaveTextContent('24h');
+    });
+
+    it('allows switching to 12h and 24h and persists', () => {
+      render(<Settings />);
+      fireEvent.click(screen.getByTestId('time-format-12h'));
+      expect(uiPreferencesService.getTimeFormatPreference()).toBe('12h');
+      expect(screen.getByTestId('current-time-format')).toHaveTextContent('12h');
+
+      fireEvent.click(screen.getByTestId('time-format-24h'));
+      expect(uiPreferencesService.getTimeFormatPreference()).toBe('24h');
+      expect(screen.getByTestId('current-time-format')).toHaveTextContent('24h');
+    });
+
+    it('updates preview according to selection', () => {
+      render(<Settings />);
+      fireEvent.click(screen.getByTestId('time-format-12h'));
+      const preview12h = screen.getByTestId('time-format-preview').textContent as string;
+      fireEvent.click(screen.getByTestId('time-format-24h'));
+      const preview24h = screen.getByTestId('time-format-preview').textContent as string;
+      // 12h should include AM/PM markers; 24h should not
+      expect(/am|pm/i.test(preview12h)).toBe(true);
+      expect(/am|pm/i.test(preview24h)).toBe(false);
+    });
+
+    it('persists time format across remount', () => {
+      const { unmount } = render(<Settings />);
+      fireEvent.click(screen.getByTestId('time-format-24h'));
+      unmount();
+      render(<Settings />);
+      expect(uiPreferencesService.getTimeFormatPreference()).toBe('24h');
+      expect(screen.getByTestId('current-time-format')).toHaveTextContent('24h');
     });
   });
 });

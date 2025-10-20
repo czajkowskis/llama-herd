@@ -70,6 +70,11 @@ class Settings(BaseSettings):
         description="Base URL for Ollama API",
         env="OLLAMA_BASE_URL"
     )
+    ollama_url: str = Field(
+        default="http://localhost:11434",
+        description="Direct URL for Ollama server (for model operations)",
+        env="OLLAMA_URL"
+    )
     ollama_api_key: str = Field(
         default="ollama",
         description="API key for Ollama (if required)",
@@ -138,4 +143,4 @@ class Settings(BaseSettings):
 
 
 # Global settings instance
-settings = Settings() 
+settings = Settings()
