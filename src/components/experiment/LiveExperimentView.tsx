@@ -16,6 +16,8 @@ import { ConnectionStatus, ConnectionStatusType } from '../ui/ConnectionStatus';
 import { DebugPanel, DebugMessage } from '../ui/DebugPanel';
 import { ViewModeIndicator, HistoricalViewBanner } from './ViewModeIndicator';
 import { formatDateLabel, isSameLocalDate } from '../../services/dateTimeService';
+import { usePullTasks } from '../../hooks/usePullTasks';
+import { PullNotification } from '../ui/PullNotification';
 
 interface LiveExperimentViewProps {
   experimentId: string;
@@ -46,6 +48,9 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
   const [exportSelection, setExportSelection] = useState<Set<string>>(new Set());
   const [newlyArrivedMessages, setNewlyArrivedMessages] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Track active model pulls
+  const { activePulls } = usePullTasks();
   const pendingMessagesRef = useRef<Message[]>([]);
   const previousMessageCountRef = useRef<number>(0);
 
@@ -431,6 +436,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
 
   return (
     <div className="p-8 space-y-6 animate-fade-in">
+      <PullNotification activePulls={activePulls} />
       <div className="bg-gray-800 p-6 rounded-2xl shadow-xl">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">

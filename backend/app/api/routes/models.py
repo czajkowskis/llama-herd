@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import requests
@@ -10,6 +11,7 @@ from datetime import datetime
 
 from ...core.config import settings
 from ...utils.logging import get_logger
+from ...services.model_pull_manager import pull_manager
 
 logger = get_logger(__name__)
 
@@ -30,6 +32,20 @@ class ListModelsResponse(BaseModel):
 
 class PullModelRequest(BaseModel):
     name: str
+
+class PullModelResponse(BaseModel):
+    task_id: str
+    message: str
+
+class PullTaskStatus(BaseModel):
+    task_id: str
+    model_name: str
+    status: str
+    progress: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+    created_at: str
+    started_at: Optional[str] = None
+    completed_at: Optional[str] = None
 
 class DeleteModelRequest(BaseModel):
     name: str
@@ -77,64 +93,87 @@ async def list_models():
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.post("/pull")
-async def pull_model(request: PullModelRequest, req: Request):
-    """Pull a model from the registry with progress streaming."""
+async def pull_model(request: PullModelRequest) -> PullModelResponse:
+    """Start pulling a model in the background and return task ID."""
     try:
         if not check_ollama_connection():
             raise HTTPException(status_code=503, detail="Ollama service is not available")
 
-        # Start the pull request to Ollama
-        pull_data = {"name": request.name, "stream": True}
-        response = requests.post(
-            f"{OLLAMA_URL}/api/pull",
-            json=pull_data,
-            stream=True,
-            timeout=300  # 5 minutes timeout
-        )
+        # Check if model is already being pulled
+        for task in pull_manager.get_all_pull_tasks().values():
+            if task.model_name == request.name and task.status in ['pending', 'running']:
+                raise HTTPException(status_code=409, detail=f"Model {request.name} is already being pulled")
 
-        if response.status_code != 200:
-            error_detail = response.text or "Failed to start model pull"
-            # Provide more specific error messages
-            if "already exists" in error_detail.lower():
-                error_detail = f"Model {request.name} is already installed."
-            elif "not found" in error_detail.lower():
-                error_detail = f"Model {request.name} not found in Ollama registry."
-            elif "disk" in error_detail.lower() or "space" in error_detail.lower():
-                error_detail = "Insufficient disk space to download the model."
-            elif "network" in error_detail.lower() or "connection" in error_detail.lower():
-                error_detail = "Network error occurred during download."
-            raise HTTPException(status_code=response.status_code, detail=error_detail)
+        # Estimate model size and check disk space
+        estimated_size = pull_manager._get_model_size_estimate(request.name)
+        if not pull_manager._check_disk_space(estimated_size):
+            raise HTTPException(status_code=507, detail="Insufficient disk space")
 
-        async def generate():
-            """Stream the pull progress as Server-Sent Events."""
+        # Create background pull task
+        task_id = pull_manager.create_pull_task(request.name)
+
+        # Define the pull function to run in background thread
+        def perform_pull(task_id: str):
+            response = None
             try:
+                # Start the pull request to Ollama
+                pull_data = {"name": request.name, "stream": True}
+                response = requests.post(
+                    f"{OLLAMA_URL}/api/pull",
+                    json=pull_data,
+                    stream=True,
+                    timeout=300  # 5 minutes timeout
+                )
+
+                if response.status_code != 200:
+                    error_detail = response.text or "Failed to start model pull"
+                    # Provide more specific error messages
+                    if "already exists" in error_detail.lower():
+                        error_detail = f"Model {request.name} is already installed."
+                    elif "not found" in error_detail.lower():
+                        error_detail = f"Model {request.name} not found in Ollama registry."
+                    elif "disk" in error_detail.lower() or "space" in error_detail.lower():
+                        error_detail = "Insufficient disk space to download the model."
+                    elif "network" in error_detail.lower() or "connection" in error_detail.lower():
+                        error_detail = "Network error occurred during download."
+                    raise Exception(error_detail)
+
+                # Process the streaming response
                 for line in response.iter_lines():
+                    # Check if task has been cancelled
+                    current_task = pull_manager.get_pull_task(task_id)
+                    if current_task and current_task.status == 'cancelled':
+                        logger.info(f"Pull task {task_id} was cancelled, stopping download")
+                        raise Exception("Pull task was cancelled")
+
                     if line:
                         try:
                             progress_data = json.loads(line.decode('utf-8'))
-                            # Convert to SSE format
-                            event_data = f"data: {json.dumps(progress_data)}\n\n"
-                            yield event_data.encode('utf-8')
+                            logger.info(f"Received progress data from Ollama: {progress_data}")
+                            # Check if this progress data contains an error
+                            if 'error' in progress_data:
+                                raise Exception(progress_data['error'])
+                            # Update progress in the task manager
+                            pull_manager.update_progress(task_id, progress_data)
                         except json.JSONDecodeError:
                             continue
 
-                # Send completion event
-                completion_data = {"status": "completed", "model": request.name}
-                yield f"data: {json.dumps(completion_data)}\n\n".encode('utf-8')
-
             except Exception as e:
-                logger.error(f"Error during model pull streaming: {e}")
-                error_data = {"status": "error", "error": str(e)}
-                yield f"data: {json.dumps(error_data)}\n\n".encode('utf-8')
+                logger.error(f"Error during model pull for {request.name}: {e}")
+                # The error will be handled by the task manager
+                raise
+            finally:
+                # Ensure response is closed to free resources
+                if response:
+                    response.close()
 
-        return StreamingResponse(
-            generate(),
-            media_type="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache",
-                "Connection": "keep-alive",
-                "Access-Control-Allow-Origin": "*",
-            }
+        # Start the background task
+        if not pull_manager.start_pull_task(task_id, perform_pull):
+            raise HTTPException(status_code=500, detail="Failed to start pull task")
+
+        return PullModelResponse(
+            task_id=task_id,
+            message=f"Started pulling model {request.name}"
         )
 
     except HTTPException:
@@ -147,36 +186,161 @@ async def pull_model(request: PullModelRequest, req: Request):
         logger.error(f"Unexpected error pulling model {request.name}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
-@router.delete("/delete")
-async def delete_model(name: str):
-    """Delete a model from local storage."""
+@router.get("/pull/{task_id}")
+async def get_pull_status(task_id: str) -> PullTaskStatus:
+    """Get the status of a model pull task."""
+    task = pull_manager.get_pull_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Pull task not found")
+
+    return PullTaskStatus(
+        task_id=task.task_id,
+        model_name=task.model_name,
+        status=task.status,
+        progress=task.progress,
+        error=task.error,
+        created_at=task.created_at.isoformat() if task.created_at else None,
+        started_at=task.started_at.isoformat() if task.started_at else None,
+        completed_at=task.completed_at.isoformat() if task.completed_at else None,
+    )
+
+@router.delete("/pull/{task_id}")
+async def cancel_pull_task(task_id: str) -> ModelOperationResponse:
+    """Cancel a running model pull task."""
+    task = pull_manager.get_pull_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Pull task not found")
+
+    if task.status not in ['pending', 'running']:
+        raise HTTPException(status_code=400, detail=f"Cannot cancel task with status '{task.status}'")
+
+    if pull_manager.cancel_pull_task(task_id):
+        return ModelOperationResponse(
+            success=True,
+            message=f"Pull task {task_id} cancelled successfully"
+        )
+    else:
+        raise HTTPException(status_code=500, detail="Failed to cancel pull task")
+
+@router.get("/pull")
+async def list_pull_tasks() -> Dict[str, PullTaskStatus]:
+    """List all model pull tasks."""
+    tasks = pull_manager.get_all_pull_tasks()
+    result = {}
+
+    for task_id, task in tasks.items():
+        result[task_id] = PullTaskStatus(
+            task_id=task.task_id,
+            model_name=task.model_name,
+            status=task.status,
+            progress=task.progress,
+            error=task.error,
+            created_at=task.created_at.isoformat() if task.created_at else None,
+            started_at=task.started_at.isoformat() if task.started_at else None,
+            completed_at=task.completed_at.isoformat() if task.completed_at else None,
+        )
+
+    return result
+
+@router.websocket("/ws/pull/{task_id}")
+async def websocket_pull_progress(websocket: WebSocket, task_id: str):
+    """WebSocket endpoint for real-time model pull progress updates."""
+    await websocket.accept()
+
+    # Check if task exists
+    task = pull_manager.get_pull_task(task_id)
+    if not task:
+        await websocket.close(code=4004, reason="Pull task not found")
+        return
+
+    # Send initial status
+    await websocket.send_text(json.dumps({
+        "type": "status",
+        "data": {
+            "task_id": task.task_id,
+            "model_name": task.model_name,
+            "status": task.status,
+            "progress": task.progress,
+            "error": task.error,
+            "created_at": task.created_at.isoformat() if task.created_at else None,
+            "started_at": task.started_at.isoformat() if task.started_at else None,
+            "completed_at": task.completed_at.isoformat() if task.completed_at else None,
+        }
+    }))
+
+    # Get the current event loop for the callback
+    loop = asyncio.get_running_loop()
+
+    # Register progress callback
+    def progress_callback(task_id: str, progress: Dict[str, Any]):
+        logger.info(f"Sending progress update for task {task_id}: {progress}")
+        try:
+            asyncio.run_coroutine_threadsafe(
+                websocket.send_text(json.dumps({
+                    "type": "progress",
+                    "data": progress
+                })),
+                loop
+            )
+        except Exception as e:
+            logger.error(f"Error sending progress update for task {task_id}: {e}")
+
+    pull_manager.register_progress_callback(task_id, progress_callback)
+
     try:
-        if not check_ollama_connection():
-            raise HTTPException(status_code=503, detail="Ollama service is not available")
+        # Keep connection alive and listen for status changes
+        while True:
+            try:
+                # Wait for any message or timeout
+                await asyncio.wait_for(websocket.receive_text(), timeout=1.0)
 
-        delete_data = {"name": name}
-        response = requests.delete(f"{OLLAMA_URL}/api/delete", json=delete_data, timeout=30)
+                # Send current status on any message (ping)
+                current_task = pull_manager.get_pull_task(task_id)
+                if current_task:
+                    await websocket.send_text(json.dumps({
+                        "type": "status",
+                        "data": {
+                            "task_id": current_task.task_id,
+                            "model_name": current_task.model_name,
+                            "status": current_task.status,
+                            "progress": current_task.progress,
+                            "error": current_task.error,
+                            "created_at": current_task.created_at.isoformat() if current_task.created_at else None,
+                            "started_at": current_task.started_at.isoformat() if current_task.started_at else None,
+                            "completed_at": current_task.completed_at.isoformat() if current_task.completed_at else None,
+                        }
+                    }))
 
-        if response.status_code == 200:
-            return ModelOperationResponse(success=True, message=f"Model {name} deleted successfully")
-        else:
-            error_detail = response.text or "Failed to delete model"
-            # Provide more specific error messages
-            if "not found" in error_detail.lower():
-                error_detail = f"Model {name} not found or already deleted."
-            elif "in use" in error_detail.lower():
-                error_detail = f"Model {name} is currently in use and cannot be deleted."
-            raise HTTPException(status_code=response.status_code, detail=error_detail)
+                    # If task is completed, we can close the connection
+                    if current_task.status in ['completed', 'error', 'cancelled']:
+                        break
 
-    except HTTPException:
-        # Re-raise HTTPExceptions (they're already properly formatted)
-        raise
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error deleting model {name}: {e}")
-        raise HTTPException(status_code=503, detail=f"Failed to delete model: {str(e)}")
-    except Exception as e:
-        logger.error(f"Unexpected error deleting model {name}: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+            except asyncio.TimeoutError:
+                # Check if task is completed during timeout
+                current_task = pull_manager.get_pull_task(task_id)
+                if current_task and current_task.status in ['completed', 'error', 'cancelled']:
+                    # Send final status and exit
+                    await websocket.send_text(json.dumps({
+                        "type": "status",
+                        "data": {
+                            "task_id": current_task.task_id,
+                            "model_name": current_task.model_name,
+                            "status": current_task.status,
+                            "progress": current_task.progress,
+                            "error": current_task.error,
+                            "created_at": current_task.created_at.isoformat() if current_task.created_at else None,
+                            "started_at": current_task.started_at.isoformat() if current_task.started_at else None,
+                            "completed_at": current_task.completed_at.isoformat() if current_task.completed_at else None,
+                        }
+                    }))
+                    break
+                # Continue listening if task is still running
+
+    except WebSocketDisconnect:
+        logger.debug(f"WebSocket disconnected for pull task {task_id}")
+    finally:
+        # Unregister callback
+        pull_manager.unregister_progress_callback(task_id)
 
 @router.get("/version")
 async def get_version():
@@ -198,11 +362,49 @@ async def get_version():
         logger.error(f"Unexpected error getting version: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
+@router.delete("/delete/{model_name}")
+async def delete_model(model_name: str) -> ModelOperationResponse:
+    """Delete a model from Ollama."""
+    try:
+        if not check_ollama_connection():
+            raise HTTPException(status_code=503, detail="Ollama service is not available")
+
+        # Check if model exists
+        list_response = requests.get(f"{OLLAMA_URL}/api/tags", timeout=30)
+        if list_response.status_code != 200:
+            raise HTTPException(status_code=500, detail="Failed to verify model existence")
+
+        models_data = list_response.json()
+        model_exists = any(model['name'] == model_name for model in models_data.get('models', []))
+        if not model_exists:
+            raise HTTPException(status_code=404, detail=f"Model {model_name} not found")
+
+        # Delete the model
+        delete_response = requests.delete(f"{OLLAMA_URL}/api/delete",
+                                        json={"name": model_name}, timeout=60)
+
+        if delete_response.status_code not in [200, 204]:
+            error_msg = delete_response.text or "Failed to delete model"
+            raise HTTPException(status_code=delete_response.status_code, detail=error_msg)
+
+        return ModelOperationResponse(success=True, message=f"Model {model_name} deleted successfully")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting model {model_name}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
 @router.get("/catalog")
 async def get_model_catalog():
     """Get curated model catalog."""
     # This could be extended to fetch from external registries
-    catalog = [
+    catalog = _get_model_catalog_data()
+    return {"models": catalog}
+
+def _get_model_catalog_data():
+    """Get the static model catalog data."""
+    return [
         # Llama family
         {"name": "Llama 3 8B Instruct Q4", "tag": "llama3:8b-instruct-q4_0", "size": 1900000000, "family": "llama", "quant": "q4_0", "notes": "Latest Llama 3 model, great for general chat"},
         {"name": "Llama 3 8B Instruct Q5", "tag": "llama3:8b-instruct-q5_0", "size": 2400000000, "family": "llama", "quant": "q5_0", "notes": "Higher quality quantization"},
@@ -222,4 +424,3 @@ async def get_model_catalog():
         {"name": "Gemma 7B Q4", "tag": "gemma:7b-instruct-q4_0", "size": 1800000000, "family": "gemma", "quant": "q4_0", "notes": "Google Gemma"},
         {"name": "Qwen 7B Chat Q4", "tag": "qwen:7b-chat-q4_0", "size": 1900000000, "family": "qwen", "quant": "q4_0", "notes": "Alibaba Qwen"},
     ]
-    return {"models": catalog}

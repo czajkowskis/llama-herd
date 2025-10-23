@@ -152,6 +152,7 @@ export const Models: React.FC = () => {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
   const [pendingPull, setPendingPull] = useState<{ tag: string; sizeHint?: number } | null>(null);
+  const [pendingRemoval, setPendingRemoval] = useState<string | null>(null);
 
   // Use the connection hook
   const { connected, version, connectionError, isRetrying, manualRetry } = useOllamaConnection();
@@ -323,7 +324,7 @@ export const Models: React.FC = () => {
       }
     })();
     return () => { mounted = false; };
-  }, []);
+  }, [connected]);
 
   // Persist default model
   useEffect(() => {
@@ -461,6 +462,29 @@ export const Models: React.FC = () => {
     setPendingPull(null);
   };
 
+  const confirmRemoval = async () => {
+    if (!pendingRemoval) return;
+
+    const tag = pendingRemoval;
+    setShowConfirmPopup(false);
+    setPendingRemoval(null);
+
+    try {
+      await ollamaService.deleteModel(tag);
+      const models = await ollamaService.listModels();
+      setInstalled(Array.isArray(models) ? models : []);
+      if (defaultModel === tag) setDefaultModel('');
+    } catch (error) {
+      console.error('Failed to remove model:', error);
+      // Could add error handling UI here if needed
+    }
+  };
+
+  const cancelRemoval = () => {
+    setShowConfirmPopup(false);
+    setPendingRemoval(null);
+  };
+
   const cancelPull = (tag: string) => {
     const ctl = pulling[tag]?.controller;
     if (ctl) {
@@ -473,11 +497,9 @@ export const Models: React.FC = () => {
     });
   };
 
-  const removeModel = async (tag: string) => {
-    await ollamaService.deleteModel(tag);
-  const models = await ollamaService.listModels();
-  setInstalled(Array.isArray(models) ? models : []);
-    if (defaultModel === tag) setDefaultModel('');
+  const removeModel = (tag: string) => {
+    setPendingRemoval(tag);
+    setShowConfirmPopup(true);
   };
 
   // function to pull all models in a family
@@ -875,11 +897,17 @@ export const Models: React.FC = () => {
       {/* Confirmation Popup */}
       <ConfirmationPopup
         isOpen={showConfirmPopup}
-        title="Confirm Model Download"
-        message={pendingPull ? `This will download the model and use approximately ${(pendingPull.sizeHint ? (pendingPull.sizeHint / (1024**3)).toFixed(1) : 'unknown')} GB of storage. Continue?` : ''}
-        onConfirm={confirmPull}
-        onCancel={cancelConfirmPull}
-        confirmText="Download"
+        title={pendingPull ? "Confirm Model Download" : "Confirm Model Removal"}
+        message={
+          pendingPull 
+            ? `This will download the model and use approximately ${(pendingPull.sizeHint ? (pendingPull.sizeHint / (1024**3)).toFixed(1) : 'unknown')} GB of storage. Continue?`
+            : pendingRemoval 
+              ? `This action will permanently delete the model "${pendingRemoval}" from your system. This cannot be undone. Continue?`
+              : ''
+        }
+        onConfirm={pendingPull ? confirmPull : confirmRemoval}
+        onCancel={pendingPull ? cancelConfirmPull : cancelRemoval}
+        confirmText={pendingPull ? "Download" : "Remove"}
         cancelText="Cancel"
         type="warning"
       />

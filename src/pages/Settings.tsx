@@ -5,6 +5,8 @@ import { Button } from '../components/ui/Button';
 import { useUIPreferences } from '../hooks/useUIPreferences';
 import { Theme, MessageDensity, getTimeFormatPreference, setTimeFormatPreference, TimeFormatPreference } from '../services/uiPreferencesService';
 import { ConnectionStatus, ConnectionStatusType } from '../components/ui/ConnectionStatus';
+import { usePullTasks } from '../hooks/usePullTasks';
+import { PullNotification } from '../components/ui/PullNotification';
 
 // Keys for localStorage
 const STORAGE_KEY_BASE = 'llama-herd-ollama-base-url';
@@ -35,6 +37,9 @@ export const Settings: React.FC = () => {
 
   // Time format preference state
   const [timeFormat, setTimeFormat] = useState<TimeFormatPreference>(getTimeFormatPreference);
+
+  // Track active model pulls
+  const { activePulls } = usePullTasks();
 
   // Validate endpoint URL roughly. It should be an absolute URL.
   const validateUrl = (value: string): string | null => {
@@ -100,6 +105,7 @@ export const Settings: React.FC = () => {
 
   return (
     <div className="p-8 text-center animate-fade-in" style={{ color: 'var(--color-text-tertiary)' }}>
+      <PullNotification activePulls={activePulls} />
       <h2 className="text-2xl font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>Settings</h2>
       <p>Configure your Ollama connection and other preferences.</p>
       <div className="mt-6 p-4 rounded-xl max-w-2xl mx-auto text-left" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>

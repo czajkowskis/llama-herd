@@ -52,7 +52,20 @@ class TestStorage(unittest.TestCase):
         experiment_data = {
             "id": experiment_id,
             "title": "My Test Experiment",
-            "description": "A test."
+            "description": "A test.",
+            "status": "pending",
+            "task": {
+                "id": "task-1",
+                "prompt": "Test task",
+            },
+            "agents": [{
+                "id": "agent-1",
+                "name": "Test Agent",
+                "prompt": "Test prompt",
+                "color": "#FF0000",
+                "model": "llama2"
+            }],
+            "iterations": 1
         }
 
         # 1. Test Experiment Creation
@@ -77,10 +90,31 @@ class TestStorage(unittest.TestCase):
         experiment_id = str(uuid.uuid4())
         
         # First, create the experiment
-        storage.save_experiment({"id": experiment_id, "title": "Conversation Test"})
+        storage.save_experiment({
+            "id": experiment_id,
+            "title": "Conversation Test",
+            "status": "pending",
+            "task": {"id": "task-1", "prompt": "Test"},
+            "agents": [{"id": "agent-1", "name": "Agent", "prompt": "Test", "color": "#FF0000", "model": "llama2"}],
+            "iterations": 1
+        })
 
         # 1. Test Conversation Storage and Naming
-        conversation_data = {"messages": [{"role": "user", "content": "Hello"}]}
+        conversation_data = {
+            "agents": [{
+                "id": "agent-1",
+                "name": "Test Agent",
+                "prompt": "Test",
+                "color": "#FF0000",
+                "model": "llama2"
+            }],
+            "messages": [{
+                "id": "msg-1",
+                "agentId": "agent-1",
+                "content": "Hello",
+                "timestamp": "2023-01-01T00:00:00"
+            }]
+        }
         save_success = storage.save_experiment_conversation(
             experiment_id=experiment_id,
             iteration=1,
@@ -105,10 +139,26 @@ class TestStorage(unittest.TestCase):
         
         # Create two experiments
         exp1_id = str(uuid.uuid4())
-        storage.save_experiment({"id": exp1_id, "title": "Experiment 1", "created_at": "2023-01-01T00:00:00"})
+        storage.save_experiment({
+            "id": exp1_id,
+            "title": "Experiment 1",
+            "created_at": "2023-01-01T00:00:00",
+            "status": "pending",
+            "task": {"id": "task-1", "prompt": "Test"},
+            "agents": [{"id": "agent-1", "name": "Agent", "prompt": "Test", "color": "#FF0000", "model": "llama2"}],
+            "iterations": 1
+        })
         
         exp2_id = str(uuid.uuid4())
-        storage.save_experiment({"id": exp2_id, "title": "Experiment 2", "created_at": "2023-01-02T00:00:00"})
+        storage.save_experiment({
+            "id": exp2_id,
+            "title": "Experiment 2",
+            "created_at": "2023-01-02T00:00:00",
+            "status": "pending",
+            "task": {"id": "task-1", "prompt": "Test"},
+            "agents": [{"id": "agent-1", "name": "Agent", "prompt": "Test", "color": "#FF0000", "model": "llama2"}],
+            "iterations": 1
+        })
 
         all_experiments = storage.get_experiments()
         self.assertEqual(len(all_experiments), 2)
@@ -123,8 +173,18 @@ class TestStorage(unittest.TestCase):
         experiment_id = str(uuid.uuid4())
         
         # Create an experiment and a conversation
-        storage.save_experiment({"id": experiment_id, "title": "To Be Deleted"})
-        storage.save_experiment_conversation(experiment_id, 1, "conv", {})
+        storage.save_experiment({
+            "id": experiment_id,
+            "title": "To Be Deleted",
+            "status": "pending",
+            "task": {"id": "task-1", "prompt": "Test"},
+            "agents": [{"id": "agent-1", "name": "Agent", "prompt": "Test", "color": "#FF0000", "model": "llama2"}],
+            "iterations": 1
+        })
+        storage.save_experiment_conversation(experiment_id, 1, "conv", {
+            "agents": [{"id": "agent-1", "name": "Agent", "prompt": "Test", "color": "#FF0000", "model": "llama2"}],
+            "messages": []
+        })
 
         experiment_dir = Path(self.test_data_dir) / "experiments" / experiment_id
         self.assertTrue(experiment_dir.exists())
@@ -141,9 +201,22 @@ class TestStorage(unittest.TestCase):
         storage = FileStorage(data_dir=self.test_data_dir)
         experiment_id = str(uuid.uuid4())
         
-        storage.save_experiment({"id": experiment_id, "title": "Get Conversation Test"})
-        storage.save_experiment_conversation(experiment_id, 1, "conv1", {"messages": [{"content": "1"}]})
-        storage.save_experiment_conversation(experiment_id, 2, "conv2", {"messages": [{"content": "2"}]})
+        storage.save_experiment({
+            "id": experiment_id,
+            "title": "Get Conversation Test",
+            "status": "pending",
+            "task": {"id": "task-1", "prompt": "Test"},
+            "agents": [{"id": "agent-1", "name": "Agent", "prompt": "Test", "color": "#FF0000", "model": "llama2"}],
+            "iterations": 1
+        })
+        storage.save_experiment_conversation(experiment_id, 1, "conv1", {
+            "agents": [{"id": "agent-1", "name": "Agent", "prompt": "Test", "color": "#FF0000", "model": "llama2"}],
+            "messages": [{"id": "msg-1", "agentId": "agent-1", "content": "1", "timestamp": "2023-01-01T00:00:00"}]
+        })
+        storage.save_experiment_conversation(experiment_id, 2, "conv2", {
+            "agents": [{"id": "agent-1", "name": "Agent", "prompt": "Test", "color": "#FF0000", "model": "llama2"}],
+            "messages": [{"id": "msg-2", "agentId": "agent-1", "content": "2", "timestamp": "2023-01-01T00:00:00"}]
+        })
 
         # The composite ID is <experiment_id>_<iteration>
         composite_id = f"{experiment_id}_2"

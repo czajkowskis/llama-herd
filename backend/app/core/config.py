@@ -85,6 +85,11 @@ class Settings(BaseSettings):
         description="Timeout in seconds for Ollama API requests",
         env="OLLAMA_TIMEOUT"
     )
+    ollama_models_dir: str = Field(
+        default="~/.ollama/models",
+        description="Directory where Ollama stores downloaded models",
+        env="OLLAMA_MODELS_DIR"
+    )
     
     # Storage Configuration
     data_directory: str = Field(

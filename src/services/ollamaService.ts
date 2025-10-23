@@ -20,6 +20,17 @@ export interface PullProgress {
   error?: string;
 }
 
+export interface PullTask {
+  task_id: string;
+  model_name: string;
+  status: string; // 'pending', 'running', 'completed', 'error', 'cancelled'
+  progress?: PullProgress;
+  error?: string;
+  created_at: string;
+  started_at?: string;
+  completed_at?: string;
+}
+
 export interface VersionResponse {
   version: string;
 }
@@ -56,20 +67,28 @@ export const getVersion = async (baseUrl?: string): Promise<string> => {
 };
 
 /**
+ * Gets all active model pull tasks.
+ */
+export const getPullTasks = async (baseUrl?: string): Promise<Record<string, PullTask>> => {
+  const urlBase = baseUrl || API_BASE_URL;
+  const res = await fetch(`${urlBase}/api/models/pull`);
+  if (!res.ok) throw new Error(`API call failed with status: ${res.status}`);
+  return await res.json();
+};
+
+/**
  * Deletes a local model by name/tag.
  */
 export const deleteModel = async (name: string, baseUrl?: string): Promise<void> => {
   const urlBase = baseUrl || API_BASE_URL;
-  const res = await fetch(`${urlBase}/api/models/delete`, {
+  const res = await fetch(`${urlBase}/api/models/delete/${encodeURIComponent(name)}`, {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name }),
   });
   if (!res.ok) throw new Error(`Delete failed with status: ${res.status}`);
 };
 
 /**
- * Pulls a model by tag. Streams progress via callback. Returns when done or aborted.
+ * Pulls a model by tag. Uses WebSocket for progress updates. Returns when done or aborted.
  */
 export const pullModel = async (
   name: string,
@@ -78,66 +97,105 @@ export const pullModel = async (
   baseUrl?: string
 ): Promise<void> => {
   const urlBase = baseUrl || API_BASE_URL;
-  const res = await fetch(`${urlBase}/api/models/pull`, {
+
+  // Start the pull task
+  const startResponse = await fetch(`${urlBase}/api/models/pull`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name }),
     signal,
   });
-  if (!res.ok || !res.body) {
-    throw new Error(`Pull failed with status: ${res.status}`);
+
+  if (!startResponse.ok) {
+    throw new Error(`Pull failed with status: ${startResponse.status}`);
   }
 
-  // Handle Server-Sent Events
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
+  const startData = await startResponse.json();
+  const taskId = startData.task_id;
 
-  try {
-    let buffer = '';
+  // Connect to WebSocket for progress updates
+  const wsUrl = urlBase.replace(/^http/, 'ws') + `/api/models/ws/pull/${taskId}`;
+  const ws = new WebSocket(wsUrl);
 
-    const processEvent = (eventData: string) => {
+  return new Promise((resolve, reject) => {
+    let completed = false;
+
+    ws.onopen = () => {
+      console.log(`Connected to pull progress WebSocket for task ${taskId}`);
+    };
+
+    ws.onmessage = (event) => {
       try {
-        const progress: PullProgress = JSON.parse(eventData);
-        onProgress?.(progress);
+        const message = JSON.parse(event.data);
+
+        if (message.type === 'progress' && message.data) {
+          const progress: PullProgress = message.data;
+          onProgress?.(progress);
+        } else if (message.type === 'status' && message.data) {
+          const status = message.data;
+
+          // Check if task is completed
+          if (status.status === 'completed') {
+            completed = true;
+            ws.close();
+            resolve();
+          } else if (status.status === 'error') {
+            completed = true;
+            ws.close();
+            reject(new Error(status.error || 'Pull failed'));
+          } else if (status.status === 'cancelled') {
+            completed = true;
+            ws.close();
+            reject(new DOMException('Pull was cancelled', 'AbortError'));
+          }
+        }
       } catch (error) {
-        console.error('Failed to parse progress event:', eventData, error);
+        console.error('Failed to parse WebSocket message:', event.data, error);
       }
     };
 
-    while (true) {
-      if (signal?.aborted) {
-        await reader.cancel('Stream reading was aborted.');
-        throw new DOMException('Stream reading was aborted.', 'AbortError');
+    ws.onerror = (error) => {
+      if (!completed) {
+        console.error('WebSocket error:', error);
+        reject(new Error('WebSocket connection failed'));
       }
+    };
 
-      const { value, done } = await reader.read();
-      if (done) break;
+    ws.onclose = (event) => {
+      if (!completed && !signal?.aborted) {
+        reject(new Error(`WebSocket closed unexpectedly: ${event.code} ${event.reason}`));
+      }
+    };
 
-      buffer += decoder.decode(value, { stream: true });
-
-      // Process complete SSE messages
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || ''; // Keep incomplete line in buffer
-
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const eventData = line.slice(6).trim(); // Remove 'data: ' prefix
-          if (eventData) {
-            processEvent(eventData);
-          }
+    // Handle abort signal
+    if (signal) {
+      signal.addEventListener('abort', () => {
+        if (!completed) {
+          completed = true;
+          ws.close();
+          // Try to cancel the task on the server
+          fetch(`${urlBase}/api/models/pull/${taskId}`, {
+            method: 'DELETE',
+          }).catch(err => console.error('Failed to cancel pull task:', err));
+          reject(new DOMException('Pull was aborted', 'AbortError'));
         }
-      }
+      });
     }
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      // Stream was aborted - this is expected, rethrow so caller knows
-      throw error;
-    }
-    throw error;
-  }
+  });
 };
 
-// Interface for the request body to generate a completion.
+/**
+ * Cancels a running model pull task.
+ */
+export const cancelModelPull = async (taskId: string, baseUrl?: string): Promise<void> => {
+  const urlBase = baseUrl || API_BASE_URL;
+  const res = await fetch(`${urlBase}/api/models/pull/${taskId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    throw new Error(`Cancel failed with status: ${res.status}`);
+  }
+};
 export interface GenerateRequest {
   model: string;
   prompt: string;
@@ -219,7 +277,17 @@ async function streamJsonLinesToObject<T>(
         throw new DOMException('Stream reading was aborted.', 'AbortError');
       }
 
-      const { value, done } = await reader.read();
+      // Race between reading and abort signal for immediate cancellation
+      const readPromise = reader.read();
+      const abortPromise = signal ? new Promise<never>((_, reject) => {
+        const abortHandler = () => reject(new DOMException('Stream reading was aborted.', 'AbortError'));
+        signal.addEventListener('abort', abortHandler, { once: true });
+        // Clean up listener if read completes first
+        readPromise.finally(() => signal.removeEventListener('abort', abortHandler));
+      }) : new Promise<never>(() => {}); // Never resolves if no signal
+
+      const { value, done } = await Promise.race([readPromise, abortPromise]);
+
       if (done) {
         // If there's any remaining data in the buffer, try to process it
         if (buffer.length > 0) {
@@ -307,6 +375,7 @@ export const generateCompletion = async (
 export const ollamaService = {
   listModels,
   getVersion,
+  getPullTasks,
   deleteModel,
   pullModel,
   generateCompletion,
