@@ -9,4 +9,5 @@ export { ErrorPopup } from './ErrorPopup';
 export { ConnectionStatus } from './ConnectionStatus';
 export type { ConnectionStatusType } from './ConnectionStatus';
 export { DebugPanel } from './DebugPanel';
-export type { DebugMessage } from './DebugPanel'; 
+export type { DebugMessage } from './DebugPanel';
+export { PullNotification } from './PullNotification'; 

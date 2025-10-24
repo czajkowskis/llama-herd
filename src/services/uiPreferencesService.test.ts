@@ -16,6 +16,8 @@ import {
   setAllPreferences,
   resetPreferences,
   getEffectiveTheme,
+  getTimeFormatPreference,
+  setTimeFormatPreference,
 } from './uiPreferencesService';
 
 // Mock localStorage
@@ -224,6 +226,25 @@ describe('uiPreferencesService', () => {
       expect(getTheme()).toBe('dark'); // default
       expect(getCompactMode()).toBe(false); // default
       expect(getMessageDensity()).toBe('normal'); // default
+    });
+  });
+
+  describe('Time format preference', () => {
+    it('should default to 24h when unset', () => {
+      expect(getTimeFormatPreference()).toBe('24h');
+    });
+
+    it('should store and retrieve 12h/24h values', () => {
+      setTimeFormatPreference('12h');
+      expect(getTimeFormatPreference()).toBe('12h');
+      setTimeFormatPreference('24h');
+      expect(getTimeFormatPreference()).toBe('24h');
+    });
+
+    it('treats legacy system value as 24h', () => {
+      // Simulate legacy value
+      (window.localStorage as any).setItem('llama-herd-ui-time-format', 'system');
+      expect(getTimeFormatPreference()).toBe('24h');
     });
   });
 

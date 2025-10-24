@@ -94,16 +94,20 @@ export const pullModel = async (
   name: string,
   onProgress?: (p: PullProgress) => void,
   signal?: AbortSignal,
-  baseUrl?: string
+  baseUrl?: string,
+  // By default we don't auto-cancel server tasks when the local signal aborts (navigation etc).
+  autoCancelOnAbort: boolean = false
 ): Promise<void> => {
   const urlBase = baseUrl || API_BASE_URL;
 
   // Start the pull task
+  // Start the pull task. Use an independent signal for the POST so unexpected aborts
+  // (e.g., navigation) don't automatically cancel the server task. The provided
+  // `signal` is used for client-side cancellation handling and websocket lifetime.
   const startResponse = await fetch(`${urlBase}/api/models/pull`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name }),
-    signal,
   });
 
   if (!startResponse.ok) {
@@ -167,16 +171,18 @@ export const pullModel = async (
       }
     };
 
-    // Handle abort signal
+    // Handle abort signal: close websocket and reject locally. Only cancel the server
+    // task if caller explicitly requested autoCancelOnAbort (defaults to false).
     if (signal) {
       signal.addEventListener('abort', () => {
         if (!completed) {
           completed = true;
-          ws.close();
-          // Try to cancel the task on the server
-          fetch(`${urlBase}/api/models/pull/${taskId}`, {
-            method: 'DELETE',
-          }).catch(err => console.error('Failed to cancel pull task:', err));
+          try { ws.close(); } catch (e) { /* ignore */ }
+          if (autoCancelOnAbort) {
+            fetch(`${urlBase}/api/models/pull/${taskId}`, {
+              method: 'DELETE',
+            }).catch(err => console.error('Failed to cancel pull task:', err));
+          }
           reject(new DOMException('Pull was aborted', 'AbortError'));
         }
       });
@@ -378,5 +384,6 @@ export const ollamaService = {
   getPullTasks,
   deleteModel,
   pullModel,
+  cancelModelPull,
   generateCompletion,
 };

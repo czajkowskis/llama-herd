@@ -99,10 +99,36 @@ async def pull_model(request: PullModelRequest) -> PullModelResponse:
         if not check_ollama_connection():
             raise HTTPException(status_code=503, detail="Ollama service is not available")
 
-        # Check if model is already being pulled
+        # Check if model is already being pulled. Allow retry if the existing task
+        # appears inactive (no live thread or stale progress).
+        now = datetime.utcnow()
         for task in pull_manager.get_all_pull_tasks().values():
-            if task.model_name == request.name and task.status in ['pending', 'running']:
-                raise HTTPException(status_code=409, detail=f"Model {request.name} is already being pulled")
+            if task.model_name != request.name:
+                continue
+            if task.status not in ['pending', 'running']:
+                continue
+
+            # If there's no thread handle or the thread is not alive, consider stale
+            thread_dead = (not task.task_handle) or (hasattr(task.task_handle, 'is_alive') and not task.task_handle.is_alive())
+
+            # If we have a last_progress_update timestamp, consider it stale if older than 60s
+            stale_progress = False
+            try:
+                if task.last_progress_update:
+                    age = (now - task.last_progress_update).total_seconds()
+                    if age > 60:
+                        stale_progress = True
+            except Exception:
+                stale_progress = False
+
+            if thread_dead or stale_progress:
+                # Mark the old task as stale/error so it doesn't block the retry
+                pull_manager.mark_task_stale(task.task_id, 'Stale or inactive; allowing retry')
+                logger.info(f"Existing pull task {task.task_id} for {request.name} marked stale to allow retry")
+                continue
+
+            # Otherwise, it's actively running - block the new pull
+            raise HTTPException(status_code=409, detail=f"Model {request.name} is already being pulled")
 
         # Estimate model size and check disk space
         estimated_size = pull_manager._get_model_size_estimate(request.name)
@@ -112,60 +138,10 @@ async def pull_model(request: PullModelRequest) -> PullModelResponse:
         # Create background pull task
         task_id = pull_manager.create_pull_task(request.name)
 
-        # Define the pull function to run in background thread
-        def perform_pull(task_id: str):
-            response = None
-            try:
-                # Start the pull request to Ollama
-                pull_data = {"name": request.name, "stream": True}
-                response = requests.post(
-                    f"{OLLAMA_URL}/api/pull",
-                    json=pull_data,
-                    stream=True,
-                    timeout=300  # 5 minutes timeout
-                )
-
-                if response.status_code != 200:
-                    error_detail = response.text or "Failed to start model pull"
-                    # Provide more specific error messages
-                    if "already exists" in error_detail.lower():
-                        error_detail = f"Model {request.name} is already installed."
-                    elif "not found" in error_detail.lower():
-                        error_detail = f"Model {request.name} not found in Ollama registry."
-                    elif "disk" in error_detail.lower() or "space" in error_detail.lower():
-                        error_detail = "Insufficient disk space to download the model."
-                    elif "network" in error_detail.lower() or "connection" in error_detail.lower():
-                        error_detail = "Network error occurred during download."
-                    raise Exception(error_detail)
-
-                # Process the streaming response
-                for line in response.iter_lines():
-                    # Check if task has been cancelled
-                    current_task = pull_manager.get_pull_task(task_id)
-                    if current_task and current_task.status == 'cancelled':
-                        logger.info(f"Pull task {task_id} was cancelled, stopping download")
-                        raise Exception("Pull task was cancelled")
-
-                    if line:
-                        try:
-                            progress_data = json.loads(line.decode('utf-8'))
-                            logger.info(f"Received progress data from Ollama: {progress_data}")
-                            # Check if this progress data contains an error
-                            if 'error' in progress_data:
-                                raise Exception(progress_data['error'])
-                            # Update progress in the task manager
-                            pull_manager.update_progress(task_id, progress_data)
-                        except json.JSONDecodeError:
-                            continue
-
-            except Exception as e:
-                logger.error(f"Error during model pull for {request.name}: {e}")
-                # The error will be handled by the task manager
-                raise
-            finally:
-                # Ensure response is closed to free resources
-                if response:
-                    response.close()
+        # Use manager-level pull implementation so pulls continue independent of the request
+        def perform_pull(task_id: str, stop_event=None):
+            # Delegate to the manager's internal performer which knows how to call Ollama
+            pull_manager._perform_pull_model(task_id, request.name, stop_event)
 
         # Start the background task
         if not pull_manager.start_pull_task(task_id, perform_pull):
@@ -203,6 +179,15 @@ async def get_pull_status(task_id: str) -> PullTaskStatus:
         started_at=task.started_at.isoformat() if task.started_at else None,
         completed_at=task.completed_at.isoformat() if task.completed_at else None,
     )
+
+
+@router.get("/pull/{task_id}/health")
+async def get_pull_health(task_id: str):
+    """Return low-level health info about a pull task (worker alive, last progress age, retries)."""
+    info = pull_manager.get_task_health(task_id)
+    if info is None:
+        raise HTTPException(status_code=404, detail="Pull task not found")
+    return info
 
 @router.delete("/pull/{task_id}")
 async def cancel_pull_task(task_id: str) -> ModelOperationResponse:

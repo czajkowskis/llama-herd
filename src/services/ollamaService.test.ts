@@ -29,13 +29,13 @@ describe('ollamaService', () => {
   });
 
   describe('listModels', () => {
-    it('should call tags endpoint on provided baseUrl and return model names', async () => {
+    it('should call models/list endpoint on provided baseUrl and return model names', async () => {
       const mockResponse = { models: [{ name: 'model-a', size: 1, digest: '', modified_at: '' }] };
       (global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => mockResponse });
 
       const models = await (await import('./ollamaService')).listModels('http://example.com');
       expect(models).toEqual(['model-a']);
-      expect((global.fetch as jest.Mock).mock.calls[0][0]).toBe('http://example.com/api/tags');
+      expect((global.fetch as jest.Mock).mock.calls[0][0]).toBe('http://example.com/api/models/list');
     });
 
     it('should bubble up non-ok status as error', async () => {

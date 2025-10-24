@@ -17,6 +17,7 @@ from .core.exceptions import (
 )
 from .api.routes.experiments import router as experiments_router
 from .api.routes.conversations import router as conversations_router
+from .api.routes.models import router as models_router
 from .api.ws import router as ws_router
 from .utils.logging import get_logger, log_with_context
 
@@ -189,6 +190,7 @@ def create_app() -> FastAPI:
     # Include API routers
     app.include_router(experiments_router)
     app.include_router(conversations_router)
+    app.include_router(models_router)
     app.include_router(ws_router)
     
     @app.on_event("startup")
@@ -196,7 +198,25 @@ def create_app() -> FastAPI:
         """Set up event loop reference for state manager."""
         loop = asyncio.get_running_loop()
         state_manager.set_event_loop(loop)
+        # Start background services
+        try:
+            from .services.model_pull_manager import pull_manager
+            # Start the cleanup worker for the global pull manager
+            pull_manager.start()
+            logger.info("Model pull manager cleanup worker started")
+        except Exception:
+            logger.exception("Failed to start model pull manager cleanup worker")
         logger.info("LLaMa-Herd backend started successfully")
+
+    @app.on_event("shutdown")
+    async def shutdown_event():
+        # Stop background services cleanly
+        try:
+            from .services.model_pull_manager import pull_manager
+            pull_manager.shutdown()
+            logger.info("Model pull manager cleanup worker stopped")
+        except Exception:
+            logger.exception("Failed to stop model pull manager cleanup worker")
 
     return app
 

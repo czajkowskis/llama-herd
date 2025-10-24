@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ollamaService } from '../services/ollamaService';
+import { usePullTasks } from '../hooks/usePullTasks';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
 import { ConfirmationPopup } from '../components/ui/ConfirmationPopup';
@@ -337,6 +338,85 @@ export const Models: React.FC = () => {
     savePullingState(pulling);
   }, [pulling]);
 
+  // Merge PullTasksContext (server-backed + websocket-updated) into the local pulling state
+  const { pullTasks, dismissByModelName, dismissAllErrors, dismissTask } = usePullTasks();
+
+  useEffect(() => {
+    // pullTasks is a map of task_id -> task data
+    setPulling(prev => {
+      const updated = { ...prev };
+      Object.values(pullTasks).forEach((t: any) => {
+        const tag = t.model_name;
+        if (!tag) return;
+
+        if (t.status === 'running' || t.status === 'pending') {
+          const total = t.progress?.total ?? undefined;
+          const completed = t.progress?.completed ?? undefined;
+          const progressPercent = (typeof total === 'number' && typeof completed === 'number' && total > 0)
+            ? Math.min(100, Math.floor((completed / total) * 100))
+            : undefined;
+
+          // Derive speed and ETA from server timestamps when possible
+          let speed: number | undefined = undefined;
+          let lastUpdateTime: number | undefined = undefined;
+          // Use started_at from server if available to estimate average speed
+          if (t.started_at && typeof completed === 'number') {
+            try {
+              const started = new Date(t.started_at).getTime();
+              const now = Date.now();
+              const elapsedSec = Math.max(1, (now - started) / 1000);
+              speed = completed / elapsedSec; // bytes per second (average)
+              lastUpdateTime = now;
+            } catch (e) {
+              // ignore parse errors
+            }
+          }
+
+          updated[tag] = {
+            ...updated[tag],
+            // keep any existing controller if present (local active pulls)
+            controller: updated[tag]?.controller,
+            total,
+            completed,
+            progress: progressPercent,
+            error: t.error ?? undefined,
+            lastUpdateTime: lastUpdateTime ?? updated[tag]?.lastUpdateTime,
+            speed: speed ?? updated[tag]?.speed,
+            startTime: t.started_at ? new Date(t.started_at).getTime() : updated[tag]?.startTime,
+          } as PullingState;
+        } else if (t.status === 'error') {
+          updated[tag] = {
+            ...updated[tag],
+            controller: updated[tag]?.controller,
+            error: t.error || 'Download interrupted. Click retry to resume.'
+          } as PullingState;
+        }
+      });
+      return updated;
+    });
+  }, [pullTasks]);
+
+  // On mount (and when connection is available), fetch server-side persisted pull tasks
+  // and merge them into the local `pulling` state so persisted tasks are visible in the UI.
+  useEffect(() => {
+    let mounted = true;
+    if (!connected) return;
+
+    (async () => {
+      try {
+        // We now consume server-side persisted tasks via the PullTasksContext so
+        // that websocket progress updates are handled centrally. If that context
+        // is available we will merge its tasks into the local pulling state below.
+        // Keep this block empty to avoid duplicate fetches here.
+        if (!mounted) return;
+      } catch (e) {
+        // ignore - we still rely on local cache
+      }
+    })();
+
+    return () => { mounted = false; };
+  }, [connected]);
+
   // Clean up pulling state for models that are now installed
   useEffect(() => {
     if (installed.length === 0) return;
@@ -486,14 +566,65 @@ export const Models: React.FC = () => {
   };
 
   const cancelPull = (tag: string) => {
-    const ctl = pulling[tag]?.controller;
-    if (ctl) {
-      ctl.abort();
+    (async () => {
+      const ctl = pulling[tag]?.controller;
+      // Abort local controller if present
+      try {
+        if (ctl) ctl.abort();
+      } catch (e) {
+        console.warn('Failed to abort local controller', e);
+      }
+
+      // Also attempt to cancel server-side pull if one exists for this model
+      try {
+        const serverTask = Object.values(pullTasks).find((t: any) => t.model_name === tag && (t.status === 'running' || t.status === 'pending')) as any | undefined;
+        if (serverTask && serverTask.task_id) {
+          await ollamaService.cancelModelPull(serverTask.task_id);
+        }
+      } catch (e) {
+        console.warn('Failed to cancel server-side pull task', e);
+      }
+
+      // Remove from state immediately
+      setPulling(prev => {
+        const { [tag]: _, ...rest } = prev;
+        return rest;
+      });
+    })();
+  };
+
+  const dismissNotification = (tag: string) => {
+    // Dismiss server-persisted tasks for this model (so they don't reappear)
+    try {
+      dismissByModelName(tag);
+    } catch (e) {
+      // ignore
     }
-    // Remove from state immediately
+
+    // Remove local-only pulling entry
     setPulling(prev => {
       const { [tag]: _, ...rest } = prev;
       return rest;
+    });
+  };
+
+  const dismissAllNotifications = () => {
+    // Dismiss server-side error tasks so they don't reappear
+    try {
+      dismissAllErrors();
+    } catch (e) {
+      // ignore
+    }
+
+    // Remove local-only error entries as well
+    setPulling(prev => {
+      const next: Record<string, PullingState> = { ...prev };
+      Object.keys(prev).forEach(tag => {
+        if (prev[tag]?.error) {
+          delete next[tag];
+        }
+      });
+      return next;
     });
   };
 
@@ -557,6 +688,7 @@ export const Models: React.FC = () => {
     const aria: any = p.progress !== undefined ? { 'aria-valuenow': p.progress, 'aria-valuemin': 0, 'aria-valuemax': 100 } : {};
     const showCancel = opts?.showCancel ?? true;
     const hasActiveController = !!p.controller;
+  const hasServerTask = Object.values(pullTasks).some((t: any) => t.model_name === tag && (t.status === 'running' || t.status === 'pending'));
     
     // Format speed and ETA
     const formatSpeed = (speed?: number) => {
@@ -591,8 +723,35 @@ export const Models: React.FC = () => {
         <span className="sr-only" aria-live="polite">{p.progress !== undefined ? `${p.progress}% complete${speed ? ` at ${speed}` : ''}${eta ? `, ${eta} remaining` : ''}` : 'Downloading'}</span>
         {showCancel && (
           <div className="flex items-center gap-2 mt-2">
-            {hasActiveController && <Button variant="secondary" onClick={() => cancelPull(tag)} aria-label={`Cancel ${tag}`}>Cancel</Button>}
-            {p.error && <span className="text-red-500 text-sm" role="alert">{p.error} <button className="underline" onClick={() => startPull(tag)}>Retry</button></span>}
+            {(hasActiveController || hasServerTask) && <Button variant="secondary" onClick={() => cancelPull(tag)} aria-label={`Cancel ${tag}`}>Cancel</Button>}
+            {p.error && (
+              <span className="text-red-500 text-sm" role="alert">
+                {p.error}{' '}
+                <button className="underline" onClick={() => startPull(tag)}>Retry</button>
+                {' '}
+                {/* Per-task dismiss: prefer server task id when available */}
+                <button
+                  className="underline ml-2"
+                  onClick={() => {
+                    try {
+                      // Find a server task id for this model with an error
+                      const serverTask = Object.values(pullTasks).find((t: any) => t.model_name === tag && t.error) as any | undefined;
+                      if (serverTask && (serverTask.task_id || serverTask.id)) {
+                        dismissTask(serverTask.task_id || serverTask.id);
+                      } else {
+                        // Fallback: remove local-only entry
+                        setPulling(prev => {
+                          const { [tag]: _, ...rest } = prev;
+                          return rest;
+                        });
+                      }
+                    } catch (e) {
+                      // ignore errors
+                    }
+                  }}
+                >Dismiss</button>
+              </span>
+            )}
           </div>
         )}
       </div>
@@ -602,9 +761,17 @@ export const Models: React.FC = () => {
   const ActiveDownloads = () => {
     const tags = Object.keys(pulling);
     if (tags.length === 0) return null;
+    const hasErrors = Object.values(pulling).some(p => !!p.error);
     return (
       <div className="mb-4 p-3 rounded-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
-        <div className="font-medium mb-2" style={{ color: 'var(--color-text-primary)' }}>Active downloads</div>
+        <div className="flex items-center justify-between mb-2">
+          <div className="font-medium" style={{ color: 'var(--color-text-primary)' }}>Active downloads</div>
+          {hasErrors && (
+            <div>
+              <Button variant="secondary" onClick={dismissAllNotifications} className="text-xs">Clear errors</Button>
+            </div>
+          )}
+        </div>
         <div className="space-y-3">
           {tags.map(tag => (
             <div key={tag}>
@@ -668,19 +835,30 @@ export const Models: React.FC = () => {
     const keys: TabKey[] = ['installed', 'discover'];
     const onKeyDown: React.KeyboardEventHandler<HTMLDivElement> = (e) => {
       const idx = keys.indexOf(active);
+      // Debug helper to log key navigation
+      console.debug('Tabs onKeyDown', e.key, 'activeIndex', idx);
       if (e.key === 'ArrowRight') {
         e.preventDefault();
-        setActive(keys[(idx + 1) % keys.length]);
+        handleSetActive(keys[(idx + 1) % keys.length]);
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        setActive(keys[(idx - 1 + keys.length) % keys.length]);
+        handleSetActive(keys[(idx - 1 + keys.length) % keys.length]);
       } else if (e.key === 'Home') {
         e.preventDefault();
-        setActive(keys[0]);
+        handleSetActive(keys[0]);
       } else if (e.key === 'End') {
         e.preventDefault();
-        setActive(keys[keys.length - 1]);
+        handleSetActive(keys[keys.length - 1]);
       }
+    };
+
+    const handleSetActive = (key: TabKey) => {
+      try {
+        console.debug('Tabs handleSetActive', key);
+      } catch (e) {
+        // ignore
+      }
+      setActive(key);
     };
     return (
       <div
@@ -698,7 +876,8 @@ export const Models: React.FC = () => {
             aria-controls={`panel-${key}`}
             aria-selected={active === key}
             className={`px-4 py-2 ${active === key ? 'border-b-2 border-purple-600 text-purple-400' : ''}`}
-            onClick={() => setActive(key)}
+            onClick={() => handleSetActive(key)}
+            onMouseDown={() => handleSetActive(key)}
           >
             {key === 'installed' ? 'Installed' : 'Discover'}
           </button>
