@@ -536,6 +536,36 @@ class ModelPullManager:
             logger.exception("Failed to persist tasks after marking stale")
         return True
 
+    def remove_pull_task(self, task_id: str) -> bool:
+        """Permanently remove a pull task from manager and persistence.
+
+        If the task is running, attempt cooperative cancellation then remove the record.
+        Returns True if the task existed and was removed.
+        """
+        with self._lock:
+            task = self.tasks.get(task_id)
+            if not task:
+                return False
+
+            # Signal stop event for cooperative cancellation if present
+            try:
+                if task.stop_event:
+                    task.stop_event.set()
+            except Exception:
+                pass
+
+            # Remove callbacks and task record immediately
+            self.progress_callbacks.pop(task_id, None)
+            self.tasks.pop(task_id, None)
+            logger.info(f"Permanently removed pull task {task_id}")
+
+        # Persist change
+        try:
+            self._persist_tasks()
+        except Exception:
+            logger.exception("Failed to persist tasks after removal")
+        return True
+
     def cleanup_completed_tasks(self, max_age_seconds: int = 3600, failed_age_seconds: int = 300, cancelled_age_seconds: int = 60):
         """Clean up old completed tasks and failed tasks."""
         current_time = datetime.now()

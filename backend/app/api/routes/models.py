@@ -207,6 +207,24 @@ async def cancel_pull_task(task_id: str) -> ModelOperationResponse:
     else:
         raise HTTPException(status_code=500, detail="Failed to cancel pull task")
 
+
+@router.delete("/pull/{task_id}/dismiss")
+async def dismiss_pull_task(task_id: str) -> ModelOperationResponse:
+    """Permanently remove a pull task so it will not reappear in listings."""
+    task = pull_manager.get_pull_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Pull task not found")
+
+    try:
+        removed = pull_manager.remove_pull_task(task_id)
+        if removed:
+            return ModelOperationResponse(success=True, message=f"Pull task {task_id} removed")
+        else:
+            raise HTTPException(status_code=500, detail="Failed to remove pull task")
+    except Exception as e:
+        logger.exception(f"Failed to dismiss pull task {task_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
 @router.get("/pull")
 async def list_pull_tasks() -> Dict[str, PullTaskStatus]:
     """List all model pull tasks."""
