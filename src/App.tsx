@@ -7,6 +7,7 @@ import { About } from './pages/About';
 import { Settings } from './pages/Settings';
 import { Models } from './pages/Models';
 import { LiveExperimentView } from './components/experiment/LiveExperimentView';
+import { LiveExperiments } from './pages/LiveExperiments';
 import { History } from './pages/History';
 import { useUIPreferences } from './hooks/useUIPreferences';
 import { PullTasksProvider } from './contexts/PullTasksContext';
@@ -15,7 +16,7 @@ const App: React.FC = () => {
   // Initialize UI preferences (applies theme/mode classes to DOM)
   useUIPreferences();
 
-  const [currentPage, setCurrentPage] = useState<'newExperiment' | 'history' | 'explore' | 'conversations' | 'settings' | 'about' | 'liveExperiment' | 'models'>(() => {
+  const [currentPage, setCurrentPage] = useState<'newExperiment' | 'history' | 'explore' | 'conversations' | 'settings' | 'about' | 'liveExperiment' | 'liveExperiments' | 'models'>(() => {
     // Simple hash-based routing to support direct /models
     const hash = typeof window !== 'undefined' ? window.location.hash : '';
     if (hash === '#/models') return 'models';
@@ -30,6 +31,8 @@ const App: React.FC = () => {
       const hash = window.location.hash;
       if (hash === '#/models') {
         setCurrentPage('models');
+      } else if (hash === '#/live-experiments') {
+        setCurrentPage('liveExperiments');
       } else if (hash === '#/settings') {
         setCurrentPage('settings');
       } else if (hash === '#/history') {
@@ -56,6 +59,16 @@ const App: React.FC = () => {
           setCurrentExperimentId(experimentId);
           setCurrentPage('liveExperiment');
         }} />;
+      case 'liveExperiments':
+        return (
+          <React.Suspense fallback={<div>Loading...</div>}>
+            {/* Lazy-ish: keep simple -- open experiment via callback */}
+            <LiveExperiments onOpenExperiment={(id: string) => {
+              setCurrentExperimentId(id);
+              setCurrentPage('liveExperiment');
+            }} />
+          </React.Suspense>
+        );
       case 'history':
         return <History />;
       case 'explore':

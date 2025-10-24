@@ -3,8 +3,8 @@ import { Icon } from '../ui/Icon';
 
 // This component represents the main navigation sidebar.
 interface SidebarProps {
-  currentPage: 'newExperiment' | 'history' | 'explore' | 'conversations' | 'settings' | 'about' | 'liveExperiment' | 'models';
-  setCurrentPage: (page: 'newExperiment' | 'history' | 'explore' | 'conversations' | 'settings' | 'about' | 'liveExperiment' | 'models') => void;
+  currentPage: 'newExperiment' | 'history' | 'explore' | 'conversations' | 'settings' | 'about' | 'liveExperiment' | 'liveExperiments' | 'models';
+  setCurrentPage: (page: 'newExperiment' | 'history' | 'explore' | 'conversations' | 'settings' | 'about' | 'liveExperiment' | 'liveExperiments' | 'models') => void;
   isExpanded: boolean;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
@@ -34,6 +34,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, i
         <button onClick={() => { setCurrentPage('newExperiment'); window.location.hash = ''; }} className={linkClass('newExperiment')} style={linkStyle('newExperiment')} title="New Experiment">
           <Icon className="text-xl shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus-square"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 8v8"/><path d="M8 12h8"/></svg></Icon>
           <span className={`font-medium whitespace-nowrap transition-all duration-300 overflow-hidden text-left ${isExpanded ? 'w-40 opacity-100' : 'w-0 opacity-0'}`}>New Experiment</span>
+        </button>
+        <button onClick={() => { setCurrentPage('liveExperiments'); window.location.hash = '#/live-experiments'; }} className={linkClass('liveExperiments')} style={linkStyle('liveExperiments')} title="Live Experiments">
+          <Icon className="text-xl shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-activity"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></Icon>
+          <span className={`font-medium whitespace-nowrap transition-all duration-300 overflow-hidden text-left ${isExpanded ? 'w-40 opacity-100' : 'w-0 opacity-0'}`}>Live Experiments</span>
         </button>
         <button onClick={() => { setCurrentPage('history'); window.location.hash = '#/history'; }} className={linkClass('history')} style={linkStyle('history')} title="History">
           <Icon className="text-xl shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-book-text"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/><path d="M8 7h6"/><path d="M8 11h8"/></svg></Icon>

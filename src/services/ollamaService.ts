@@ -202,6 +202,19 @@ export const cancelModelPull = async (taskId: string, baseUrl?: string): Promise
     throw new Error(`Cancel failed with status: ${res.status}`);
   }
 };
+
+/**
+ * Permanently dismiss a pull task on the server so it won't be returned by list endpoints.
+ */
+export const dismissPullTask = async (taskId: string, baseUrl?: string): Promise<void> => {
+  const urlBase = baseUrl || API_BASE_URL;
+  const res = await fetch(`${urlBase}/api/models/pull/${taskId}/dismiss`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    throw new Error(`Dismiss failed with status: ${res.status}`);
+  }
+};
 export interface GenerateRequest {
   model: string;
   prompt: string;
@@ -385,5 +398,6 @@ export const ollamaService = {
   deleteModel,
   pullModel,
   cancelModelPull,
+  dismissPullTask,
   generateCompletion,
 };

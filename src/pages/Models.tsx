@@ -732,12 +732,19 @@ export const Models: React.FC = () => {
                 {/* Per-task dismiss: prefer server task id when available */}
                 <button
                   className="underline ml-2"
-                  onClick={() => {
+                  onClick={async () => {
                     try {
                       // Find a server task id for this model with an error
                       const serverTask = Object.values(pullTasks).find((t: any) => t.model_name === tag && t.error) as any | undefined;
                       if (serverTask && (serverTask.task_id || serverTask.id)) {
-                        dismissTask(serverTask.task_id || serverTask.id);
+                        // Call server to permanently remove the task
+                        try {
+                          await ollamaService.dismissPullTask(serverTask.task_id || serverTask.id);
+                        } catch (e) {
+                          console.warn('Server dismiss failed, falling back to local dismiss', e);
+                          // fallback to local dismiss so user still clears UI
+                          try { dismissTask(serverTask.task_id || serverTask.id); } catch (_) {}
+                        }
                       } else {
                         // Fallback: remove local-only entry
                         setPulling(prev => {
@@ -1075,7 +1082,8 @@ export const Models: React.FC = () => {
       
       {/* Confirmation Popup */}
       <ConfirmationPopup
-        isOpen={showConfirmPopup}
+        // Only show the global confirmation popup when there's an active pending action
+        isOpen={showConfirmPopup && (pendingPull !== null || pendingRemoval !== null)}
         title={pendingPull ? "Confirm Model Download" : "Confirm Model Removal"}
         message={
           pendingPull 
