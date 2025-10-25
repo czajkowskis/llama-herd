@@ -18,6 +18,7 @@ export interface PullProgress {
   completed?: number; // completed bytes
   digest?: string;
   error?: string;
+  speed?: number; // download speed in bytes per second
 }
 
 export interface PullTask {

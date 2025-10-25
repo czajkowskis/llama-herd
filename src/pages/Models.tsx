@@ -551,12 +551,8 @@ export const Models: React.FC = () => {
         </div>
         <div className="flex justify-between items-center mt-1 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
           <span aria-live="polite">{p.progress !== undefined ? `${p.progress}%` : 'Downloading'}</span>
-          <div className="flex gap-2">
-            {speed && <span>{speed}</span>}
-            {eta && <span>ETA: {eta}</span>}
-          </div>
         </div>
-        <span className="sr-only" aria-live="polite">{p.progress !== undefined ? `${p.progress}% complete${speed ? ` at ${speed}` : ''}${eta ? `, ${eta} remaining` : ''}` : 'Downloading'}</span>
+        <span className="sr-only" aria-live="polite">{p.progress !== undefined ? `${p.progress}% complete` : 'Downloading'}</span>
         {showCancel && (
           <div className="flex items-center gap-2 mt-2">
             {(hasActiveController || hasServerTask) && <Button variant="secondary" onClick={() => cancelPull(tag)} aria-label={`Cancel ${tag}`}>Cancel</Button>}
