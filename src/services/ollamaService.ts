@@ -41,7 +41,29 @@ export interface VersionResponse {
  */
 // Accept an optional baseUrl so callers (Settings) can test arbitrary endpoints.
 export const listModels = async (baseUrl?: string): Promise<string[]> => {
-  const urlBase = baseUrl || API_BASE_URL;
+  // When callers (Settings) supply a raw Ollama base URL we must not call
+  // that host directly from the browser. Instead ask the backend to test the
+  // specified Ollama endpoint and return the model list. If no baseUrl is
+  // supplied, use the application's backend models listing as before.
+  if (baseUrl) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/ollama/test/list`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endpoint: baseUrl }),
+      });
+      if (!res.ok) {
+        throw new Error(`Test proxy failed with status: ${res.status}`);
+      }
+      const data: ListModelsResponse = await res.json();
+      return data.models.map(model => model.name);
+    } catch (error) {
+      console.error('Error fetching model list via backend test proxy:', error);
+      throw error;
+    }
+  }
+
+  const urlBase = API_BASE_URL;
   try {
     const response = await fetch(`${urlBase}/api/models/list`);
     if (!response.ok) {
@@ -59,7 +81,18 @@ export const listModels = async (baseUrl?: string): Promise<string[]> => {
  * Returns Ollama server version (and implicitly connectivity).
  */
 export const getVersion = async (baseUrl?: string): Promise<string> => {
-  const urlBase = baseUrl || API_BASE_URL;
+  if (baseUrl) {
+    const res = await fetch(`${API_BASE_URL}/api/ollama/test/version`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint: baseUrl }),
+    });
+    if (!res.ok) throw new Error(`Test proxy failed with status: ${res.status}`);
+    const data: VersionResponse = await res.json();
+    return data.version;
+  }
+
+  const urlBase = API_BASE_URL;
   const res = await fetch(`${urlBase}/api/models/version`);
   if (!res.ok) throw new Error(`API call failed with status: ${res.status}`);
   const data: VersionResponse = await res.json();
