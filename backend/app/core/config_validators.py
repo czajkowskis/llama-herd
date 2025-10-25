@@ -63,18 +63,8 @@ def validate_positive_int(value: int) -> int:
     return value
 
 
-def validate_non_negative_int(value: int) -> int:
-    """Validate non-negative integer."""
-    if value < 0:
-        raise ValueError("Value must be non-negative")
-    return value
 
 
-def validate_positive_float(value: float) -> float:
-    """Validate positive float."""
-    if value <= 0.0:
-        raise ValueError("Value must be positive")
-    return value
 
 
 def validate_percentage(value: float) -> float:
@@ -84,8 +74,3 @@ def validate_percentage(value: float) -> float:
     return value
 
 
-def validate_retention_time(value: int) -> int:
-    """Validate retention time in seconds."""
-    if value < 0:
-        raise ValueError("Retention time must be non-negative")
-    return value

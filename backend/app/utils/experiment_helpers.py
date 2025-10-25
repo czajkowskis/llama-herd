@@ -25,7 +25,7 @@ def get_experiment_with_fallback(experiment_id: str) -> Optional[Dict[str, Any]]
         if experiment:
             return {
                 "experiment_id": experiment.experiment_id,
-                "title": truncate_title(experiment.task.prompt),
+                "title": experiment.task.prompt[:100] + ("..." if len(experiment.task.prompt) > 100 else ""),
                 "status": experiment.status,
                 "conversation": None,  # Will be set by caller if needed
                 "conversations": [c.model_dump() if hasattr(c, 'model_dump') else c for c in experiment.conversations],
