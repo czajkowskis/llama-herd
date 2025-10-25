@@ -1,111 +1,208 @@
 # LLaMa-Herd
 
-A React application for managing multi-agent conversations and experiments.
+**A Multi-Agent Conversation Platform for AI Research and Development**
 
-## Conversation JSON Format
+LLaMa-Herd is a multi-agent conversation platform that facilitates creation, configuration, and orchestration of conversations between multiple AI agents. Built with modern web technologies and designed for researchers, developers, and AI enthusiasts, it provides an environment for exploring multi-agent interactions and collaborative AI systems.
 
-The application expects conversation files to be in JSON format with the following structure:
+## Key Features
 
-```json
-{
-  "title": "Conversation Title",
-  "messages": [
-    {
-      "agent": {
-        "name": "Agent Name",
-        "model": "llama2:7b"
-      },
-      "content": "Agent message content",
-      "timestamp": "2024-01-01T12:00:00.000Z"
-    },
-    {
-      "agent": {
-        "name": "Another Agent",
-        "model": "mistral:7b"
-      },
-      "content": "Another agent's message",
-      "timestamp": "2024-01-01T12:01:00.000Z"
-    }
-  ]
-}
-```
-
-### Key Features:
-
-- **Agent Configuration**: Each agent can have a unique name and color
-- **Model Information**: The model used by each agent is displayed in the chat
-- **Multiple Conversations**: Upload and manage multiple conversation files
-- **Inline Editing**: Edit conversation titles and agent names directly
-- **Color Management**: Unique color assignment with custom color picker
-
-### Supported JSON Structures:
-
-1. **Standard Format** (recommended):
-   ```json
-   {
-     "agent": {
-       "name": "Agent Name",
-       "model": "llama2:7b"
-     },
-     "content": "Message content"
-   }
-   ```
-
-2. **Alternative Format**:
-   ```json
-   {
-     "agent": "Agent Name",
-     "model": "llama2:7b",
-     "message": "Message content"
-   }
-   ```
-
-The application will automatically extract model information and display it in both the agent configuration window and the chat visualization.
-
-## Core Functionality
-
-* **API Integration:** The application includes a service layer for seamless communication with the Ollama API, enabling access to local Ollama models.
-
-* **AutoGen Integration:** The application is designed to work with AutoGen, providing a graphical interface for defining and executing multi-agent experiments. This allows users to easily set up and manage collaborative tasks and conversational workflows involving multiple AI agents.
+- **Multi-Agent Experiments**: Create and run experiments with multiple AI agents working together
+- **Real-time Monitoring**: Live WebSocket updates during experiments with connection status tracking
+- **Custom Agent Configuration**: Define agents with specific personalities, language models, and behaviors
+- **Experiment Management**: Track experiment status, iterations, and conversation history
+- **History & Analysis**: View and analyze completed experiments and imported conversations
+- **Model Management**: Pull and manage Ollama models with progress tracking
+- **Import/Export**: Import conversations and export experiment data in various formats
+- **Ollama Integration**: Seamless integration with local Ollama models
+- **Testing Infrastructure**: Comprehensive testing with unit, integration, and E2E tests
 
 ## Prerequisites
 
-To install and run this project, ensure the following software is installed on your system:
+- **Python 3.10+** with pip
+- **Node.js 16+** with npm
+- **Ollama** installed and running ([Download from ollama.ai](https://ollama.ai))
 
-* **Node.js & npm:** A stable version of Node.js is required for the React development environment.
+## Installation & Setup
 
-* **Ollama:** The Ollama server must be running locally to enable the application's core functionality. Detailed installation instructions can be found on the [official Ollama website](https://ollama.ai/).
+### 1. Clone the Repository
 
-## Installation and Execution
-
-Follow these steps to set up and run the project:
-
-1.  **Clone the repository:**
-
-    ```bash
-    git clone <your-repo-url>
-    cd <your-project-directory>
-    ```
-
-2.  **Install project dependencies:**
-
-    ```bash
-    npm install
-    ```
-
-3.  **Start the development server:**
-
-    ```bash
-    npm start
-    ```
-
-The application will be accessible via a web browser at `http://localhost:3000` (or the configured port).
-
-## Ollama Server Configuration
-
-For the application to function correctly, the Ollama server must be operational. Use the following commands to pull a model (e.g., `llama2`) and start the server:
 ```bash
-ollama pull llama2
-ollama run llama2
+git clone <repository-url>
+cd llama-herd
 ```
-The application is initially configured to connect to the default Ollama API endpoint at `http://localhost:11434/api`. You can change it in the Settings page.
+
+### 2. Backend Setup
+
+```bash
+cd backend
+
+# Create virtual environment (recommended)
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### 3. Frontend Setup
+
+```bash
+# From project root
+npm install
+```
+
+### 4. Ollama Setup
+
+```bash
+# Install Ollama (if not already installed)
+# Visit https://ollama.ai for installation instructions
+
+# Start Ollama server
+ollama serve
+
+# Pull some models (in a new terminal)
+ollama pull llama2
+ollama pull codellama
+# Add other models as needed
+```
+
+## Running the Application
+
+### Option 1: Quick Start (Recommended)
+
+```bash
+# Start both backend and proxy server
+cd backend
+./start_with_proxy.sh
+```
+
+This script will:
+- Check dependencies
+- Start the Ollama proxy server on port 8080
+- Start the FastAPI backend on port 8000
+- Handle cleanup when stopped
+
+### Option 2: Manual Startup
+
+**Terminal 1 - Start Ollama Proxy:**
+```bash
+cd backend
+python3 ollama_proxy.py
+```
+
+**Terminal 2 - Start Backend:**
+```bash
+cd backend
+python3 main.py
+```
+
+**Terminal 3 - Start Frontend:**
+```bash
+npm start
+```
+
+### Access the Application
+
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+
+## Project Structure
+
+```
+llama-herd/
+├── backend/                    # FastAPI backend
+│   ├── app/
+│   │   ├── api/               # API routes and WebSocket handlers
+│   │   ├── core/              # Configuration and core utilities
+│   │   ├── schemas/           # Pydantic models
+│   │   ├── services/          # Business logic services
+│   │   ├── storage/           # Data persistence layer
+│   │   └── utils/             # Utility functions
+│   ├── data/                  # Application data storage
+│   ├── tests/                 # Backend tests
+│   ├── main.py               # Application entry point
+│   ├── ollama_proxy.py       # Ollama API proxy
+│   └── start_with_proxy.sh   # Startup script
+├── src/                       # React frontend
+│   ├── components/           # Reusable UI components
+│   ├── features/             # Feature-specific components
+│   │   ├── experiments/      # Experiment management
+│   │   ├── history/          # History and analysis
+│   │   └── models/           # Model management
+│   ├── services/             # API services
+│   ├── hooks/                # Custom React hooks
+│   └── types/                # TypeScript type definitions
+├── tests/                     # Frontend E2E tests
+└── build/                     # Production build output
+```
+
+## Configuration
+
+### Backend Configuration
+
+The backend can be configured via environment variables or `.env` file:
+
+```bash
+# API Configuration
+API_HOST=0.0.0.0
+API_PORT=8000
+API_TITLE="LLaMa-Herd Backend"
+API_VERSION="1.0.0"
+
+# CORS Configuration
+CORS_ORIGINS="http://localhost:3000,http://localhost:3001"
+
+# Ollama Configuration
+OLLAMA_BASE_URL=http://localhost:8080/v1
+OLLAMA_URL=http://localhost:11434
+OLLAMA_TIMEOUT=300
+
+# Storage Configuration
+DATA_DIRECTORY=data
+EXPERIMENTS_DIRECTORY=experiments
+
+# Experiment Configuration
+DEFAULT_MAX_ROUNDS=8
+DEFAULT_TEMPERATURE=0.7
+EXPERIMENT_TIMEOUT_SECONDS=3600
+ITERATION_TIMEOUT_SECONDS=300
+```
+
+### Frontend Configuration
+
+Frontend configuration is handled through:
+- `src/config/index.ts` - API endpoints and settings
+- Browser localStorage - UI preferences and Ollama connection
+- Settings page - User-configurable options
+
+## API Documentation
+
+### REST Endpoints
+
+**Experiments:**
+- `POST /api/experiments/start` - Start a new experiment
+- `GET /api/experiments/{experiment_id}` - Get experiment details
+- `GET /api/experiments` - List all experiments
+- `DELETE /api/experiments/{experiment_id}` - Delete an experiment
+
+**Models:**
+- `GET /api/models` - List available Ollama models
+- `POST /api/models/pull` - Pull a new model
+- `GET /api/models/pull/{task_id}` - Get pull task status
+
+**Conversations:**
+- `GET /api/conversations` - List conversations
+- `GET /api/conversations/{conversation_id}` - Get conversation details
+
+### WebSocket Endpoints
+
+- `WS /ws/experiments/{experiment_id}` - Real-time experiment updates
+
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+**Happy experimenting with multi-agent conversations!**

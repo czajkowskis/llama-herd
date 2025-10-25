@@ -80,7 +80,9 @@ export const UploadInterface: React.FC<UploadInterfaceProps> = ({
             <br />
             <span className="text-gray-400 ml-16">"name": <span className="text-green-400">"Agent Name"</span>,</span>
             <br />
-            <span className="text-gray-400 ml-16">"model": <span className="text-green-400">"llama2:7b"</span></span>
+            <span className="text-gray-400 ml-16">"model": <span className="text-green-400">"llama2:7b"</span> <span className="text-gray-500">(optional)</span></span>
+            <br />
+            <span className="text-gray-400 ml-12"><span className="text-purple-400">{`}`}</span>,</span>
             <br />
             <span className="text-gray-400 ml-12"><span className="text-purple-400">{`}`}</span>,</span>
             <br />
@@ -96,15 +98,19 @@ export const UploadInterface: React.FC<UploadInterfaceProps> = ({
           </div>
           <br />
           <div className="text-gray-300 mt-4">
-            <span className="text-blue-400">Alternative format also supported:</span>
+            <span className="text-blue-400">Optional model information:</span>
+            <br />
+            <span className="text-gray-400">Model can be specified in the agent object (preferred) or directly in the message:</span>
             <br />
             <span className="text-purple-400">{`{`}</span>
             <br />
-            <span className="text-gray-400 ml-4">"agent": <span className="text-green-400">"Agent Name"</span>,</span>
+            <span className="text-gray-400 ml-4">"agent": <span className="text-purple-400">{`{ "name": "Agent Name", "model": "llama2:7b" }`}</span>,</span>
             <br />
             <span className="text-gray-400 ml-4">"model": <span className="text-green-400">"llama2:7b"</span>,</span>
             <br />
-            <span className="text-gray-400 ml-4">"message": <span className="text-green-400">"Message content"</span></span>
+            <span className="text-gray-400 ml-4">"content": <span className="text-green-400">"Message content"</span>,</span>
+            <br />
+            <span className="text-gray-400 ml-4">"timestamp": <span className="text-green-400">"2024-01-01T12:00:00.000Z"</span></span>
             <br />
             <span className="text-purple-400">{`}`}</span>
           </div>

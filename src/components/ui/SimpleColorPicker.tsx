@@ -16,8 +16,8 @@ export const SimpleColorPicker: React.FC<SimpleColorPickerProps> = ({
   return (
     <div className="flex items-center space-x-3">
       <div
-        className="w-8 h-8 rounded border-2 border-gray-600 cursor-pointer"
-        style={{ backgroundColor: color }}
+        className="w-8 h-8 rounded border-2 cursor-pointer"
+        style={{ backgroundColor: color, borderColor: 'var(--color-border)' }}
         onClick={() => colorInputRef.current?.click()}
         title={label || 'Click to change color'}
       />
@@ -29,7 +29,7 @@ export const SimpleColorPicker: React.FC<SimpleColorPickerProps> = ({
         className="hidden"
         aria-label={label || 'Color picker'}
       />
-      <span className="text-sm text-gray-300 font-mono">{color}</span>
+      <span className="text-sm font-mono" style={{ color: 'var(--color-text-secondary)' }}>{color}</span>
     </div>
   );
 }; 

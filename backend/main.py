@@ -3,13 +3,10 @@
 Main entry point for the LLaMa-Herd Backend FastAPI application.
 """
 import uvicorn
-from app import create_app
 from app.core.config import settings
 
 def main():
     """Main function to start the FastAPI server."""
-    app = create_app()
-    
     print(f"🚀 Starting LLaMa-Herd Backend...")
     print(f"   API Title: {settings.api_title}")
     print(f"   API Version: {settings.api_version}")
@@ -19,12 +16,12 @@ def main():
     print("")
     
     uvicorn.run(
-        "app:create_app",
+        "app:create_app",  # Use import string for reload support
+        factory=True,
         host=settings.api_host,
         port=settings.api_port,
         log_level="info",
-        reload=True,
-        factory=True
+        reload=True
     )
 
 if __name__ == "__main__":

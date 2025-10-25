@@ -1,120 +1,99 @@
 """
-Centralized application state management.
+Centralized application state management using separated managers.
 """
-from typing import Dict, Any, Optional
-import queue
+import asyncio
+from typing import Dict, Any, Optional, List
 from datetime import datetime
-from ..schemas.conversation import ConversationAgent, Message
 
-
-class ExperimentState:
-    """Represents the state of a single experiment."""
-    
-    def __init__(self, experiment_id: str, task: Any, agents: list):
-        self.experiment_id = experiment_id
-        self.task = task
-        self.agents = agents
-        self.conversation_agents = []
-        self.messages = []
-        self.conversations = []
-        self.iterations = 1
-        self.current_iteration = 0
-        self.status = 'running'
-        self.created_at = datetime.now().isoformat()
-        self.completed_at = None
-        self.error = None
-        
-        # Initialize conversation agents
-        for agent in agents:
-            self.conversation_agents.append(ConversationAgent(
-                id=agent.id,
-                name=agent.name,
-                color=agent.color,
-                model=agent.model,
-            ))
-    
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert state to dictionary."""
-        return {
-            'experiment_id': self.experiment_id,
-            'task': self.task,
-            'agents': self.agents,
-            'conversation_agents': self.conversation_agents,
-            'messages': self.messages,
-            'conversations': self.conversations,
-            'iterations': self.iterations,
-            'current_iteration': self.current_iteration,
-            'status': self.status,
-            'created_at': self.created_at,
-            'completed_at': self.completed_at,
-            'error': self.error
-        }
+from ..schemas.conversation import ConversationAgent, Message, Conversation
+from ..schemas.task import TaskModel
+from ..schemas.agent import AgentModel
+from .experiment_state_manager import ExperimentStateManager, ExperimentState
+from .message_queue_manager import MessageQueueManager
 
 
 class StateManager:
-    """Manages application state."""
+    """Centralized state manager using separated concerns."""
     
     def __init__(self):
-        self._active_experiments: Dict[str, ExperimentState] = {}
-        self._message_queues: Dict[str, queue.Queue] = {}
+        self.experiment_manager = ExperimentStateManager()
+        self.message_queue_manager = MessageQueueManager()
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
     
-    def create_experiment(self, experiment_id: str, task: Any, agents: list) -> ExperimentState:
+    def set_event_loop(self, loop: asyncio.AbstractEventLoop):
+        """Set the event loop for async operations."""
+        self._loop = loop
+    
+    # Experiment state management - delegate to ExperimentStateManager
+    def create_experiment(self, experiment_id: str, task: TaskModel, agents: List[AgentModel]) -> ExperimentState:
         """Create a new experiment state."""
-        experiment_state = ExperimentState(experiment_id, task, agents)
-        self._active_experiments[experiment_id] = experiment_state
-        self._message_queues[experiment_id] = queue.Queue()
-        return experiment_state
+        return self.experiment_manager.create_experiment(experiment_id, task, agents)
     
     def get_experiment(self, experiment_id: str) -> Optional[ExperimentState]:
         """Get experiment state by ID."""
-        return self._active_experiments.get(experiment_id)
+        return self.experiment_manager.get_experiment(experiment_id)
     
     def get_all_experiments(self) -> Dict[str, ExperimentState]:
         """Get all active experiments."""
-        return self._active_experiments.copy()
+        return self.experiment_manager.get_all_experiments()
     
     def remove_experiment(self, experiment_id: str) -> bool:
         """Remove experiment state."""
-        if experiment_id in self._active_experiments:
-            del self._active_experiments[experiment_id]
-            if experiment_id in self._message_queues:
-                del self._message_queues[experiment_id]
-            return True
-        return False
-    
-    def get_message_queue(self, experiment_id: str) -> Optional[queue.Queue]:
-        """Get message queue for experiment."""
-        return self._message_queues.get(experiment_id)
+        return self.experiment_manager.remove_experiment(experiment_id)
     
     def update_experiment_status(self, experiment_id: str, status: str, **kwargs) -> bool:
         """Update experiment status."""
-        experiment = self.get_experiment(experiment_id)
-        if experiment:
-            experiment.status = status
-            if status == 'completed':
-                experiment.completed_at = datetime.now().isoformat()
-            for key, value in kwargs.items():
-                if hasattr(experiment, key):
-                    setattr(experiment, key, value)
-            return True
-        return False
+        return self.experiment_manager.update_experiment_status(experiment_id, status, **kwargs)
     
     def add_message(self, experiment_id: str, message: Message) -> bool:
         """Add message to experiment."""
-        experiment = self.get_experiment(experiment_id)
-        if experiment:
-            experiment.messages.append(message)
-            return True
-        return False
+        return self.experiment_manager.add_message(experiment_id, message)
     
-    def add_conversation(self, experiment_id: str, conversation: Any) -> bool:
+    def add_conversation(self, experiment_id: str, conversation: Conversation) -> bool:
         """Add conversation to experiment."""
-        experiment = self.get_experiment(experiment_id)
-        if experiment:
-            experiment.conversations.append(conversation)
-            return True
-        return False
+        return self.experiment_manager.add_conversation(experiment_id, conversation)
+    
+    def clear_messages(self, experiment_id: str) -> bool:
+        """Clear messages for an experiment."""
+        return self.experiment_manager.clear_messages(experiment_id)
+    
+    # Message queue management - delegate to MessageQueueManager
+    def put_message_threadsafe(self, experiment_id: str, message: Dict[str, Any]) -> None:
+        """Put a message in the queue for a specific experiment (thread-safe)."""
+        self.message_queue_manager.put_message_threadsafe(experiment_id, message)
+    
+    def get_message(self, experiment_id: str, timeout: Optional[float] = None) -> Optional[Dict[str, Any]]:
+        """Get a message from the queue for a specific experiment."""
+        return self.message_queue_manager.get_message(experiment_id, timeout)
+    
+    def get_all_messages(self, experiment_id: str) -> list:
+        """Get all messages from the queue for a specific experiment."""
+        return self.message_queue_manager.get_all_messages(experiment_id)
+    
+    def clear_queue(self, experiment_id: str) -> None:
+        """Clear all messages for a specific experiment."""
+        self.message_queue_manager.clear_queue(experiment_id)
+    
+    def remove_queue(self, experiment_id: str) -> None:
+        """Remove the queue for a specific experiment."""
+        self.message_queue_manager.remove_queue(experiment_id)
+    
+    def has_messages(self, experiment_id: str) -> bool:
+        """Check if there are messages in the queue for a specific experiment."""
+        return self.message_queue_manager.has_messages(experiment_id)
+    
+    def get_queue_size(self, experiment_id: str) -> int:
+        """Get the size of the queue for a specific experiment."""
+        return self.message_queue_manager.get_queue_size(experiment_id)
+    
+    def get_all_queue_sizes(self) -> Dict[str, int]:
+        """Get the size of all queues."""
+        return self.message_queue_manager.get_all_queue_sizes()
+    
+    def cleanup_empty_queues(self) -> None:
+        """Remove empty queues to free up memory."""
+        self.message_queue_manager.cleanup_empty_queues()
 
 
 # Global state manager instance
-state_manager = StateManager() 
+state_manager = StateManager()

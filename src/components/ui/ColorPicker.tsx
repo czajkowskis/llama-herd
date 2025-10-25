@@ -31,12 +31,24 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   if (!isVisible) return null;
 
   return (
-    <div className="absolute top-16 left-0 z-50 bg-gray-800 p-4 rounded-xl shadow-xl border border-gray-600 min-w-40">
-      <div className="flex items-center justify-start pb-2 mb-3 border-b border-gray-700">
+    <div className="absolute top-16 left-0 z-50 p-4 rounded-xl shadow-xl border min-w-40" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }}>
+      <div className="flex items-center justify-start pb-2 mb-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
         <button
           onClick={onClose}
           aria-label="Close color picker"
-          className="w-8 h-8 rounded-md border-2 border-gray-600 hover:border-gray-400 text-gray-300 hover:text-white flex items-center justify-center"
+          className="w-8 h-8 rounded-md border-2 flex items-center justify-center"
+          style={{ 
+            borderColor: 'var(--color-border)',
+            color: 'var(--color-text-secondary)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = 'var(--color-text-tertiary)';
+            e.currentTarget.style.color = 'var(--color-text-primary)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'var(--color-border)';
+            e.currentTarget.style.color = 'var(--color-text-secondary)';
+          }}
           title="Close"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -61,9 +73,22 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
               }}
               className={`w-8 h-8 rounded-full border-2 transition-all duration-200 ${
                 currentColor === color ? 'border-white scale-110' :
-                isUsed ? 'border-red-500 opacity-50' : 'border-gray-600 hover:border-gray-400'
+                isUsed ? 'border-red-500 opacity-50' : ''
               }`}
-              style={{ backgroundColor: color }}
+              style={{ 
+                backgroundColor: color,
+                borderColor: currentColor === color ? 'white' : isUsed ? '#ef4444' : 'var(--color-border)'
+              }}
+              onMouseEnter={(e) => {
+                if (!isUsed && currentColor !== color) {
+                  e.currentTarget.style.borderColor = 'var(--color-text-tertiary)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isUsed && currentColor !== color) {
+                  e.currentTarget.style.borderColor = 'var(--color-border)';
+                }
+              }}
               disabled={isUsed}
               title={isUsed ? `Used by ${existingAgent}` : `Select ${color}`}
             />
@@ -74,13 +99,27 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
         <button
           onClick={() => colorInputRef.current?.click()}
           className={`w-8 h-8 rounded-full border-2 transition-all duration-200 flex items-center justify-center ${
-            isCustomSelected ? 'border-white scale-110' : 'border-gray-600 hover:border-gray-400'
+            isCustomSelected ? 'border-white scale-110' : ''
           }`}
-          style={{ backgroundColor: isCustomSelected ? currentColor : 'transparent' }}
+          style={{ 
+            backgroundColor: isCustomSelected ? currentColor : 'transparent',
+            borderColor: isCustomSelected ? 'white' : 'var(--color-border)',
+            color: 'var(--color-text-secondary)'
+          }}
+          onMouseEnter={(e) => {
+            if (!isCustomSelected) {
+              e.currentTarget.style.borderColor = 'var(--color-text-tertiary)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isCustomSelected) {
+              e.currentTarget.style.borderColor = 'var(--color-border)';
+            }
+          }}
           title={isCustomSelected ? `Custom: ${currentColor}` : 'Choose custom color'}
         >
           {!isCustomSelected && (
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-300">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 5v14" />
               <path d="M5 12h14" />
             </svg>

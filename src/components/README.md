@@ -1,6 +1,6 @@
 # Components Organization
 
-This directory contains all React components organized into logical folders for better maintainability.
+This directory contains shared UI components and common components used throughout the application.
 
 ## Folder Structure
 
@@ -12,68 +12,54 @@ Reusable UI elements used throughout the application:
 - `Icon.tsx` - Icon wrapper component
 - `ColorPicker.tsx` - Color selection component
 
-### `/experiment/` - Experiment Management
-Components related to experiment creation and management:
-- `TaskCreationSection.tsx` - Task creation and import interface
-- `AgentCreationSection.tsx` - Agent creation and management interface
-- `ExperimentStatus.tsx` - Experiment status display
-
-### `/task/` - Task Management
-Components for task-related functionality:
-- `TaskCreateForm.tsx` - Form for creating new tasks
-- `TaskImportForm.tsx` - Form for importing tasks from files
-- `TaskDisplay.tsx` - Display component for existing tasks
-
-### `/agent/` - Agent Management
-Components for agent configuration and management:
-- `AgentForm.tsx` - Form for creating/editing agents
-- `AgentList.tsx` - List display for agents
-- `AgentConfiguration.tsx` - Agent configuration interface
-
-### `/conversation/` - Conversation Features
-Components for conversation viewing and management:
-- `ChatView.tsx` - Main chat interface
-- `ConversationList.tsx` - List of conversations
-- `ConversationTile.tsx` - Individual conversation display
-
 ### `/common/` - Shared Components
 Common components used across multiple features:
 - `ErrorDisplay.tsx` - Error message display
 - `Sidebar.tsx` - Navigation sidebar
 - `UploadInterface.tsx` - File upload interface
 
+## Feature-Based Organization
+
+The application now uses a feature-based architecture where components are organized by feature:
+
+- `/features/models/` - Model management components
+- `/features/history/` - History and conversation components  
+- `/features/experiments/` - Experiment creation and management components
+
 ## Import Patterns
 
 ### Individual Component Imports
 ```typescript
 import { Button } from './components/ui/Button';
-import { TaskCreationSection } from './components/experiment/TaskCreationSection';
+import { Sidebar } from './components/common/Sidebar';
 ```
 
 ### Category Imports
 ```typescript
 import { Button, Input, Icon } from './components/ui';
-import { TaskCreateForm, TaskImportForm } from './components/task';
+import { ErrorDisplay, Sidebar } from './components/common';
 ```
 
-### All Components Import
+### Feature Imports
 ```typescript
-import { Button, TaskCreationSection, AgentForm } from './components';
+import { ModelsPage, DiscoverModels } from './features/models';
+import { HistoryPage, ChatView } from './features/history';
+import { NewExperimentPage, LiveExperimentView } from './features/experiments';
 ```
 
 ## Benefits
 
-1. **Logical Organization**: Components are grouped by functionality
-2. **Easy Navigation**: Clear folder structure makes finding components simple
-3. **Scalability**: Easy to add new components to appropriate folders
-4. **Maintainability**: Related components are kept together
-5. **Import Flexibility**: Multiple import patterns available
-6. **Type Safety**: All imports are properly typed
+1. **Feature-Based Organization**: Components are grouped by feature for better maintainability
+2. **Clear Separation**: UI components are separated from feature-specific components
+3. **Easy Navigation**: Clear folder structure makes finding components simple
+4. **Scalability**: Easy to add new features and components
+5. **Maintainability**: Related components are kept together within features
+6. **Import Flexibility**: Multiple import patterns available
+7. **Type Safety**: All imports are properly typed
 
 ## Adding New Components
 
-1. Identify the appropriate folder based on component functionality
-2. Create the component file in the correct folder
-3. Update the folder's `index.ts` file to export the new component
-4. Update the main `components/index.ts` if needed
-5. Use the appropriate import pattern in consuming files 
+1. For UI components: Add to `/ui/` or `/common/` as appropriate
+2. For feature components: Add to the appropriate feature directory
+3. Update the relevant `index.ts` file to export the new component
+4. Use the appropriate import pattern in consuming files 

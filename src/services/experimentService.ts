@@ -1,6 +1,7 @@
+import { API_BASE_URL, buildWebSocketUrl } from '../config';
 import { Agent, Task, ExperimentStatusResponse } from '../types/index.d';
-
-const API_BASE_URL = 'http://localhost:8000/api';
+import ReconnectingWebSocket from './ReconnectingWebSocket';
+import { WebSocketMessage } from '../types/api';
 
 export interface ExperimentRequest {
   task: Task;
@@ -31,17 +32,12 @@ export interface ExperimentListResponse {
   }>;
 }
 
-export interface WebSocketMessage {
-  type: 'message' | 'status' | 'error' | 'conversation' | 'agents';
-  data: any;
-}
-
 class ExperimentService {
-  private ws: WebSocket | null = null;
-  private messageHandlers: ((message: WebSocketMessage) => void)[] = [];
+  // Map of experimentId -> ReconnectingWebSocket instance
+  private connections: Map<string, ReconnectingWebSocket> = new Map();
 
   async startExperiment(task: Task, agents: Agent[], iterations: number = 1): Promise<ExperimentResponse> {
-    const response = await fetch(`${API_BASE_URL}/experiments/start`, {
+    const response = await fetch(`${API_BASE_URL}/api/experiments/start`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -57,7 +53,7 @@ class ExperimentService {
   }
 
   async getExperiment(experimentId: string): Promise<ExperimentStatusResponse> {
-    const response = await fetch(`${API_BASE_URL}/experiments/${experimentId}`);
+    const response = await fetch(`${API_BASE_URL}/api/experiments/${experimentId}`);
     
     if (!response.ok) {
       throw new Error(`Failed to get experiment: ${response.statusText}`);
@@ -67,7 +63,7 @@ class ExperimentService {
   }
 
   async listExperiments(): Promise<ExperimentListResponse> {
-    const response = await fetch(`${API_BASE_URL}/experiments`);
+    const response = await fetch(`${API_BASE_URL}/api/experiments`);
     
     if (!response.ok) {
       throw new Error(`Failed to list experiments: ${response.statusText}`);
@@ -77,7 +73,7 @@ class ExperimentService {
   }
 
   async deleteExperiment(experimentId: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/experiments/${experimentId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/experiments/${experimentId}`, {
       method: 'DELETE',
     });
     
@@ -86,52 +82,50 @@ class ExperimentService {
     }
   }
 
-  connectToExperiment(experimentId: string, onMessage: (message: WebSocketMessage) => void): void {
-    // Close existing connection if any
-    if (this.ws) {
-      this.ws.close();
+  /**
+   * Subscribe to experiment websocket messages. Returns an unsubscribe function.
+   */
+  connectToExperiment(
+    experimentId: string,
+    onMessage: (message: WebSocketMessage) => void
+  ): () => void {
+    let conn = this.connections.get(experimentId);
+    const wsUrl = buildWebSocketUrl(`/ws/experiments/${experimentId}`);
+
+    if (!conn) {
+      conn = new ReconnectingWebSocket(wsUrl, {
+        initialBackoffMs: 500,
+        maxBackoffMs: 30000,
+        heartbeatIntervalMs: 10000,
+        heartbeatPayload: JSON.stringify({ type: 'ping' }),
+        idleTimeoutMs: 60000,
+      });
+      conn.start();
+      this.connections.set(experimentId, conn);
     }
 
-    // Store the message handler
-    this.messageHandlers.push(onMessage);
+    const unsubscribe = conn.subscribe(onMessage);
 
-    // Create WebSocket connection
-    const wsUrl = `ws://localhost:8000/ws/experiments/${experimentId}`;
-    this.ws = new WebSocket(wsUrl);
-
-    this.ws.onopen = () => {
-      console.log('WebSocket connected to experiment');
-    };
-
-    this.ws.onmessage = (event) => {
-      try {
-        const message: WebSocketMessage = JSON.parse(event.data);
-        // Call all registered message handlers
-        this.messageHandlers.forEach(handler => handler(message));
-      } catch (error) {
-        console.error('Failed to parse WebSocket message:', error);
-      }
-    };
-
-    this.ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
-
-    this.ws.onclose = () => {
-      console.log('WebSocket disconnected');
+    return () => {
+      unsubscribe();
+      // If no subscribers remain, the wrapper will close after its idle timeout (or immediately).
+      // Clean up the map entry if the connection has been closed.
+      // Note: we don't have direct API to check subscribers count; rely on idle close to free resources.
     };
   }
 
+  /**
+   * Close all open connections and clear subscriptions. Useful for app shutdown.
+   */
   disconnect(): void {
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
-    }
-    this.messageHandlers = [];
+    this.connections.forEach(conn => conn.close());
+    this.connections.clear();
   }
 
-  removeMessageHandler(handler: (message: WebSocketMessage) => void): void {
-    this.messageHandlers = this.messageHandlers.filter(h => h !== handler);
+  // Optional: expose connection state for an experimentId
+  getConnectionState(experimentId: string): string | null {
+    const conn = this.connections.get(experimentId);
+    return conn ? conn.getState() : null;
   }
 }
 

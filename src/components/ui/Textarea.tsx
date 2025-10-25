@@ -1,11 +1,20 @@
 import React from 'react';
 
 // This component provides a reusable textarea field with consistent styling.
+// Uses CSS variables for automatic theme switching
 export const Textarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement>> = (props) => {
+  const { className, style, ...restProps } = props;
+  
   return (
     <textarea
-      className="w-full p-3 rounded-xl bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200 resize-y"
-      {...props}
+      className={`custom-themed w-full p-3 rounded-xl transition-all duration-200 resize-y border ${className || ''}`}
+      style={{
+        backgroundColor: 'var(--color-bg-tertiary)',
+        color: 'var(--color-text-primary)',
+        borderColor: 'var(--color-border)',
+        ...style
+      }}
+      {...restProps}
     />
   );
 };

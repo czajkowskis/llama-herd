@@ -14,6 +14,7 @@ export interface Task {
   prompt: string;
   datasetItems?: { task: string; answer: string }[];
   expectedSolutionRegex?: string;
+  iterations?: number;
 }
 
 export interface ConversationAgent {
@@ -38,17 +39,21 @@ export interface Conversation {
   agents: ConversationAgent[];
   messages: Message[];
   createdAt: string;
+  experiment_id?: string;
+  iteration?: number;
 }
 
 export interface ExperimentStatusResponse {
   experiment_id: string;
   status: string;
-  conversation: Conversation; // current conversation stream
+  conversation: Conversation | null; // current conversation stream (null for completed experiments)
   conversations?: Conversation[]; // completed runs/items
   iterations?: number;
   current_iteration?: number;
   error?: string;
 }
+
+
 
 export interface GenerateResponse {
   model: string;

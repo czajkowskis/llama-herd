@@ -3,14 +3,16 @@ Service for managing experiments.
 """
 import uuid
 from datetime import datetime
-from typing import List, Dict, Any
-from ..schemas.experiment import ExperimentRequest
+from typing import List
+from ..schemas.experiment import ExperimentRequest, ExperimentResponse, ExperimentListItem
 from ..schemas.task import TaskModel
 from ..schemas.agent import AgentModel
-from ..core.exceptions import ExperimentError, ValidationError
+from ..core.exceptions import ExperimentError, ValidationError, NotFoundError
 from ..core.state import state_manager
 from ..services.agent_service import AgentService
-from ..utils.logging import logger
+from ..utils.logging import get_logger, log_with_context, set_experiment_context
+
+logger = get_logger(__name__)
 
 
 class ExperimentService:
@@ -26,6 +28,9 @@ class ExperimentService:
             # Generate experiment ID
             experiment_id = str(uuid.uuid4())
             
+            # Set context for logging
+            set_experiment_context(experiment_id)
+            
             # Create experiment state
             experiment_state = state_manager.create_experiment(
                 experiment_id=experiment_id,
@@ -37,40 +42,75 @@ class ExperimentService:
             iterations = ExperimentService._calculate_iterations(request)
             experiment_state.iterations = iterations
             
-            logger.info(f"Created experiment {experiment_id} with {len(request.agents)} agents")
+            log_with_context(
+                logger,
+                'info',
+                f"Created experiment",
+                experiment_id=experiment_id,
+                agent_count=len(request.agents),
+                iterations=iterations
+            )
             
             return experiment_id
             
+        except ValidationError:
+            raise
         except Exception as e:
-            logger.error(f"Failed to create experiment: {str(e)}")
+            log_with_context(
+                logger,
+                'error',
+                f"Failed to create experiment: {str(e)}",
+                exception_type=type(e).__name__
+            )
             raise ExperimentError(f"Failed to create experiment: {str(e)}")
     
     @staticmethod
-    def get_experiment(experiment_id: str) -> Dict[str, Any]:
+    def get_experiment(experiment_id: str) -> ExperimentResponse:
         """Get experiment by ID."""
         experiment = state_manager.get_experiment(experiment_id)
         if not experiment:
-            raise ValidationError(f"Experiment {experiment_id} not found")
+            raise NotFoundError(
+                f"Experiment not found",
+                resource_type="experiment",
+                resource_id=experiment_id
+            )
         
-        return experiment.to_dict()
+        return ExperimentResponse(
+            experiment_id=experiment.experiment_id,
+            task=experiment.task,
+            agents=experiment.agents,
+            conversations=experiment.conversations,
+            iterations=experiment.iterations,
+            current_iteration=experiment.current_iteration,
+            status=experiment.status,
+            created_at=experiment.created_at,
+            completed_at=experiment.completed_at,
+            error=experiment.error
+        )
+
     
     @staticmethod
-    def list_experiments() -> List[Dict[str, Any]]:
+    def list_experiments() -> List[ExperimentListItem]:
         """List all experiments."""
         experiments = []
         
         for experiment_id, experiment in state_manager.get_all_experiments().items():
-            experiments.append({
-                "experiment_id": experiment_id,
-                "title": f"Experiment: {experiment.task.prompt[:50]}...",
-                "status": experiment.status,
-                "created_at": experiment.created_at,
-                "agent_count": len(experiment.agents),
-                "message_count": len(experiment.messages)
-            })
+            # Generate title from task prompt (truncate only if longer than 100 chars)
+            title = experiment.task.prompt
+            if len(title) > 100:
+                title = title[:100] + "..."
+            
+            experiments.append(ExperimentListItem(
+                experiment_id=experiment_id,
+                title=title,
+                status=experiment.status,
+                created_at=experiment.created_at,
+                agent_count=len(experiment.agents),
+                message_count=len(experiment.messages)
+            ))
         
         # Sort by created_at (newest first)
-        experiments.sort(key=lambda x: x['created_at'], reverse=True)
+        experiments.sort(key=lambda x: x.created_at, reverse=True)
         return experiments
     
     @staticmethod

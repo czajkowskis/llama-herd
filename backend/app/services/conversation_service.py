@@ -3,7 +3,7 @@ Service for managing conversations.
 """
 import uuid
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Optional
 from ..schemas.conversation import Message, ConversationAgent, Conversation
 from ..core.exceptions import ValidationError
 from ..core.state import state_manager
@@ -83,6 +83,43 @@ class ConversationService:
             )
             
             if state_manager.add_conversation(experiment_id, conversation):
+                # Also save to persistent storage using new folder structure
+                try:
+                    from ..storage import get_storage
+                    storage = get_storage()
+                    # Convert to dict format for storage
+                    conversation_dict = conversation.model_dump()
+                    
+                    # Extract iteration number from title (e.g., "Run 1" -> 1, "Dataset item 3" -> 3)
+                    current_iteration = 1  # Default fallback
+                    if title.startswith("Run "):
+                        try:
+                            current_iteration = int(title.split(" ")[1])
+                        except (IndexError, ValueError):
+                            pass
+                    elif title.startswith("Dataset item "):
+                        try:
+                            current_iteration = int(title.split(" ")[2])
+                        except (IndexError, ValueError):
+                            pass
+                    
+                    # Get experiment title for folder naming
+                    experiment_title = None
+                    if hasattr(experiment, 'task') and hasattr(experiment.task, 'prompt'):
+                        experiment_title = experiment.task.prompt[:50]  # Limit length
+                    
+                    # Save conversation using new method (this will create experiment folder if needed)
+                    storage.save_experiment_conversation(
+                        experiment_id=experiment_id,
+                        iteration=current_iteration,
+                        title=title,
+                        conversation=conversation_dict,
+                        experiment_title=experiment_title
+                    )
+                    logger.info(f"Saved conversation snapshot {conversation.id} to persistent storage (iteration {current_iteration})")
+                except Exception as storage_error:
+                    logger.warning(f"Failed to save conversation to persistent storage: {str(storage_error)}")
+                
                 # Notify via message queue
                 ConversationService._notify_conversation(experiment_id, conversation)
                 return conversation
@@ -122,27 +159,79 @@ class ConversationService:
         return agent_id
     
     @staticmethod
-    def _notify_message(experiment_id: str, message: Message):
+    def _notify_message(experiment_id: str, message: Message) -> None:
         """Notify about new message via message queue."""
-        queue = state_manager.get_message_queue(experiment_id)
-        if queue:
-            try:
-                queue.put({
-                    "type": "message",
-                    "data": message.dict()
-                })
-            except Exception as e:
-                logger.warning(f"Failed to notify about message: {str(e)}")
+        try:
+            state_manager.put_message_threadsafe(experiment_id, {
+                "type": "message",
+                "data": message.model_dump()
+            })
+        except Exception as e:
+            logger.warning(f"Failed to notify about message: {str(e)}")
     
     @staticmethod
-    def _notify_conversation(experiment_id: str, conversation: Conversation):
+    def _notify_conversation(experiment_id: str, conversation: Conversation) -> None:
         """Notify about new conversation via message queue."""
-        queue = state_manager.get_message_queue(experiment_id)
-        if queue:
-            try:
-                queue.put({
-                    "type": "conversation",
-                    "data": conversation.dict()
-                })
-            except Exception as e:
-                logger.warning(f"Failed to notify about conversation: {str(e)}") 
+        try:
+            state_manager.put_message_threadsafe(experiment_id, {
+                "type": "conversation",
+                "data": conversation.model_dump()
+            })
+        except Exception as e:
+            logger.warning(f"Failed to notify about conversation: {str(e)}")
+
+    @staticmethod
+    def notify_conversation_started(experiment_id: str, title: str) -> None:
+        """Emit a conversation-start signal before any messages are sent for a new run.
+        Sends a 'conversation' payload with a new id and empty messages so the frontend can switch context immediately.
+        """
+        try:
+            experiment = state_manager.get_experiment(experiment_id)
+            if not experiment:
+                raise ValidationError(f"Experiment {experiment_id} not found")
+
+            conv = Conversation(
+                id=str(uuid.uuid4()),
+                title=title,
+                agents=experiment.conversation_agents,
+                messages=[],
+                createdAt=datetime.now().isoformat(),
+                experiment_id=experiment_id,
+                iteration=experiment.current_iteration or None,
+            )
+            # Notify only (do not append to experiment.conversations yet)
+            ConversationService._notify_conversation(experiment_id, conv)
+        except Exception as e:
+            logger.warning(f"Failed to emit conversation-start: {str(e)}")
+    
+    @staticmethod
+    def get_live_conversation(experiment_id: str) -> Optional[dict]:
+        """
+        Build a live conversation view from an active experiment's current messages.
+        Returns None if experiment is not active.
+        Returns an empty conversation if experiment exists but has no messages yet.
+        """
+        experiment = state_manager.get_experiment(experiment_id)
+        if not experiment:
+            logger.debug(f"get_live_conversation: No experiment found in state for {experiment_id}")
+            return None
+        
+        logger.debug(f"get_live_conversation: Building live conversation with {len(experiment.messages)} messages")
+        
+        # Build conversation object from current state (even if empty messages)
+        # This allows frontend to accumulate messages as they arrive via WebSocket
+        return {
+            "id": experiment_id,
+            "title": "Live",
+            "agents": [
+                a.model_dump() if hasattr(a, 'model_dump') else a 
+                for a in experiment.conversation_agents
+            ],
+            "messages": [
+                m.model_dump() if hasattr(m, 'model_dump') else m 
+                for m in experiment.messages
+            ],
+            "createdAt": experiment.created_at,
+            "experiment_id": experiment_id,
+            "iteration": None
+        } 

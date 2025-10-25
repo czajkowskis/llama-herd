@@ -8,57 +8,456 @@ nohup: ignoring input
 
 INFO:     Will watch for changes in these directories: ['/home/szymon/llama-herd/backend']
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [189655] using StatReload
-INFO:     Started server process [189661]
+INFO:     Started reloader process [55974] using StatReload
+INFO:     Started server process [55985]
 INFO:     Waiting for application startup.
+timestamp=2025-10-25T17:59:44.854617Z level=INFO module=__init__ message="Model pull manager cleanup worker started"
+timestamp=2025-10-25T17:59:44.854713Z level=INFO module=__init__ message="Started Ollama cache warming task"
+timestamp=2025-10-25T17:59:44.854754Z level=INFO module=__init__ message="LLaMa-Herd backend started successfully"
 INFO:     Application startup complete.
-INFO:     127.0.0.1:48340 - "GET /docs HTTP/1.1" 200 OK
-WARNING:  StatReload detected changes in 'app/services/autogen_service.py'. Reloading...
+timestamp=2025-10-25T17:59:44.890018Z level=INFO module=_client message="HTTP Request: GET http://localhost:11434/api/tags "HTTP/1.1 200 OK""
+timestamp=2025-10-25T17:59:44.892015Z level=INFO module=_client message="HTTP Request: GET http://localhost:11434/api/version "HTTP/1.1 200 OK""
+INFO:     127.0.0.1:44904 - "GET /api/models/pull HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44916 - "GET /api/models/pull HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40046 - "GET /api/models/pull HTTP/1.1" 200 OK
+WARNING:  StatReload detected changes in 'main.py'. Reloading...
 INFO:     Shutting down
 INFO:     Waiting for application shutdown.
+timestamp=2025-10-25T17:59:58.036177Z level=INFO module=__init__ message="Model pull manager cleanup worker stopped"
 INFO:     Application shutdown complete.
-INFO:     Finished server process [189661]
-INFO:     Started server process [190237]
+INFO:     Finished server process [55985]
+INFO:     Started server process [56032]
 INFO:     Waiting for application startup.
+timestamp=2025-10-25T17:59:59.406425Z level=INFO module=__init__ message="Model pull manager cleanup worker started"
+timestamp=2025-10-25T17:59:59.406570Z level=INFO module=__init__ message="Started Ollama cache warming task"
+timestamp=2025-10-25T17:59:59.406644Z level=INFO module=__init__ message="LLaMa-Herd backend started successfully"
 INFO:     Application startup complete.
-INFO:app.utils.logging:Created experiment 611aefb0-d91e-42b2-b2c2-46e8c0e13c7d with 1 agents
-INFO:app.utils.logging:Starting experiment 611aefb0-d91e-42b2-b2c2-46e8c0e13c7d in background thread
-INFO:app.utils.logging:Starting experiment 611aefb0-d91e-42b2-b2c2-46e8c0e13c7d with 1 agents
-INFO:app.utils.logging:Background thread started for experiment 611aefb0-d91e-42b2-b2c2-46e8c0e13c7d
-INFO:     127.0.0.1:49318 - "POST /api/experiments/start HTTP/1.1" 200 OK
-INFO:app.utils.logging:Experiment 611aefb0-d91e-42b2-b2c2-46e8c0e13c7d found, starting iterations
-INFO:app.utils.logging:Experiment 611aefb0-d91e-42b2-b2c2-46e8c0e13c7d: 1 iterations, dataset items: 0
-INFO:app.utils.logging:Running manual iterations for experiment 611aefb0-d91e-42b2-b2c2-46e8c0e13c7d
-INFO:     127.0.0.1:49318 - "GET /api/experiments/611aefb0-d91e-42b2-b2c2-46e8c0e13c7d HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49344 - "WebSocket /ws/experiments/611aefb0-d91e-42b2-b2c2-46e8c0e13c7d" [accepted]
+timestamp=2025-10-25T17:59:59.460246Z level=INFO module=_client message="HTTP Request: GET http://localhost:11434/api/tags "HTTP/1.1 200 OK""
+timestamp=2025-10-25T17:59:59.463409Z level=INFO module=_client message="HTTP Request: GET http://localhost:11434/api/version "HTTP/1.1 200 OK""
+INFO:     127.0.0.1:40050 - "GET /api/models/pull HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35210 - "GET /api/models/pull HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35212 - "GET /api/models/pull HTTP/1.1" 200 OK
+timestamp=2025-10-25T18:00:14.367431Z level=INFO module=logging experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="Created experiment" experiment_id="ca247719-4f97-4f61-aa30-663b0ae83228" agent_count=1 iterations=1
+timestamp=2025-10-25T18:00:14.369013Z level=INFO module=logging experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="Started experiment" experiment_id="ca247719-4f97-4f61-aa30-663b0ae83228" agent_count=1 iterations=1
+timestamp=2025-10-25T18:00:14.369090Z level=INFO module=autogen_service experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="Starting experiment ca247719-4f97-4f61-aa30-663b0ae83228 in background task"
+timestamp=2025-10-25T18:00:14.369136Z level=INFO module=autogen_service experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="Background task created for experiment ca247719-4f97-4f61-aa30-663b0ae83228"
+INFO:     127.0.0.1:35212 - "POST /api/experiments/start HTTP/1.1" 200 OK
+timestamp=2025-10-25T18:00:14.369654Z level=INFO module=iteration_manager experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="Starting experiment ca247719-4f97-4f61-aa30-663b0ae83228 with 1 agents"
+timestamp=2025-10-25T18:00:14.369699Z level=INFO module=iteration_manager experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="Experiment ca247719-4f97-4f61-aa30-663b0ae83228 found, starting iterations"
+timestamp=2025-10-25T18:00:14.369725Z level=INFO module=iteration_manager experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="Experiment ca247719-4f97-4f61-aa30-663b0ae83228: 1 iterations, dataset items: 0"
+timestamp=2025-10-25T18:00:14.369755Z level=INFO module=iteration_manager experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="Running manual iterations for experiment ca247719-4f97-4f61-aa30-663b0ae83228"
+timestamp=2025-10-25T18:00:14.369786Z level=INFO module=iteration_manager experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="[ca247719-4f97-4f61-aa30-663b0ae83228] Starting iteration 1"
+timestamp=2025-10-25T18:00:14.369953Z level=INFO module=iteration_manager experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="[ca247719-4f97-4f61-aa30-663b0ae83228] Starting conversation runner with 1 agents"
+timestamp=2025-10-25T18:00:14.370022Z level=INFO module=conversation_runner experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="[ca247719-4f97-4f61-aa30-663b0ae83228] Starting conversation runner"
+timestamp=2025-10-25T18:00:14.370057Z level=INFO module=conversation_runner experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="[ca247719-4f97-4f61-aa30-663b0ae83228] Prompt: Hello..."
+timestamp=2025-10-25T18:00:14.370084Z level=INFO module=conversation_runner experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="[ca247719-4f97-4f61-aa30-663b0ae83228] Number of agents: 1"
+timestamp=2025-10-25T18:00:14.370165Z level=INFO module=conversation_runner experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="[ca247719-4f97-4f61-aa30-663b0ae83228] Creating autogen agents..."
+timestamp=2025-10-25T18:00:14.380122Z level=INFO module=agent_factory experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="Created AutoGen agent: Hello"
+timestamp=2025-10-25T18:00:14.380208Z level=INFO module=conversation_runner experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="[ca247719-4f97-4f61-aa30-663b0ae83228] Created 1 autogen agents"
+timestamp=2025-10-25T18:00:14.380247Z level=INFO module=conversation_runner experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="[ca247719-4f97-4f61-aa30-663b0ae83228] Single agent detected, using direct agent.run()"
+timestamp=2025-10-25T18:00:14.380348Z level=INFO module=conversation_runner experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="[ca247719-4f97-4f61-aa30-663b0ae83228] Running single agent..."
+timestamp=2025-10-25T18:00:14.602441Z level=INFO module=autogen_service experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="Watchdog for ca247719-4f97-4f61-aa30-663b0ae83228 will monitor for 3600s"
+timestamp=2025-10-25T18:00:14.607907Z level=INFO module=logging experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="Retrieved experiment" experiment_id="ca247719-4f97-4f61-aa30-663b0ae83228" conversation_count=0
+INFO:     127.0.0.1:35212 - "GET /api/experiments/ca247719-4f97-4f61-aa30-663b0ae83228 HTTP/1.1" 200 OK
+timestamp=2025-10-25T18:00:14.613156Z level=INFO module=logging experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="Retrieved experiment" experiment_id="ca247719-4f97-4f61-aa30-663b0ae83228" conversation_count=0
+INFO:     127.0.0.1:59070 - "GET /api/experiments/ca247719-4f97-4f61-aa30-663b0ae83228 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59064 - "WebSocket /ws/experiments/ca247719-4f97-4f61-aa30-663b0ae83228" [accepted]
 INFO:     connection open
-INFO:     127.0.0.1:49334 - "GET /api/experiments/611aefb0-d91e-42b2-b2c2-46e8c0e13c7d HTTP/1.1" 200 OK
-INFO:app.utils.logging:Created AutoGen agent: Comedian
-INFO:app.utils.logging:Single agent detected, using direct communication
-user_proxy (to Comedian):
+timestamp=2025-10-25T18:00:14.725744Z level=INFO module=_base_client experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="Retrying request to /chat/completions in 0.396751 seconds"
+timestamp=2025-10-25T18:00:14.727727Z level=INFO module=_client message="HTTP Request: GET http://localhost:11434/api/tags "HTTP/1.1 200 OK""
+timestamp=2025-10-25T18:00:14.731202Z level=INFO module=_client message="HTTP Request: GET http://localhost:11434/api/version "HTTP/1.1 200 OK""
+timestamp=2025-10-25T18:00:15.181233Z level=INFO module=_base_client experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="Retrying request to /chat/completions in 0.828862 seconds"
+INFO:     127.0.0.1:59070 - "GET /api/models/pull HTTP/1.1" 200 OK
+timestamp=2025-10-25T18:00:16.093058Z level=ERROR module=conversation_runner experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="[ca247719-4f97-4f61-aa30-663b0ae83228] Autogen conversation error: Connection error."
+timestamp=2025-10-25T18:00:16.093204Z level=ERROR module=conversation_runner experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="[ca247719-4f97-4f61-aa30-663b0ae83228] Error type: APIConnectionError"
+timestamp=2025-10-25T18:00:16.108033Z level=ERROR module=conversation_runner experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="[ca247719-4f97-4f61-aa30-663b0ae83228] Traceback: Traceback (most recent call last):
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpx/_transports/default.py", line 394, in handle_async_request
+    resp = await self._pool.handle_async_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpcore/_async/connection_pool.py", line 256, in handle_async_request
+    raise exc from None
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpcore/_async/connection_pool.py", line 236, in handle_async_request
+    response = await connection.handle_async_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        pool_request.request
+        ^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpcore/_async/connection.py", line 101, in handle_async_request
+    raise exc
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpcore/_async/connection.py", line 78, in handle_async_request
+    stream = await self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpcore/_async/connection.py", line 124, in _connect
+    stream = await self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpcore/_backends/auto.py", line 31, in connect_tcp
+    return await self._backend.connect_tcp(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+    )
+    ^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpcore/_backends/anyio.py", line 113, in connect_tcp
+    with map_exceptions(exc_map):
+         ~~~~~~~~~~~~~~^^^^^^^^^
+  File "/usr/lib64/python3.13/contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectError: All connection attempts failed
 
-Tell me a joke
+The above exception was the direct cause of the following exception:
 
---------------------------------------------------------------------------------
-INFO:httpx:HTTP Request: POST http://localhost:8080/v1/chat/completions "HTTP/1.1 200 OK"
-[autogen.oai.client: 08-10 21:14:04] {714} WARNING - Model gemma3:4b is not found. The cost will be 0. In your config_list, add field {"price" : [prompt_price_per_1k, completion_token_price_per_1k]} for customized pricing.
-WARNING:autogen.oai.client:Model gemma3:4b is not found. The cost will be 0. In your config_list, add field {"price" : [prompt_price_per_1k, completion_token_price_per_1k]} for customized pricing.
-Comedian (to user_proxy):
+Traceback (most recent call last):
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/openai/_base_client.py", line 1529, in request
+    response = await self._client.send(
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpx/_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+    )
+    ^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpx/_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpx/_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpx/_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpx/_transports/default.py", line 393, in handle_async_request
+    with map_httpcore_exceptions():
+         ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib64/python3.13/contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectError: All connection attempts failed
 
-Okay, okay, settle down folks! Let me tell you this one:
+The above exception was the direct cause of the following exception:
 
-Why don't scientists trust atoms? 
+Traceback (most recent call last):
+  File "/home/szymon/llama-herd/backend/app/services/conversation_runner.py", line 63, in run_conversation
+    result = await single_agent.run(task=[initial_message])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/autogen_agentchat/agents/_base_chat_agent.py", line 149, in run
+    response = await self.on_messages(input_messages, cancellation_token)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/autogen_agentchat/agents/_assistant_agent.py", line 896, in on_messages
+    async for message in self.on_messages_stream(messages, cancellation_token):
+        if isinstance(message, Response):
+            return message
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/autogen_agentchat/agents/_assistant_agent.py", line 953, in on_messages_stream
+    async for inference_output in self._call_llm(
+    ...<15 lines>...
+            yield inference_output
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/autogen_agentchat/agents/_assistant_agent.py", line 1109, in _call_llm
+    model_result = await model_client.create(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+    )
+    ^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/autogen_ext/models/openai/_openai_client.py", line 704, in create
+    result: Union[ParsedChatCompletion[BaseModel], ChatCompletion] = await future
+                                                                     ^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/openai/resources/chat/completions/completions.py", line 2583, in create
+    return await self._post(
+           ^^^^^^^^^^^^^^^^^
+    ...<48 lines>...
+    )
+    ^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/openai/_base_client.py", line 1794, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/openai/_base_client.py", line 1561, in request
+    raise APIConnectionError(request=request) from err
+openai.APIConnectionError: Connection error.
+"
+timestamp=2025-10-25T18:00:16.108237Z level=INFO module=conversation_runner experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="run_conversation emitted a final status for ca247719-4f97-4f61-aa30-663b0ae83228"
+timestamp=2025-10-25T18:00:16.108383Z level=ERROR module=iteration_manager experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="[ca247719-4f97-4f61-aa30-663b0ae83228] Error during conversation: Connection error."
+timestamp=2025-10-25T18:00:16.118501Z level=ERROR module=iteration_manager experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="[ca247719-4f97-4f61-aa30-663b0ae83228] Traceback: Traceback (most recent call last):
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpx/_transports/default.py", line 394, in handle_async_request
+    resp = await self._pool.handle_async_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpcore/_async/connection_pool.py", line 256, in handle_async_request
+    raise exc from None
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpcore/_async/connection_pool.py", line 236, in handle_async_request
+    response = await connection.handle_async_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        pool_request.request
+        ^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpcore/_async/connection.py", line 101, in handle_async_request
+    raise exc
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpcore/_async/connection.py", line 78, in handle_async_request
+    stream = await self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpcore/_async/connection.py", line 124, in _connect
+    stream = await self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpcore/_backends/auto.py", line 31, in connect_tcp
+    return await self._backend.connect_tcp(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+    )
+    ^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpcore/_backends/anyio.py", line 113, in connect_tcp
+    with map_exceptions(exc_map):
+         ~~~~~~~~~~~~~~^^^^^^^^^
+  File "/usr/lib64/python3.13/contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectError: All connection attempts failed
 
-... Because they make up everything! 
+The above exception was the direct cause of the following exception:
 
-(Pause for laughter... hopefully!)
+Traceback (most recent call last):
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/openai/_base_client.py", line 1529, in request
+    response = await self._client.send(
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpx/_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+    )
+    ^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpx/_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpx/_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpx/_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpx/_transports/default.py", line 393, in handle_async_request
+    with map_httpcore_exceptions():
+         ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib64/python3.13/contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectError: All connection attempts failed
 
----
+The above exception was the direct cause of the following exception:
 
-Want to hear another one, or would you like me to try a different kind of joke?  I can do puns, observational humor, or even a little bit of self-deprecating comedy. Just let me know! 😄
+Traceback (most recent call last):
+  File "/home/szymon/llama-herd/backend/app/services/iteration_manager.py", line 147, in _run_single_iteration
+    await asyncio.wait_for(
+    ...<2 lines>...
+    )
+  File "/usr/lib64/python3.13/asyncio/tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/app/services/conversation_runner.py", line 63, in run_conversation
+    result = await single_agent.run(task=[initial_message])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/autogen_agentchat/agents/_base_chat_agent.py", line 149, in run
+    response = await self.on_messages(input_messages, cancellation_token)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/autogen_agentchat/agents/_assistant_agent.py", line 896, in on_messages
+    async for message in self.on_messages_stream(messages, cancellation_token):
+        if isinstance(message, Response):
+            return message
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/autogen_agentchat/agents/_assistant_agent.py", line 953, in on_messages_stream
+    async for inference_output in self._call_llm(
+    ...<15 lines>...
+            yield inference_output
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/autogen_agentchat/agents/_assistant_agent.py", line 1109, in _call_llm
+    model_result = await model_client.create(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+    )
+    ^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/autogen_ext/models/openai/_openai_client.py", line 704, in create
+    result: Union[ParsedChatCompletion[BaseModel], ChatCompletion] = await future
+                                                                     ^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/openai/resources/chat/completions/completions.py", line 2583, in create
+    return await self._post(
+           ^^^^^^^^^^^^^^^^^
+    ...<48 lines>...
+    )
+    ^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/openai/_base_client.py", line 1794, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/openai/_base_client.py", line 1561, in request
+    raise APIConnectionError(request=request) from err
+openai.APIConnectionError: Connection error.
+"
+timestamp=2025-10-25T18:00:16.118652Z level=ERROR module=iteration_manager experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="Error in experiment ca247719-4f97-4f61-aa30-663b0ae83228: Connection error."
+timestamp=2025-10-25T18:00:16.118724Z level=ERROR module=iteration_manager experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="Exception type: APIConnectionError"
+timestamp=2025-10-25T18:00:16.128619Z level=ERROR module=iteration_manager experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="Traceback: Traceback (most recent call last):
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpx/_transports/default.py", line 394, in handle_async_request
+    resp = await self._pool.handle_async_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpcore/_async/connection_pool.py", line 256, in handle_async_request
+    raise exc from None
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpcore/_async/connection_pool.py", line 236, in handle_async_request
+    response = await connection.handle_async_request(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        pool_request.request
+        ^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpcore/_async/connection.py", line 101, in handle_async_request
+    raise exc
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpcore/_async/connection.py", line 78, in handle_async_request
+    stream = await self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpcore/_async/connection.py", line 124, in _connect
+    stream = await self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpcore/_backends/auto.py", line 31, in connect_tcp
+    return await self._backend.connect_tcp(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+    )
+    ^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpcore/_backends/anyio.py", line 113, in connect_tcp
+    with map_exceptions(exc_map):
+         ~~~~~~~~~~~~~~^^^^^^^^^
+  File "/usr/lib64/python3.13/contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectError: All connection attempts failed
 
---------------------------------------------------------------------------------
+The above exception was the direct cause of the following exception:
 
->>>>>>>> TERMINATING RUN (03b14857-58df-4dd7-939a-d370ca466e63): Maximum number of consecutive auto-replies reached
-INFO:app.utils.logging:Single agent conversation completed with 3 messages
-INFO:app.utils.logging:Experiment 611aefb0-d91e-42b2-b2c2-46e8c0e13c7d iterations completed, marking as completed
+Traceback (most recent call last):
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/openai/_base_client.py", line 1529, in request
+    response = await self._client.send(
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpx/_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+    )
+    ^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpx/_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpx/_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpx/_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpx/_transports/default.py", line 393, in handle_async_request
+    with map_httpcore_exceptions():
+         ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib64/python3.13/contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectError: All connection attempts failed
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/szymon/llama-herd/backend/app/services/iteration_manager.py", line 57, in run_experiment
+    await self._run_manual_iterations(experiment_id, task.prompt, agents, iterations)
+  File "/home/szymon/llama-herd/backend/app/services/iteration_manager.py", line 117, in _run_manual_iterations
+    await self._run_single_iteration(experiment_id, prompt, agents, iteration)
+  File "/home/szymon/llama-herd/backend/app/services/iteration_manager.py", line 147, in _run_single_iteration
+    await asyncio.wait_for(
+    ...<2 lines>...
+    )
+  File "/usr/lib64/python3.13/asyncio/tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/app/services/conversation_runner.py", line 63, in run_conversation
+    result = await single_agent.run(task=[initial_message])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/autogen_agentchat/agents/_base_chat_agent.py", line 149, in run
+    response = await self.on_messages(input_messages, cancellation_token)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/autogen_agentchat/agents/_assistant_agent.py", line 896, in on_messages
+    async for message in self.on_messages_stream(messages, cancellation_token):
+        if isinstance(message, Response):
+            return message
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/autogen_agentchat/agents/_assistant_agent.py", line 953, in on_messages_stream
+    async for inference_output in self._call_llm(
+    ...<15 lines>...
+            yield inference_output
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/autogen_agentchat/agents/_assistant_agent.py", line 1109, in _call_llm
+    model_result = await model_client.create(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+    )
+    ^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/autogen_ext/models/openai/_openai_client.py", line 704, in create
+    result: Union[ParsedChatCompletion[BaseModel], ChatCompletion] = await future
+                                                                     ^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/openai/resources/chat/completions/completions.py", line 2583, in create
+    return await self._post(
+           ^^^^^^^^^^^^^^^^^
+    ...<48 lines>...
+    )
+    ^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/openai/_base_client.py", line 1794, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/szymon/llama-herd/backend/venv/lib64/python3.13/site-packages/openai/_base_client.py", line 1561, in request
+    raise APIConnectionError(request=request) from err
+openai.APIConnectionError: Connection error.
+"
+timestamp=2025-10-25T18:00:16.131759Z level=INFO module=iteration_manager experiment_id=ca247719-4f97-4f61-aa30-663b0ae83228 message="Persisted error status for experiment ca247719-4f97-4f61-aa30-663b0ae83228"
+INFO:     connection closed
+INFO:     127.0.0.1:59070 - "GET /api/models/pull HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37036 - "GET /api/models/pull HTTP/1.1" 200 OK
+timestamp=2025-10-25T18:00:29.735454Z level=INFO module=_client message="HTTP Request: GET http://localhost:11434/api/tags "HTTP/1.1 200 OK""
+timestamp=2025-10-25T18:00:29.736532Z level=INFO module=_client message="HTTP Request: GET http://localhost:11434/api/version "HTTP/1.1 200 OK""
+INFO:     127.0.0.1:37052 - "GET /api/models/pull HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60588 - "GET /api/models/pull HTTP/1.1" 200 OK
+timestamp=2025-10-25T18:00:36.282356Z level=INFO module=experiments message="Listed 11 experiments"
+INFO:     127.0.0.1:60588 - "GET /api/experiments HTTP/1.1" 200 OK
+timestamp=2025-10-25T18:00:36.297694Z level=INFO module=experiments message="Listed 11 experiments"
+INFO:     127.0.0.1:60588 - "GET /api/experiments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60588 - "GET /api/models/pull HTTP/1.1" 200 OK
+timestamp=2025-10-25T18:00:44.744296Z level=INFO module=_client message="HTTP Request: GET http://localhost:11434/api/tags "HTTP/1.1 200 OK""
+timestamp=2025-10-25T18:00:44.747067Z level=INFO module=_client message="HTTP Request: GET http://localhost:11434/api/version "HTTP/1.1 200 OK""
+INFO:     127.0.0.1:51404 - "GET /api/models/pull HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51404 - "GET /api/models/pull HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42692 - "GET /api/models/pull HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+timestamp=2025-10-25T18:00:59.516393Z level=INFO module=__init__ message="Model pull manager cleanup worker stopped"
+INFO:     Application shutdown complete.
+INFO:     Finished server process [56032]
+INFO:     Stopping reloader process [55974]

@@ -1,0 +1,62 @@
+{
+  "experiment": {
+    "id": "test-exp-1",
+    "name": "Test Experiment",
+    "status": "running",
+    "createdAt": "2024-01-15T10:00:00Z",
+    "task": {
+      "id": "task-1",
+      "prompt": "Discuss the benefits of renewable energy",
+      "description": "A conversation about renewable energy benefits"
+    },
+    "agents": [
+      {
+        "id": "agent-1",
+        "name": "Energy Expert",
+        "color": "#3B82F6",
+        "model": "llama2",
+        "systemPrompt": "You are an expert in renewable energy technologies."
+      },
+      {
+        "id": "agent-2", 
+        "name": "Environmental Advocate",
+        "color": "#10B981",
+        "model": "llama2",
+        "systemPrompt": "You advocate for environmental protection and sustainability."
+      }
+    ]
+  },
+  "conversation": {
+    "id": "conv-1",
+    "title": "Renewable Energy Discussion",
+    "agents": [
+      {
+        "id": "agent-1",
+        "name": "Energy Expert",
+        "color": "#3B82F6",
+        "model": "llama2"
+      },
+      {
+        "id": "agent-2",
+        "name": "Environmental Advocate", 
+        "color": "#10B981",
+        "model": "llama2"
+      }
+    ],
+    "createdAt": "2024-01-15T10:00:00Z",
+    "messages": [
+      {
+        "id": "msg-1",
+        "agentId": "agent-1",
+        "content": "Renewable energy sources like solar and wind power offer significant environmental benefits.",
+        "timestamp": "2024-01-15T10:01:00Z"
+      },
+      {
+        "id": "msg-2",
+        "agentId": "agent-2", 
+        "content": "I agree! They also help reduce our dependence on fossil fuels and create sustainable jobs.",
+        "timestamp": "2024-01-15T10:02:00Z"
+      }
+    ]
+  }
+}
