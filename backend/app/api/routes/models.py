@@ -2,19 +2,41 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Callable
 import requests
 import json
 import logging
 import asyncio
+import functools
 from datetime import datetime, UTC
 
 from ...core.config import settings
 from ...utils.logging import get_logger
-from ...utils.error_handling import handle_ollama_errors
 from ...services.model_pull_manager import pull_manager
 
 logger = get_logger(__name__)
+
+def handle_ollama_errors(func: Callable) -> Callable:
+    """
+    Decorator specifically for handling Ollama-related errors.
+    """
+    @functools.wraps(func)
+    async def wrapper(*args, **kwargs) -> Any:
+        try:
+            return await func(*args, **kwargs)
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Ollama error in {func.__name__}: {str(e)}")
+            # Provide more specific error messages for common Ollama issues
+            error_msg = str(e).lower()
+            if "connection" in error_msg or "timeout" in error_msg:
+                raise HTTPException(status_code=503, detail="Failed to connect to Ollama service")
+            elif "not found" in error_msg:
+                raise HTTPException(status_code=404, detail="Model not found")
+            else:
+                raise HTTPException(status_code=500, detail="Internal server error")
+    return wrapper
 
 router = APIRouter(prefix="/api/models", tags=["models"])
 
