@@ -3,7 +3,7 @@ File-based storage implementation.
 """
 import json
 import os
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 import uuid
@@ -144,7 +144,7 @@ class FileStorage(BaseStorage):
             experiment['id'] = experiment_id
 
         if 'created_at' not in experiment:
-            experiment['created_at'] = datetime.utcnow().isoformat()
+            experiment['created_at'] = datetime.now(UTC).isoformat()
 
         file_path = self._get_experiment_path(experiment_id)
         file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -252,7 +252,7 @@ class FileStorage(BaseStorage):
         conversation['experiment_id'] = experiment_id
         conversation['iteration'] = iteration
         conversation['title'] = title
-        conversation['created_at'] = datetime.utcnow().isoformat()
+        conversation['created_at'] = datetime.now(UTC).isoformat()
         
         # Use per-experiment lock for conversation writes too
         lock_path = self._get_experiment_lock_path(experiment_id)
@@ -309,7 +309,7 @@ class FileStorage(BaseStorage):
         
         # Ensure imported_at is set
         if 'imported_at' not in conversation:
-            conversation['imported_at'] = datetime.utcnow().isoformat()
+            conversation['imported_at'] = datetime.now(UTC).isoformat()
         
         # Save to imported conversations folder
         imported_dir = self.data_dir / "imported_conversations"

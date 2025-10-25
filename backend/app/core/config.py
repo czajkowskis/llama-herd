@@ -50,114 +50,94 @@ class Settings(BaseSettings):
     )
     api_host: str = Field(
         default="0.0.0.0",
-        description="Host to bind the API server (0.0.0.0 for all interfaces)",
-        env="API_HOST"
+        description="Host to bind the API server (0.0.0.0 for all interfaces)"
     )
     api_port: int = Field(
         default=8000,
-        description="Port to bind the API server",
-        env="API_PORT"
+        description="Port to bind the API server"
     )
     
     # CORS Configuration
     cors_origins: Union[str, List[str]] = Field(
         default="http://localhost:3000,http://localhost:3001",
-        description="Allowed CORS origins (comma-separated string or list)",
-        env="CORS_ORIGINS"
+        description="Allowed CORS origins (comma-separated string or list)"
     )
     cors_allow_credentials: bool = Field(
         default=True,
         description="Allow credentials in CORS requests",
-        env="CORS_ALLOW_CREDENTIALS"
     )
     cors_allow_methods: Union[str, List[str]] = Field(
         default="*",
-        description="Allowed HTTP methods for CORS (comma-separated string or list)",
-        env="CORS_ALLOW_METHODS"
+        description="Allowed HTTP methods for CORS (comma-separated string or list)"
     )
     cors_allow_headers: Union[str, List[str]] = Field(
         default="*",
-        description="Allowed HTTP headers for CORS (comma-separated string or list)",
-        env="CORS_ALLOW_HEADERS"
+        description="Allowed HTTP headers for CORS (comma-separated string or list)"
     )
     
     # Ollama Configuration
     ollama_base_url: str = Field(
         default="http://localhost:8080/v1",
-        description="Base URL for Ollama API",
-        env="OLLAMA_BASE_URL"
+        description="Base URL for Ollama API"
     )
     ollama_url: str = Field(
         default="http://localhost:11434",
-        description="Direct URL for Ollama server (for model operations)",
-        env="OLLAMA_URL"
+        description="Direct URL for Ollama server (for model operations)"
     )
     ollama_api_key: str = Field(
         default="ollama",
-        description="API key for Ollama (if required)",
-        env="OLLAMA_API_KEY"
+        description="API key for Ollama (if required)"
     )
     ollama_timeout: int = Field(
         default=300,
-        description="Timeout in seconds for Ollama API requests",
-        env="OLLAMA_TIMEOUT"
+        description="Timeout in seconds for Ollama API requests"
     )
     ollama_models_dir: str = Field(
         default="~/.ollama/models",
-        description="Directory where Ollama stores downloaded models",
-        env="OLLAMA_MODELS_DIR"
+        description="Directory where Ollama stores downloaded models"
     )
     
     # Storage Configuration
     data_directory: str = Field(
         default="data",
-        description="Root directory for data storage",
-        env="DATA_DIRECTORY"
+        description="Root directory for data storage"
     )
     experiments_directory: str = Field(
         default="experiments",
-        description="Subdirectory for experiment data (relative to data_directory)",
-        env="EXPERIMENTS_DIRECTORY"
+        description="Subdirectory for experiment data (relative to data_directory)"
     )
     conversations_directory: str = Field(
         default="conversations",
-        description="Subdirectory for conversation data (relative to data_directory)",
-        env="CONVERSATIONS_DIRECTORY"
+        description="Subdirectory for conversation data (relative to data_directory)"
     )
     
     # Experiment Configuration
     default_max_rounds: int = Field(
         default=8,
-        description="Default maximum rounds for agent conversations",
-        env="DEFAULT_MAX_ROUNDS"
+        description="Default maximum rounds for agent conversations"
     )
     default_temperature: float = Field(
         default=0.7,
-        description="Default temperature for LLM inference",
-        env="DEFAULT_TEMPERATURE"
+        description="Default temperature for LLM inference"
     )
     # Timeouts (in seconds)
     experiment_timeout_seconds: int = Field(
         default=60 * 60,  # 1 hour default
-        description="Maximum time in seconds an experiment may run before being marked errored",
-        env="EXPERIMENT_TIMEOUT_SECONDS"
+        description="Maximum time in seconds an experiment may run before being marked errored"
     )
     iteration_timeout_seconds: int = Field(
         default=5 * 60,  # 5 minutes default
-        description="Maximum time in seconds an iteration/conversation may run before being marked errored",
-        env="ITERATION_TIMEOUT_SECONDS"
+        description="Maximum time in seconds an iteration/conversation may run before being marked errored"
     )
     
     # Pull Configuration
     pull_progress_throttle_ms: int = Field(
         default=500,
-        description="Minimum time in milliseconds between progress updates",
-        env="PULL_PROGRESS_THROTTLE_MS"
+        description="Minimum time in milliseconds between progress updates"
     )
     pull_progress_percent_delta: float = Field(
         default=2.0,
-        description="Minimum percentage change to trigger progress update",
-        env="PULL_PROGRESS_PERCENT_DELTA"
+        description="Minimum percentage change to trigger progress update"
     )
     
     model_config = {

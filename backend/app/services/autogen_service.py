@@ -13,6 +13,7 @@ from ..storage import get_storage
 from ..utils.logging import get_logger
 
 storage = get_storage()
+logger = get_logger(__name__)
 
 
 class AutogenService:

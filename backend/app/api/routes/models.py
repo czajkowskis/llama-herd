@@ -7,7 +7,7 @@ import requests
 import json
 import logging
 import asyncio
-from datetime import datetime
+from datetime import datetime, UTC
 
 from ...core.config import settings
 from ...utils.logging import get_logger
@@ -123,7 +123,7 @@ async def pull_model(request: PullModelRequest) -> PullModelResponse:
 
         # Check if model is already being pulled. Allow retry if the existing task
         # appears inactive (no live thread or stale progress).
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         for task in pull_manager.get_all_pull_tasks().values():
             if task.model_name != request.name:
                 continue

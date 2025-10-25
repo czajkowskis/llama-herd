@@ -152,6 +152,15 @@ async def delete_experiment(experiment_id: str):
     try:
         set_experiment_context(experiment_id)
         
+        # Check if experiment exists first
+        experiment_data = get_experiment_with_fallback(experiment_id)
+        if not experiment_data:
+            raise NotFoundError(
+                f"Experiment not found",
+                resource_type="experiment",
+                resource_id=experiment_id
+            )
+        
         # Remove from active experiments if running
         ExperimentService.delete_experiment(experiment_id)
         
@@ -175,6 +184,8 @@ async def delete_experiment(experiment_id: str):
         
         return {"message": "Experiment deleted"}
         
+    except NotFoundError as e:
+        raise
     except Exception as e:
         log_with_context(
             logger,

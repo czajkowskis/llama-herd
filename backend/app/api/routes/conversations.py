@@ -6,6 +6,7 @@ from ...storage import get_storage
 from ...core.exceptions import NotFoundError, ConversationError, StorageError
 from ...utils.logging import get_logger, log_with_context
 from ...utils.case_converter import normalize_dict_to_snake, normalize_dict_to_camel
+from ...schemas.conversation import Conversation
 
 storage = get_storage()
 logger = get_logger(__name__)
@@ -15,11 +16,12 @@ router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
 
 @router.post("")
-async def save_conversation(conversation: dict):
+async def save_conversation(conversation: Conversation):
     """Save a conversation to persistent storage."""
     try:
-        # Normalize camelCase keys to snake_case
-        normalized_conversation = normalize_dict_to_snake(conversation, deep=True)
+        # Convert Pydantic model to dict and normalize camelCase keys to snake_case
+        conversation_dict = conversation.model_dump()
+        normalized_conversation = normalize_dict_to_snake(conversation_dict, deep=True)
         
         conversation_id = normalized_conversation.get('id', 'unknown')
         

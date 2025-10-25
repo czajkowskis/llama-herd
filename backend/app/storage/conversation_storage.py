@@ -2,7 +2,7 @@
 Conversation-specific storage operations.
 """
 import uuid
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
@@ -59,7 +59,7 @@ class ConversationStorage:
         conversation['experiment_id'] = experiment_id
         conversation['iteration'] = iteration
         conversation['title'] = title
-        conversation['created_at'] = datetime.utcnow().isoformat()
+        conversation['created_at'] = datetime.now(UTC).isoformat()
         
         # Use per-experiment lock for conversation writes too
         lock_path = self._get_experiment_lock_path(experiment_id)
@@ -115,7 +115,7 @@ class ConversationStorage:
         
         # Ensure imported_at is set
         if 'imported_at' not in conversation:
-            conversation['imported_at'] = datetime.utcnow().isoformat()
+            conversation['imported_at'] = datetime.now(UTC).isoformat()
         
         # Use deterministic filename based on id for atomic updates
         filename = f"{conversation_id}.json"

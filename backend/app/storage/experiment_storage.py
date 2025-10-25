@@ -2,7 +2,7 @@
 Experiment-specific storage operations.
 """
 import uuid
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import Dict, Any, Optional
 
@@ -51,7 +51,7 @@ class ExperimentStorage:
             experiment['id'] = experiment_id
 
         if 'created_at' not in experiment:
-            experiment['created_at'] = datetime.utcnow().isoformat()
+            experiment['created_at'] = datetime.now(UTC).isoformat()
 
         file_path = self._get_experiment_path(experiment_id)
         file_path.parent.mkdir(parents=True, exist_ok=True)

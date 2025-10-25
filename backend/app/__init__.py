@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import asyncio
+from contextlib import asynccontextmanager
 
 from .core.config import settings
 from .core.state import state_manager
@@ -25,10 +26,65 @@ from .utils.logging import get_logger, log_with_context
 logger = get_logger(__name__)
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifespan events."""
+    # Startup
+    loop = asyncio.get_running_loop()
+    state_manager.set_event_loop(loop)
+    # Start background services
+    try:
+        from .services.model_pull_manager import pull_manager
+        # Start the cleanup worker for the global pull manager
+        pull_manager.start()
+        logger.info("Model pull manager cleanup worker started")
+    except Exception:
+        logger.exception("Failed to start model pull manager cleanup worker")
+    # Start a small cache-warming task for Ollama tags/version so the UI
+    # can use cached data while Ollama is busy pulling large models.
+    try:
+        from .services import ollama_client
+
+        async def _warm_cache():
+            while True:
+                try:
+                    await ollama_client.get_tags()
+                    await ollama_client.get_version()
+                except Exception:
+                    # ignore - the client already logs details
+                    pass
+                await asyncio.sleep(getattr(settings, 'ollama_cache_warm_interval', 15))
+
+        app.state._ollama_cache_task = asyncio.create_task(_warm_cache())
+        logger.info('Started Ollama cache warming task')
+    except Exception:
+        logger.exception('Failed to start Ollama cache warming task')
+    logger.info("LLaMa-Herd backend started successfully")
+    
+    yield
+    
+    # Shutdown
+    # Stop background services cleanly
+    try:
+        from .services.model_pull_manager import pull_manager
+        pull_manager.shutdown()
+        logger.info("Model pull manager cleanup worker stopped")
+    except Exception:
+        logger.exception("Failed to stop model pull manager cleanup worker")
+    # Cancel cache warmup task
+    try:
+        task = getattr(app.state, '_ollama_cache_task', None)
+        if task:
+            task.cancel()
+    except Exception:
+        logger.exception('Failed to stop Ollama cache warming task')
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.api_title,
-        version=settings.api_version
+        version=settings.api_version,
+        lifespan=lifespan
     )
 
     app.add_middleware(
@@ -195,56 +251,6 @@ def create_app() -> FastAPI:
     app.include_router(ollama_proxy_router)
     app.include_router(ws_router)
     
-    @app.on_event("startup")
-    async def startup_event():
-        """Set up event loop reference for state manager."""
-        loop = asyncio.get_running_loop()
-        state_manager.set_event_loop(loop)
-        # Start background services
-        try:
-            from .services.model_pull_manager import pull_manager
-            # Start the cleanup worker for the global pull manager
-            pull_manager.start()
-            logger.info("Model pull manager cleanup worker started")
-        except Exception:
-            logger.exception("Failed to start model pull manager cleanup worker")
-        # Start a small cache-warming task for Ollama tags/version so the UI
-        # can use cached data while Ollama is busy pulling large models.
-        try:
-            from .services import ollama_client
-
-            async def _warm_cache():
-                while True:
-                    try:
-                        await ollama_client.get_tags()
-                        await ollama_client.get_version()
-                    except Exception:
-                        # ignore - the client already logs details
-                        pass
-                    await asyncio.sleep(getattr(settings, 'ollama_cache_warm_interval', 15))
-
-            app.state._ollama_cache_task = asyncio.create_task(_warm_cache())
-            logger.info('Started Ollama cache warming task')
-        except Exception:
-            logger.exception('Failed to start Ollama cache warming task')
-        logger.info("LLaMa-Herd backend started successfully")
-
-    @app.on_event("shutdown")
-    async def shutdown_event():
-        # Stop background services cleanly
-        try:
-            from .services.model_pull_manager import pull_manager
-            pull_manager.shutdown()
-            logger.info("Model pull manager cleanup worker stopped")
-        except Exception:
-            logger.exception("Failed to stop model pull manager cleanup worker")
-        # Cancel cache warmup task
-        try:
-            task = getattr(app.state, '_ollama_cache_task', None)
-            if task:
-                task.cancel()
-        except Exception:
-            logger.exception('Failed to stop Ollama cache warming task')
 
     return app
 
