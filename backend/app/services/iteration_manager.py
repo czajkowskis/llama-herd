@@ -22,7 +22,6 @@ class IterationManager:
     """Service for managing experiment iterations."""
     
     def __init__(self):
-        self.conversation_runner = ConversationRunner()
         self.notifier = ExperimentNotifier()
         self.storage = get_storage()
     
@@ -141,11 +140,14 @@ class IterationManager:
         from ..services.message_handler import MessageHandler
         message_handler = MessageHandler(experiment_id)
         
+        # Create a fresh ConversationRunner for each iteration to prevent agent state carryover
+        conversation_runner = ConversationRunner()
+        
         # Run conversation with timeout using asyncio.wait_for
         try:
             logger.info(f"[{experiment_id}] Starting conversation runner with {len(agents)} agents")
             await asyncio.wait_for(
-                self.conversation_runner.run_conversation(experiment_id, prompt, agents, message_handler),
+                conversation_runner.run_conversation(experiment_id, prompt, agents, message_handler),
                 timeout=settings.iteration_timeout_seconds
             )
             logger.info(f"[{experiment_id}] Iteration {iteration} completed successfully")

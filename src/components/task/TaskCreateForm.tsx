@@ -33,7 +33,7 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({ onTaskCreate }) 
     }
     
     const taskId = `task-${Date.now()}`;
-    onTaskCreate({ id: taskId, prompt: taskPrompt });
+    onTaskCreate({ id: taskId, prompt: taskPrompt, iterations: iterations });
     setTaskPrompt('');
     setIterations(1);
   };

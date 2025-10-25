@@ -14,6 +14,7 @@ export interface Task {
   prompt: string;
   datasetItems?: { task: string; answer: string }[];
   expectedSolutionRegex?: string;
+  iterations?: number;
 }
 
 export interface ConversationAgent {

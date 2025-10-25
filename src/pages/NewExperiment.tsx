@@ -88,7 +88,8 @@ export const NewExperiment: React.FC<NewExperimentProps> = ({ onExperimentStart 
       setExperimentError(null);
       
       try {
-        const response = await experimentService.startExperiment(currentTask, agents, 1);
+        const iterations = currentTask.iterations || 1;
+        const response = await experimentService.startExperiment(currentTask, agents, iterations);
         
         // Only update the title if user provided a custom experiment name
         // The backend already saves the experiment with a default title
@@ -104,7 +105,7 @@ export const NewExperiment: React.FC<NewExperimentProps> = ({ onExperimentStart 
                 agents: agents,
                 status: 'running',
                 createdAt: new Date().toISOString(),
-                iterations: 1,
+                iterations: currentTask.iterations || 1,
                 currentIteration: 0
               };
               await backendStorageService.saveExperiment(storedExperiment);
