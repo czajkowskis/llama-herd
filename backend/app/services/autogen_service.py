@@ -1,7 +1,7 @@
 """
 Service for managing AutoGen agent interactions and conversations.
 """
-import threading
+import asyncio
 from typing import List
 
 from ..schemas.agent import AgentModel
@@ -30,14 +30,14 @@ class AutogenService:
         pass
     
     
-    def run_experiment(
+    async def run_experiment(
         self,
         experiment_id: str,
         task: TaskModel,
         agents: List[AgentModel]
     ):
         """Run a complete experiment with multiple iterations."""
-        self.iteration_manager.run_experiment(experiment_id, task, agents)
+        await self.iteration_manager.run_experiment(experiment_id, task, agents)
     
     
     def start_experiment_background(
@@ -46,24 +46,34 @@ class AutogenService:
         task: TaskModel,
         agents: List[AgentModel]
     ) -> None:
-        """Start an experiment in a background thread."""
+        """Start an experiment in a background task."""
         try:
-            logger.info(f"Starting experiment {experiment_id} in background thread")
-            thread = threading.Thread(
-                target=self.run_experiment,
-                args=(experiment_id, task, agents),
-                daemon=True
+            logger.info(f"Starting experiment {experiment_id} in background task")
+            
+            # Get the event loop
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                # No event loop running, create one
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            
+            # Create a task to run the experiment
+            task_obj = loop.create_task(
+                self.run_experiment(experiment_id, task, agents)
             )
-            thread.start()
-            logger.info(f"Background thread started for experiment {experiment_id}")
+            
+            logger.info(f"Background task created for experiment {experiment_id}")
 
-            # Start a watchdog thread to enforce experiment-level timeout
-            def _watchdog():
+            # Start a watchdog task to enforce experiment-level timeout
+            async def _watchdog():
                 try:
                     timeout = settings.experiment_timeout_seconds
                     logger.info(f"Watchdog for {experiment_id} will monitor for {timeout}s")
-                    thread.join(timeout=timeout)
-                    if thread.is_alive():
+                    
+                    try:
+                        await asyncio.wait_for(task_obj, timeout=timeout)
+                    except asyncio.TimeoutError:
                         logger.error(f"Experiment {experiment_id} exceeded timeout of {timeout}s; marking as error")
                         state_manager.update_experiment_status(experiment_id, 'error', error='experiment_timeout')
                         from datetime import datetime
@@ -84,13 +94,17 @@ class AutogenService:
                             state_manager.put_message_threadsafe(experiment_id, {"type": "status", "data": data})
                         except Exception:
                             pass
+                        
+                        # Cancel the task
+                        task_obj.cancel()
                 except Exception as e:
                     logger.error(f"Watchdog for {experiment_id} failed: {str(e)}")
 
-            watchdog_thread = threading.Thread(target=_watchdog, daemon=True)
-            watchdog_thread.start()
+            # Create watchdog task
+            watchdog_task = loop.create_task(_watchdog())
+            
         except Exception as e:
-            logger.error(f"Error starting background thread for experiment {experiment_id}: {str(e)}")
+            logger.error(f"Error starting background task for experiment {experiment_id}: {str(e)}")
             raise
 
 

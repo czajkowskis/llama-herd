@@ -2,6 +2,9 @@
 Service for managing AI agents.
 """
 from typing import List, Dict, Any
+from autogen_core.models import ChatCompletionClient, ModelInfo
+from autogen_ext.models.openai import OpenAIChatCompletionClient
+
 from ..schemas.agent import AgentModel
 from ..core.exceptions import AgentError
 from ..core.config import settings
@@ -29,21 +32,44 @@ class AgentService:
         return True
     
     @staticmethod
-    def create_agent_config(agent: AgentModel) -> Dict[str, Any]:
-        """Create agent configuration for LLM."""
-        config_list = [{
-            "model": agent.model,
+    def create_agent_config(agent: AgentModel) -> ChatCompletionClient:
+        """Create a model client for the agent using Ollama."""
+        # Create model info for Ollama models (since they're not standard OpenAI models)
+        # Provide all required fields for ModelInfo
+        model_info = ModelInfo(
+            model_id=agent.model,
+            provider="ollama",
+            family="ollama",  # Model family
+            context_length=4096,  # Default context length for most Ollama models
+            supports_vision=False,
+            vision=False,  # Not a vision model
+            function_calling=False,  # Ollama models don't support function calling by default
+            json_output=False,  # Not a JSON mode model
+            stream=True,  # Support streaming
+            multimodal=False,  # Not a multimodal model
+            pricing_per_1m_input_tokens=0,  # Free (local)
+            pricing_per_1m_output_tokens=0,  # Free (local)
+            structured_output=False  # Not a structured output model
+        )
+        
+        # Create client configuration for Ollama
+        config = {
             "base_url": settings.ollama_base_url,
             "api_key": settings.ollama_api_key,
-        }]
-        
-        llm_config: Dict[str, Any] = {
-            "config_list": config_list,
-            "temperature": agent.temperature if agent.temperature is not None else settings.default_temperature,
-            "timeout": settings.ollama_timeout,
+            "model": agent.model,
+            "model_info": model_info,
         }
         
-        return llm_config
+        model_client = OpenAIChatCompletionClient(**config)
+        
+        return model_client
+    
+    @staticmethod
+    def get_model_args(agent: AgentModel) -> Dict[str, Any]:
+        """Get model arguments (temperature, etc.) for agent."""
+        return {
+            "temperature": agent.temperature if agent.temperature is not None else settings.default_temperature,
+        }
     
     @staticmethod
     def get_agent_summary(agent: AgentModel) -> Dict[str, Any]:

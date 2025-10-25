@@ -80,7 +80,7 @@ async def start_experiment(request: ExperimentRequest):
 
 
 @router.get("/{experiment_id}")
-async def get_experiment(experiment_id: str) -> ExperimentStatusResponse:
+async def get_experiment(experiment_id: str):
     """Get experiment details by ID."""
     try:
         # Set experiment context for logging

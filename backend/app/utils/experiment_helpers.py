@@ -42,7 +42,7 @@ def get_experiment_with_fallback(experiment_id: str) -> Optional[Dict[str, Any]]
     storage = get_storage()
     stored_experiment = storage.get_experiment(experiment_id)
     if stored_experiment:
-        # Get conversations for this experiment
+                    # Get conversations for this experiment
         conversations = storage.get_experiment_conversations(experiment_id)
         
         return {
@@ -139,7 +139,7 @@ def get_experiment_list_with_storage() -> list:
                     "experiment_id": stored_exp['id'],
                     "title": stored_exp['title'],
                     "status": stored_exp.get('status', 'unknown'),
-                    "created_at": stored_exp['created_at'],
+                    "created_at": stored_exp.get('created_at'),
                     "agents": full_experiment.get('agents', []),
                     "agent_count": len(full_experiment.get('agents', [])),
                     "message_count": 0  # We don't store message count in persistent storage
@@ -150,7 +150,7 @@ def get_experiment_list_with_storage() -> list:
                     "experiment_id": stored_exp['id'],
                     "title": stored_exp['title'],
                     "status": stored_exp.get('status', 'unknown'),
-                    "created_at": stored_exp['created_at'],
+                    "created_at": stored_exp.get('created_at'),
                     "agents": [],
                     "agent_count": 0,
                     "message_count": 0

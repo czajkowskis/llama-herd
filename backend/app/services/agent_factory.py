@@ -2,8 +2,9 @@
 Factory for creating AutoGen agents.
 """
 from typing import List
-import autogen
-from autogen import AssistantAgent, UserProxyAgent
+import asyncio
+from autogen_agentchat.agents import AssistantAgent
+from autogen_core.models import ChatCompletionClient
 
 from ..schemas.agent import AgentModel
 from ..services.agent_service import AgentService
@@ -17,7 +18,7 @@ class AgentFactory:
     """Factory for creating AutoGen agents."""
     
     @staticmethod
-    def create_autogen_agents(
+    async def create_autogen_agents(
         agents: List[AgentModel],
         message_handler: 'MessageHandler'
     ) -> List[AssistantAgent]:
@@ -28,12 +29,9 @@ class AgentFactory:
             # Validate agent configuration
             AgentService.validate_agent_config(agent_config)
             
-            # Create agent configuration
-            llm_config = AgentService.create_agent_config(agent_config)
-            
-            # Create standard agent
-            agent = AgentFactory._create_standard_agent(
-                agent_config, llm_config, message_handler
+            # Create agent
+            agent = await AgentFactory._create_standard_agent(
+                agent_config, message_handler
             )
             
             autogen_agents.append(agent)
@@ -42,67 +40,28 @@ class AgentFactory:
         return autogen_agents
     
     @staticmethod
-    def _create_standard_agent(
+    async def _create_standard_agent(
         agent_config: AgentModel,
-        llm_config: dict,
         message_handler: 'MessageHandler'
     ) -> AssistantAgent:
         """Create a standard AutoGen agent."""
         
-        # Create standard agent
+        # Get model client
+        model_client = AgentService.create_agent_config(agent_config)
+        
+        # Sanitize agent name to be a valid Python identifier (replace spaces with underscores)
+        agent_name = agent_config.name.replace(" ", "_")
+        
+        # Create agent with new API
+        # The model is specified via model_client, and system message contains the agent's prompt
         agent = AssistantAgent(
-            name=agent_config.name,
+            name=agent_name,
+            model_client=model_client,
             system_message=agent_config.prompt,
-            llm_config=llm_config,
         )
         
-        # Set additional properties
-        agent.max_consecutive_auto_reply = 1  # Reduced to prevent loops
-        agent.can_execute_code = False
-        
-        # Override the send method to log messages
-        original_send = agent.send
-        def logged_send(message, recipient, request_reply=None, silent=False):
-            if not silent and message:
-                # Log the outgoing message
-                message_handler.add_message(
-                    agent_name=agent_config.name,
-                    content=str(message),
-                    model=agent_config.model
-                )
-            return original_send(message, recipient, request_reply, silent)
-        
-        agent.send = logged_send
+        # Subscribe to messages from this agent
+        # The new API uses event-driven messaging
+        # We'll handle message logging through the team's event system
         
         return agent
-    
-    @staticmethod
-    def create_user_proxy(primary_agent: AgentModel, message_handler: 'MessageHandler') -> UserProxyAgent:
-        """Create a user proxy agent with logging capabilities."""
-        llm_config = AgentService.create_agent_config(primary_agent)
-        
-        # Create standard UserProxyAgent
-        user_proxy = UserProxyAgent(
-            name="user_proxy",
-            human_input_mode="NEVER",
-            max_consecutive_auto_reply=0,
-            llm_config=llm_config,
-            code_execution_config=False,
-            is_termination_msg=lambda msg: False,
-        )
-        
-        # Override the send method to log messages
-        original_send = user_proxy.send
-        def logged_send(message, recipient, request_reply=None, silent=False):
-            if not silent and message:
-                # Log the user proxy message
-                message_handler.add_message(
-                    agent_name="User",
-                    content=str(message),
-                    model="User"
-                )
-            return original_send(message, recipient, request_reply, silent)
-        
-        user_proxy.send = logged_send
-        
-        return user_proxy

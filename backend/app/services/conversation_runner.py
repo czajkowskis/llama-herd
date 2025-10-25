@@ -1,10 +1,11 @@
 """
 Service for running AutoGen conversations.
 """
-import time
+import asyncio
 from typing import List
-import autogen
-from autogen import AssistantAgent, GroupChat, GroupChatManager
+from autogen_agentchat.agents import AssistantAgent
+from autogen_agentchat.teams import RoundRobinGroupChat
+from autogen_agentchat.messages import TextMessage
 
 from ..schemas.agent import AgentModel
 from ..core.config import settings
@@ -22,7 +23,7 @@ class ConversationRunner:
     def __init__(self):
         self.agent_factory = AgentFactory()
     
-    def run_conversation(
+    async def run_conversation(
         self,
         experiment_id: str,
         prompt: str,
@@ -30,14 +31,12 @@ class ConversationRunner:
         message_handler: 'MessageHandler'
     ):
         """Run a single conversation with the given agents."""
+        logger.info(f"[{experiment_id}] Starting conversation runner")
+        logger.info(f"[{experiment_id}] Prompt: {prompt[:100]}...")
+        logger.info(f"[{experiment_id}] Number of agents: {len(agents)}")
+        
         final_sent = False
         try:
-            # Create AutoGen agents
-            autogen_agents = self.agent_factory.create_autogen_agents(agents, message_handler)
-            
-            # Create user proxy
-            user_proxy = self.agent_factory.create_user_proxy(agents[0], message_handler)
-            
             # Add initial system message
             message_handler.add_message(
                 agent_name="System",
@@ -45,56 +44,88 @@ class ConversationRunner:
                 model="System"
             )
             
+            # Create AutoGen agents
+            logger.info(f"[{experiment_id}] Creating autogen agents...")
+            autogen_agents = await self.agent_factory.create_autogen_agents(agents, message_handler)
+            logger.info(f"[{experiment_id}] Created {len(autogen_agents)} autogen agents")
+            
             # Handle conversation based on number of agents
             if len(agents) == 1:
                 # Single agent: use direct communication
-                logger.info("Single agent detected, using direct communication")
+                logger.info(f"[{experiment_id}] Single agent detected, using direct agent.run()")
                 single_agent = autogen_agents[0]
                 
-                # Start conversation with single agent
-                user_proxy.initiate_chat(single_agent, message=prompt)
+                # Create initial message
+                initial_message = TextMessage(content=prompt, source="user")
+                logger.info(f"[{experiment_id}] Running single agent...")
                 
-                # Wait for conversation to complete
-                time.sleep(5)  # Give time for the conversation to develop
+                # Run the agent (new API uses keyword argument task=)
+                result = await single_agent.run(task=[initial_message])
+                logger.info(f"[{experiment_id}] Agent run completed")
                 
-                # Get message count from state manager
-                from ..core.state import state_manager
-                experiment = state_manager.get_experiment(experiment_id)
-                message_count = len(experiment.messages) if experiment else 0
-                logger.info(f"Single agent conversation completed with {message_count} messages")
+                # Log the result
+                if result and hasattr(result, 'messages'):
+                    logger.info(f"[{experiment_id}] Processing {len(result.messages)} result messages")
+                    for msg in result.messages:
+                        if hasattr(msg, 'content') and msg.content:
+                            message_handler.add_message(
+                                agent_name=single_agent.name,
+                                content=str(msg.content),
+                                model=agents[0].model
+                            )
+                else:
+                    logger.warning(f"[{experiment_id}] Agent run returned no messages")
+                
+                logger.info(f"[{experiment_id}] Single agent conversation completed")
             else:
-                # Multiple agents: use group chat
-                logger.info(f"Multiple agents detected ({len(agents)}), using group chat")
+                # Multiple agents: use group chat (RoundRobinGroupChat)
+                logger.info(f"Multiple agents detected ({len(agents)}), using RoundRobinGroupChat")
                 
-                # Add user proxy to group chat for initiation
-                group_chat_with_proxy = self._create_group_chat(autogen_agents + [user_proxy])
+                # Determine max rounds based on settings
+                rounds_target = max(settings.default_max_rounds, len(agents) * 6)
                 
-                # Create manager with user proxy included
-                manager = GroupChatManager(
-                    groupchat=group_chat_with_proxy,
-                    llm_config=AgentService.create_agent_config(agents[0])
+                # Create team with round-robin selection
+                team = RoundRobinGroupChat(
+                    participants=autogen_agents,
+                    max_rounds=rounds_target,
                 )
                 
-                # Initiate chat with the group
-                user_proxy.initiate_chat(
-                    manager,
-                    message=prompt
-                )
+                # Create initial message
+                initial_message = TextMessage(content=prompt, source="user")
                 
-                # Wait for conversation to complete
-                time.sleep(5)  # Give time for the conversation to develop
+                # Run the team (new API uses keyword argument task=)
+                result = await team.run(task=[initial_message])
                 
-                # Get message count from state manager
-                from ..core.state import state_manager
-                experiment = state_manager.get_experiment(experiment_id)
-                message_count = len(experiment.messages) if experiment else 0
-                logger.info(f"Group chat conversation completed with {message_count} messages")
+                # Log messages from the result
+                if result and hasattr(result, 'messages'):
+                    for msg in result.messages:
+                        if hasattr(msg, 'content') and msg.content:
+                            # Try to find which agent sent this message
+                            agent_name = getattr(msg, 'name', 'Agent')
+                            model = 'Unknown'
+                            for agent in agents:
+                                if agent.name == agent_name:
+                                    model = agent.model
+                                    break
+                            
+                            message_handler.add_message(
+                                agent_name=agent_name,
+                                content=str(msg.content),
+                                model=model
+                            )
+                
+                logger.info(f"Group chat conversation completed")
             
         except Exception as e:
-            logger.error(f"Autogen conversation error: {str(e)}")
+            logger.error(f"[{experiment_id}] Autogen conversation error: {str(e)}")
+            logger.error(f"[{experiment_id}] Error type: {type(e).__name__}")
+            import traceback
+            logger.error(f"[{experiment_id}] Traceback: {traceback.format_exc()}")
+            
             # Emit an error status for this conversation so listeners are aware
             try:
-                from ..services.experiment_notifier import ExperimentNotifier
+                from ..core.state import state_manager
+                from datetime import datetime
                 data = {
                     "experiment_id": experiment_id,
                     "status": "error",
@@ -106,23 +137,10 @@ class ConversationRunner:
                 # Using close_connection False here because higher-level run_experiment will decide
                 state_manager.put_message_threadsafe(experiment_id, {"type": "status", "data": data})
                 final_sent = True
-            except Exception:
-                pass
+            except Exception as inner_e:
+                logger.error(f"[{experiment_id}] Failed to emit error status: {str(inner_e)}")
             raise
         finally:
             # If we didn't send a final conversation-level message, do nothing; run_experiment will handle finalization
             if final_sent:
                 logger.info(f"run_conversation emitted a final status for {experiment_id}")
-    
-    def _create_group_chat(self, agents: List[AssistantAgent]) -> GroupChat:
-        """Create a group chat configuration."""
-        rounds_target = max(settings.default_max_rounds, len(agents) * 6)
-        
-        return GroupChat(
-            agents=agents,
-            messages=[],
-            max_round=rounds_target,
-            speaker_selection_method="round_robin",
-            allow_repeat_speaker=False,
-            send_introductions=False,
-        )

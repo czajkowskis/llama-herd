@@ -79,11 +79,27 @@ class ExperimentStorage:
         """Update the experiment index."""
         index = self.index.read_index()
         
+        # Try to find existing entry to preserve created_at if updating
+        existing_entry = None
+        for exp in index:
+            if exp['id'] == experiment_id:
+                existing_entry = exp
+                break
+        
+        # Use existing created_at if available, otherwise from experiment, otherwise generate new
+        created_at = None
+        if existing_entry and existing_entry.get('created_at'):
+            created_at = existing_entry['created_at']
+        elif experiment.get('created_at'):
+            created_at = experiment['created_at']
+        else:
+            created_at = datetime.now(UTC).isoformat()
+        
         # Create a slim version of the experiment for the index
         experiment_metadata = {
             'id': experiment.get('id'),
             'title': experiment.get('title'),
-            'created_at': experiment.get('created_at'),
+            'created_at': created_at,
             'status': experiment.get('status'),
         }
 
@@ -127,7 +143,19 @@ class ExperimentStorage:
                 if not experiment:
                     return False
                 
+                # Preserve created_at from existing experiment - never overwrite it
+                existing_created_at = experiment.get('created_at')
+                if not existing_created_at:
+                    existing_created_at = datetime.now(UTC).isoformat()
+                
                 experiment.update(updates)
+                # Always preserve the original created_at
+                experiment['created_at'] = existing_created_at
+                
+                # Ensure created_at is set in the experiment itself
+                if 'created_at' not in experiment or not experiment['created_at']:
+                    experiment['created_at'] = datetime.now(UTC).isoformat()
+                
                 file_path = self._get_experiment_path(experiment_id)
                 # Call internal method that doesn't try to acquire lock again
                 return self._save_experiment_internal(experiment_id, experiment, file_path)

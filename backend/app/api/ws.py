@@ -3,8 +3,9 @@ import asyncio
 import json
 
 from ..core.state import state_manager
+from ..utils.logging import get_logger
 
-
+logger = get_logger(__name__)
 router = APIRouter()
 
 
@@ -25,11 +26,28 @@ async def websocket_endpoint(websocket: WebSocket, experiment_id: str):
             "data": {"status": experiment.status}
         }))
 
-        # Get message queue for this experiment
-        message_queue = state_manager.get_message_queue(experiment_id)
-        if not message_queue:
-            await websocket.close(code=4004, reason="Experiment message queue not found")
-            return
+        # Create an async queue for this WebSocket connection
+        # We'll bridge messages from the thread-safe queue to this async queue
+        message_queue = asyncio.Queue()
+        
+        # Background task to bridge messages from thread-safe queue to async queue
+        async def bridge_messages():
+            """Bridge messages from thread-safe queue to async queue."""
+            while True:
+                try:
+                    # Poll the thread-safe queue periodically
+                    msg = state_manager.get_message(experiment_id, timeout=0.1)
+                    if msg:
+                        await message_queue.put(msg)
+                    else:
+                        # Short sleep to avoid busy waiting
+                        await asyncio.sleep(0.05)
+                except Exception as e:
+                    logger.error(f"Error bridging messages for {experiment_id}: {e}")
+                    break
+        
+        # Start the bridge task
+        bridge_task = asyncio.create_task(bridge_messages())
 
         # Listen for messages with proper async handling
         while True:
@@ -63,9 +81,16 @@ async def websocket_endpoint(websocket: WebSocket, experiment_id: str):
         except Exception:
             pass
     finally:
-        # Ensure proper cleanup
+        # Cancel the bridge task
+        bridge_task.cancel()
         try:
-            await websocket.close()
+            await bridge_task
+        except asyncio.CancelledError:
+            pass
+        
+        # Ensure proper cleanup with normal close code (1000)
+        try:
+            await websocket.close(code=1000, reason="Experiment completed")
         except Exception:
             pass
 
