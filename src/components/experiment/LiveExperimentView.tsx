@@ -39,7 +39,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
   const [maxReconnectAttempts, setMaxReconnectAttempts] = useState<number | undefined>(undefined);
   const [serverError, setServerError] = useState<string | null>(null);
   const [debugMessages, setDebugMessages] = useState<DebugMessage[]>([]);
-  const [agentInfos, setAgentInfos] = useState<{ name: string; model: string }[]>([]);
+  // Removed agentInfos state as it's no longer used
   const [isViewingLive, setIsViewingLive] = useState<boolean>(true);
   const [showExportPanel, setShowExportPanel] = useState(false);
   const [showRawJSONModal, setShowRawJSONModal] = useState(false);
@@ -171,7 +171,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
               backendStorageService.saveExperiment({
                 id: experimentId,
                 title: `Experiment: ${liveConversation.title}`,
-                task: { id: '', prompt: liveConversation.title, iterations: 1, datasetItems: [] },
+                task: { id: '', prompt: liveConversation.title, datasetItems: [] },
                 agents: liveConversation.agents.map(agent => ({
                   id: agent.id,
                   name: agent.name,
@@ -227,11 +227,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
             }
           }
           break;
-        case 'agents':
-          if (Array.isArray(message.data)) {
-            setAgentInfos(message.data as { name: string; model: string }[]);
-          }
-          break;
+        // Note: 'agents' message type is not sent by backend, so this case is removed
       }
     };
 
@@ -503,12 +499,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
           }}
         />
 
-        {/* Agents debug info */}
-        {agentInfos.length > 0 && (
-          <div className="mb-4 text-xs text-gray-400">
-            Agents: {agentInfos.map((a) => `${a.name} (${a.model})`).join(', ')}
-          </div>
-        )}
+        {/* Agents debug info removed - no longer available */}
 
         {/* Debug Panel - only show in live view */}
         {debugMessages.length > 0 && isViewingLive && (

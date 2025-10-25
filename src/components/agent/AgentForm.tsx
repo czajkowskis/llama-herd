@@ -6,6 +6,7 @@ import { ColorPicker } from '../ui/ColorPicker';
 import { ErrorDisplay } from '../common/ErrorDisplay';
 import { ErrorPopup } from '../ui/ErrorPopup';
 import { Agent } from '../../types/index.d';
+import { validateTemperature, validateAgentName, validateAgentPrompt } from '../../utils/validation';
 
 // Predefined colors from ColorPicker component
 const PREDEFINED_COLORS = [
@@ -57,6 +58,8 @@ export const AgentForm: React.FC<AgentFormProps> = ({
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
   const [colorError, setColorError] = useState<string>('');
   const [nameError, setNameError] = useState<string>('');
+  const [temperatureError, setTemperatureError] = useState<string>('');
+  const [promptError, setPromptError] = useState<string>('');
   const [showErrorPopup, setShowErrorPopup] = useState<boolean>(false);
   const [errorPopupMessage, setErrorPopupMessage] = useState<string>('');
 
@@ -79,6 +82,8 @@ export const AgentForm: React.FC<AgentFormProps> = ({
     }
     setColorError('');
     setNameError('');
+    setTemperatureError('');
+    setPromptError('');
   }, [editingAgent, agents]);
 
   // Initialize color when component mounts or agents change
@@ -89,17 +94,33 @@ export const AgentForm: React.FC<AgentFormProps> = ({
   }, [agents, editingAgent, agentColor]);
 
   const handleSave = () => {
-    // Validate required fields
-    if (!agentName.trim()) {
-      setErrorPopupMessage('Please enter an agent name.');
-      setShowErrorPopup(true);
+    // Clear previous errors
+    setColorError('');
+    setNameError('');
+    setTemperatureError('');
+    setPromptError('');
+
+    // Validate agent name
+    const nameValidation = validateAgentName(agentName);
+    if (!nameValidation.isValid) {
+      setNameError(nameValidation.error || 'Invalid agent name');
       return;
     }
-    if (!agentPrompt.trim()) {
-      setErrorPopupMessage('Please enter an agent prompt.');
-      setShowErrorPopup(true);
+
+    // Validate agent prompt
+    const promptValidation = validateAgentPrompt(agentPrompt);
+    if (!promptValidation.isValid) {
+      setPromptError(promptValidation.error || 'Invalid agent prompt');
       return;
     }
+
+    // Validate temperature
+    const temperatureValidation = validateTemperature(agentTemperature);
+    if (!temperatureValidation.isValid) {
+      setTemperatureError(temperatureValidation.error || 'Invalid temperature');
+      return;
+    }
+
     if (!agentModel) {
       setErrorPopupMessage('Please select a model.');
       setShowErrorPopup(true);
@@ -242,7 +263,12 @@ export const AgentForm: React.FC<AgentFormProps> = ({
         </div>
       </div>
 
-      <ErrorDisplay colorError={colorError} nameError={nameError} />
+      <ErrorDisplay 
+        colorError={colorError} 
+        nameError={nameError} 
+        temperatureError={temperatureError}
+        promptError={promptError}
+      />
 
       <h3 className="text-lg font-medium" style={{ color: 'var(--color-text-secondary)' }}>Temperature</h3>
       <div className="space-y-2">

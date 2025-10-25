@@ -52,3 +52,19 @@ class ExperimentResponse(BaseModel):
     completed_at: Optional[str] = None
     error: Optional[str] = None
 
+
+class ExperimentStatusResponse(BaseModel):
+    """Experiment status response matching frontend expectations."""
+    experiment_id: str
+    status: str
+    conversation: Optional[Conversation] = None  # Live conversation for running experiments
+    conversations: List[Conversation] = []  # Completed conversations
+    iterations: int
+    current_iteration: int
+    error: Optional[str] = None
+    # Additional fields that frontend might need
+    task: Optional[TaskModel] = None
+    agents: Optional[List[AgentModel]] = None
+    created_at: Optional[str] = None
+    completed_at: Optional[str] = None
+

@@ -26,4 +26,6 @@ class Conversation(BaseModel):
     createdAt: str
     experiment_id: Optional[str] = None
     iteration: Optional[int] = None
+    source: Optional[str] = None  # 'import' or 'experiment'
+    importedAt: Optional[str] = None  # When conversation was imported
 

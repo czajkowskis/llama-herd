@@ -12,7 +12,6 @@ export interface Agent {
 export interface Task {
   id: string;
   prompt: string;
-  iterations?: number;
   datasetItems?: { task: string; answer: string }[];
   expectedSolutionRegex?: string;
 }
@@ -40,6 +39,7 @@ export interface Conversation {
   messages: Message[];
   createdAt: string;
   experiment_id?: string;
+  iteration?: number;
 }
 
 export interface ExperimentStatusResponse {

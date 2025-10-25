@@ -31,7 +31,6 @@ export const TaskImportForm: React.FC<TaskImportFormProps> = ({ onTaskImport }) 
               const newTask: Task = {
                 id: taskId,
                 prompt: `Imported task with ${parsedTask.length} items.`,
-                iterations: parsedTask.length,
                 datasetItems: parsedTask,
                 expectedSolutionRegex: expectedSolutionRegex || undefined,
               };

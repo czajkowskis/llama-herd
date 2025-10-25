@@ -3,6 +3,7 @@ import { Button } from '../ui/Button';
 import { Textarea } from '../ui/Textarea';
 import { ErrorPopup } from '../ui/ErrorPopup';
 import { Task } from '../../types/index.d';
+import { validateTaskPrompt, validateIterations } from '../../utils/validation';
 
 interface TaskCreateFormProps {
   onTaskCreate: (task: Task) => void;
@@ -12,15 +13,27 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({ onTaskCreate }) 
   const [taskPrompt, setTaskPrompt] = useState<string>('');
   const [iterations, setIterations] = useState<number>(1);
   const [showErrorPopup, setShowErrorPopup] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   const handleCreateTask = () => {
-    if (!taskPrompt.trim()) {
+    // Validate task prompt
+    const promptValidation = validateTaskPrompt(taskPrompt);
+    if (!promptValidation.isValid) {
+      setErrorMessage(promptValidation.error || 'Invalid task prompt');
+      setShowErrorPopup(true);
+      return;
+    }
+
+    // Validate iterations
+    const iterationsValidation = validateIterations(iterations);
+    if (!iterationsValidation.isValid) {
+      setErrorMessage(iterationsValidation.error || 'Invalid iterations');
       setShowErrorPopup(true);
       return;
     }
     
     const taskId = `task-${Date.now()}`;
-    onTaskCreate({ id: taskId, prompt: taskPrompt, iterations });
+    onTaskCreate({ id: taskId, prompt: taskPrompt });
     setTaskPrompt('');
     setIterations(1);
   };
@@ -71,7 +84,7 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({ onTaskCreate }) 
       <ErrorPopup
         isOpen={showErrorPopup}
         title="Validation Error"
-        message="Please enter a task prompt."
+        message={errorMessage}
         onClose={() => setShowErrorPopup(false)}
         type="error"
       />

@@ -57,6 +57,22 @@ export const Settings: React.FC = () => {
     setEndpointError(err);
   }, [endpoint]);
 
+  // Persist endpoint automatically when it changes and is valid so the setting
+  // survives browser restarts even if the user forgets to click "Save".
+  useEffect(() => {
+    if (!endpointError && endpoint) {
+      try {
+        localStorage.setItem(STORAGE_KEY_BASE, endpoint.replace(/\/$/, ''));
+      } catch (e) {
+        // Ignore storage errors (e.g., quota exceeded or unavailable)
+        // and surface no UI disruption; Save button still provides explicit feedback.
+        // Keep a console warning for diagnostics.
+        // eslint-disable-next-line no-console
+        console.warn('Failed to persist Ollama endpoint to localStorage', e);
+      }
+    }
+  }, [endpoint, endpointError]);
+
   // Update connection status based on testing state
   useEffect(() => {
     if (isTesting) {
