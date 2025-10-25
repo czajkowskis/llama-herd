@@ -3,7 +3,6 @@ from fastapi.responses import StreamingResponse
 from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
-import requests
 import json
 import logging
 import asyncio
@@ -12,6 +11,7 @@ from datetime import datetime
 from ...core.config import settings
 from ...utils.logging import get_logger
 from ...services.model_pull_manager import pull_manager
+from ...services.ollama_client import get_tags as oc_get_tags, get_version as oc_get_version, delete_model as oc_delete_model, ping as oc_ping
 
 logger = get_logger(__name__)
 
@@ -54,49 +54,36 @@ class ModelOperationResponse(BaseModel):
     success: bool
     message: str
 
-def check_ollama_connection():
-    """Check if Ollama is reachable."""
+async def check_ollama_connection():
+    """Check if Ollama is reachable using async client (fast)."""
     try:
-        response = requests.get(f"{OLLAMA_URL}/api/version", timeout=5)
-        return response.status_code == 200
-    except:
+        return await oc_ping()
+    except Exception:
         return False
 
 @router.get("/list")
 async def list_models():
     """List all installed models."""
     try:
-        if not check_ollama_connection():
+        if not await check_ollama_connection():
             raise HTTPException(status_code=503, detail="Ollama service is not available")
 
-        response = requests.get(f"{OLLAMA_URL}/api/tags", timeout=30)
-        if response.status_code != 200:
-            error_detail = response.text or "Failed to fetch models from Ollama"
-            # Try to provide more specific error messages
-            if "connection refused" in error_detail.lower():
-                error_detail = "Cannot connect to Ollama. Please ensure Ollama is running and accessible."
-            elif "no such file" in error_detail.lower():
-                error_detail = "Ollama service not found. Please install and start Ollama."
-            raise HTTPException(status_code=response.status_code, detail=error_detail)
-
-        data = response.json()
-        return ListModelsResponse(models=data.get("models", []))
+        # Use async client with short timeout and caching to avoid blocking the app
+        models = await oc_get_tags()
+        return ListModelsResponse(models=models)
 
     except HTTPException:
-        # Re-raise HTTPExceptions (they're already properly formatted)
         raise
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error connecting to Ollama: {e}")
-        raise HTTPException(status_code=503, detail="Failed to connect to Ollama service")
     except Exception as e:
         logger.error(f"Error listing models: {e}")
+        # If the async client returned stale cache it would have succeeded above
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.post("/pull")
 async def pull_model(request: PullModelRequest) -> PullModelResponse:
     """Start pulling a model in the background and return task ID."""
     try:
-        if not check_ollama_connection():
+        if not await check_ollama_connection():
             raise HTTPException(status_code=503, detail="Ollama service is not available")
 
         # Check if model is already being pulled. Allow retry if the existing task
@@ -155,9 +142,6 @@ async def pull_model(request: PullModelRequest) -> PullModelResponse:
     except HTTPException:
         # Re-raise HTTPExceptions (they're already properly formatted)
         raise
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error pulling model {request.name}: {e}")
-        raise HTTPException(status_code=503, detail=f"Failed to pull model: {str(e)}")
     except Exception as e:
         logger.error(f"Unexpected error pulling model {request.name}: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -349,18 +333,13 @@ async def websocket_pull_progress(websocket: WebSocket, task_id: str):
 async def get_version():
     """Get Ollama version information."""
     try:
-        if not check_ollama_connection():
+        if not await check_ollama_connection():
             raise HTTPException(status_code=503, detail="Ollama service is not available")
 
-        response = requests.get(f"{OLLAMA_URL}/api/version", timeout=10)
-        if response.status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail="Failed to get version")
+        return await oc_get_version()
 
-        return response.json()
-
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error getting Ollama version: {e}")
-        raise HTTPException(status_code=503, detail="Failed to connect to Ollama service")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Unexpected error getting version: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -369,28 +348,26 @@ async def get_version():
 async def delete_model(model_name: str) -> ModelOperationResponse:
     """Delete a model from Ollama."""
     try:
-        if not check_ollama_connection():
+        # Verify connectivity
+        if not await check_ollama_connection():
             raise HTTPException(status_code=503, detail="Ollama service is not available")
 
-        # Check if model exists
-        list_response = requests.get(f"{OLLAMA_URL}/api/tags", timeout=30)
-        if list_response.status_code != 200:
+        try:
+            models_data = await oc_get_tags()
+        except Exception as e:
+            logger.error(f"Failed to verify model existence: {e}")
             raise HTTPException(status_code=500, detail="Failed to verify model existence")
 
-        models_data = list_response.json()
-        model_exists = any(model['name'] == model_name for model in models_data.get('models', []))
+        model_exists = any(m.get('name') == model_name or m.get('tag') == model_name for m in models_data)
         if not model_exists:
             raise HTTPException(status_code=404, detail=f"Model {model_name} not found")
 
-        # Delete the model
-        delete_response = requests.delete(f"{OLLAMA_URL}/api/delete",
-                                        json={"name": model_name}, timeout=60)
-
-        if delete_response.status_code not in [200, 204]:
-            error_msg = delete_response.text or "Failed to delete model"
-            raise HTTPException(status_code=delete_response.status_code, detail=error_msg)
-
-        return ModelOperationResponse(success=True, message=f"Model {model_name} deleted successfully")
+        try:
+            await oc_delete_model(model_name)
+            return ModelOperationResponse(success=True, message=f"Model {model_name} deleted successfully")
+        except Exception as e:
+            logger.error(f"Error deleting model {model_name}: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
 
     except HTTPException:
         raise

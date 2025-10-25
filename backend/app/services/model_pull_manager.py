@@ -31,6 +31,10 @@ class PullTask:
     completed_at: Optional[datetime] = None
     task_handle: Optional[threading.Thread] = None
     last_progress_update: Optional[datetime] = None
+    # Timestamp (epoch seconds) when we last emitted a progress callback to listeners
+    last_emit_time: Optional[float] = None
+    # Last emitted percent (0-100) used to decide large-enough deltas
+    last_emitted_percent: Optional[float] = None
     stop_event: Optional[threading.Event] = None
     # Retry bookkeeping
     retry_count: int = 0
@@ -437,10 +441,36 @@ class ModelPullManager:
     def update_progress(self, task_id: str, progress: Dict[str, Any]):
         """Update progress for a running task."""
         callbacks: List[Callable[[str, Dict[str, Any]], None]] = []
+
+        # Helper to extract a percent value (0-100) from progress data when available
+        def _extract_percent(p: Dict[str, Any]) -> Optional[float]:
+            # Prefer explicit fields
+            for key in ('percent', 'progress'):
+                if key in p:
+                    try:
+                        val = float(p[key])
+                        # If given as 0..1 convert to 0..100
+                        if 0.0 <= val <= 1.0:
+                            val = val * 100.0
+                        return float(val)
+                    except Exception:
+                        pass
+            # Try bytes / total pattern
+            for a_key, b_key in (('downloaded_bytes', 'total_bytes'), ('downloaded', 'size'), ('downloaded', 'total')):
+                if a_key in p and b_key in p:
+                    try:
+                        a = float(p.get(a_key, 0))
+                        b = float(p.get(b_key, 0))
+                        if b > 0:
+                            return (a / b) * 100.0
+                    except Exception:
+                        pass
+            return None
+
         with self._lock:
             if task_id in self.tasks:
                 task = self.tasks[task_id]
-                # Add disk space information to progress
+                # Add disk space information to progress (best-effort)
                 try:
                     from ..core.config import settings
                     models_dir = os.path.expanduser(settings.ollama_models_dir)
@@ -453,25 +483,76 @@ class ModelPullManager:
                     elif available_gb < 5.0:  # Less than 5GB available
                         progress['disk_space_warning'] = f"Disk space running low: {available_gb:.2f}GB available"
                 except Exception as e:
-                    logger.error(f"Failed to check disk space for progress update: {e}")
+                    logger.debug(f"Failed to check disk space for progress update: {e}")
+
+                # Always update internal progress record and last_progress_update timestamp
                 task.progress = progress
                 task.last_progress_update = datetime.now()
-                # Collect callbacks while holding lock, but call them outside
+
+                # Prepare for potential emission
                 callbacks = list(self.progress_callbacks.get(task_id, []))
 
-        # Make a shallow copy of progress to avoid callers mutating internal dict
-        safe_progress = dict(progress)
-        # Notify any registered callbacks outside the lock
-        for cb in callbacks:
+                # Determine throttling controls from settings (fallback sensible defaults)
+                try:
+                    from ..core.config import settings
+                    throttle_ms = int(getattr(settings, 'pull_progress_throttle_ms', 500))
+                    percent_delta = float(getattr(settings, 'pull_progress_percent_delta', 2.0))
+                except Exception:
+                    throttle_ms = 500
+                    percent_delta = 2.0
+
+                now_ts = time.time()
+                last_emit = task.last_emit_time
+                progress_pct = _extract_percent(progress)
+
+                should_emit = False
+                # If we've never emitted for this task, emit immediately
+                if last_emit is None:
+                    should_emit = True
+                else:
+                    # Time-based emission
+                    if (now_ts - last_emit) * 1000.0 >= throttle_ms:
+                        should_emit = True
+                    # Percent-delta emission (if percent available)
+                    elif progress_pct is not None and task.last_emitted_percent is not None and abs(progress_pct - task.last_emitted_percent) >= percent_delta:
+                        should_emit = True
+                    elif progress_pct is not None and task.last_emitted_percent is None:
+                        # If we have a percent now but never emitted percent before, emit
+                        should_emit = True
+
+                # If we decided to emit, record emit metadata now while still under lock
+                if should_emit:
+                    task.last_emit_time = now_ts
+                    if progress_pct is not None:
+                        task.last_emitted_percent = progress_pct
+
+        # If we are emitting, call callbacks and persist. Do not call callbacks while holding lock.
+        if callbacks:
+            # We must recompute whether we should actually call callbacks based on the task object we updated.
+            # Safe to read without lock for this decision (best-effort)
+            emit_now = False
             try:
-                cb(task_id, safe_progress)
-            except Exception as e:
-                logger.error(f"Error in progress callback for task {task_id}: {e}")
-        # Persist progress update
-        try:
-            self._persist_tasks()
-        except Exception:
-            logger.exception("Failed to persist tasks after progress update")
+                t = self.tasks.get(task_id)
+                if t and t.last_emit_time is not None:
+                    # If last_emit_time is recent, that indicates we intended to emit
+                    if (time.time() - t.last_emit_time) * 1000.0 < max(10000, throttle_ms * 2):
+                        emit_now = True
+            except Exception:
+                emit_now = True
+
+            if emit_now:
+                safe_progress = dict(progress)
+                for cb in callbacks:
+                    try:
+                        cb(task_id, safe_progress)
+                    except Exception as e:
+                        logger.error(f"Error in progress callback for task {task_id}: {e}")
+
+                # Persist progress emission
+                try:
+                    self._persist_tasks()
+                except Exception:
+                    logger.exception("Failed to persist tasks after progress update")
 
     def cancel_pull_task(self, task_id: str) -> bool:
         """Cancel a running pull task."""

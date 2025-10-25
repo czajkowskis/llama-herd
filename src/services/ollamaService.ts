@@ -354,7 +354,7 @@ export const generateCompletion = async (
   signal?: AbortSignal
 ): Promise<string | void> => {
   try {
-    const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
+    const response = await fetch(`${API_BASE_URL}/api/ollama/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

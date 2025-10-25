@@ -19,6 +19,7 @@ from .api.routes.experiments import router as experiments_router
 from .api.routes.conversations import router as conversations_router
 from .api.routes.models import router as models_router
 from .api.ws import router as ws_router
+from .api.routes.ollama_proxy import router as ollama_proxy_router
 from .utils.logging import get_logger, log_with_context
 
 logger = get_logger(__name__)
@@ -191,6 +192,7 @@ def create_app() -> FastAPI:
     app.include_router(experiments_router)
     app.include_router(conversations_router)
     app.include_router(models_router)
+    app.include_router(ollama_proxy_router)
     app.include_router(ws_router)
     
     @app.on_event("startup")
@@ -206,6 +208,25 @@ def create_app() -> FastAPI:
             logger.info("Model pull manager cleanup worker started")
         except Exception:
             logger.exception("Failed to start model pull manager cleanup worker")
+        # Start a small cache-warming task for Ollama tags/version so the UI
+        # can use cached data while Ollama is busy pulling large models.
+        try:
+            from .services import ollama_client
+
+            async def _warm_cache():
+                while True:
+                    try:
+                        await ollama_client.get_tags()
+                        await ollama_client.get_version()
+                    except Exception:
+                        # ignore - the client already logs details
+                        pass
+                    await asyncio.sleep(getattr(settings, 'ollama_cache_warm_interval', 15))
+
+            app.state._ollama_cache_task = asyncio.create_task(_warm_cache())
+            logger.info('Started Ollama cache warming task')
+        except Exception:
+            logger.exception('Failed to start Ollama cache warming task')
         logger.info("LLaMa-Herd backend started successfully")
 
     @app.on_event("shutdown")
@@ -217,6 +238,13 @@ def create_app() -> FastAPI:
             logger.info("Model pull manager cleanup worker stopped")
         except Exception:
             logger.exception("Failed to stop model pull manager cleanup worker")
+        # Cancel cache warmup task
+        try:
+            task = getattr(app.state, '_ollama_cache_task', None)
+            if task:
+                task.cancel()
+        except Exception:
+            logger.exception('Failed to stop Ollama cache warming task')
 
     return app
 

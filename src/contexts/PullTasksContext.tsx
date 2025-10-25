@@ -69,6 +69,12 @@ export const PullTasksProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const webSocketsRef = useRef<Record<string, WebSocket>>({});
+  // Client-side throttle bookkeeping: last emit times and last emitted percent per task
+  const lastEmitRef = useRef<Record<string, number>>({});
+  const lastPercentRef = useRef<Record<string, number>>({});
+  // Throttle defaults (ms and percent delta). Keep in sync with server defaults for best results.
+  const THROTTLE_MS = 400; // ms
+  const PERCENT_DELTA = 2.0; // percent
 
   const updatePullTask = useCallback((taskId: string, updates: Partial<PullTask>) => {
     setPullTasks(prev => {
@@ -81,6 +87,60 @@ export const PullTasksProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       };
     });
   }, []);
+
+  // Helper to extract percent (0-100) from progress-like objects
+  const extractPercent = useCallback((p: any): number | null => {
+    if (!p) return null;
+    const keys = ['percent', 'progress'];
+    for (const k of keys) {
+      if (p[k] !== undefined && p[k] !== null) {
+        const v = Number(p[k]);
+        if (Number.isFinite(v)) {
+          if (v >= 0 && v <= 1) return v * 100;
+          return v;
+        }
+      }
+    }
+    // bytes / total patterns
+    const pairs = [['downloaded_bytes', 'total_bytes'], ['downloaded', 'size'], ['downloaded', 'total']];
+    for (const [a, b] of pairs) {
+      if (p[a] !== undefined && p[b] !== undefined) {
+        const aN = Number(p[a]);
+        const bN = Number(p[b]);
+        if (Number.isFinite(aN) && Number.isFinite(bN) && bN > 0) {
+          return (aN / bN) * 100;
+        }
+      }
+    }
+    return null;
+  }, []);
+
+  // Throttled update: only call updatePullTask at most once per THROTTLE_MS or when percent delta >= PERCENT_DELTA
+  const throttledUpdate = useCallback((taskId: string, updates: Partial<PullTask>) => {
+    try {
+      const now = Date.now();
+      const last = lastEmitRef.current[taskId] || 0;
+      const progress = (updates as any).progress;
+      const pct = extractPercent(progress);
+      const lastPct = lastPercentRef.current[taskId];
+
+      let should = false;
+      if (!last) should = true;
+      else if ((now - last) >= THROTTLE_MS) should = true;
+      else if (pct !== null && lastPct !== undefined && Math.abs(pct - lastPct) >= PERCENT_DELTA) should = true;
+      else if (pct !== null && lastPct === undefined) should = true;
+
+      if (should) {
+        lastEmitRef.current[taskId] = now;
+        if (pct !== null) lastPercentRef.current[taskId] = pct;
+        updatePullTask(taskId, updates);
+      }
+      // otherwise drop this update (server will send a later one or poll will reconcile)
+    } catch (e) {
+      // Fallback to immediate update on any unexpected error
+      updatePullTask(taskId, updates);
+    }
+  }, [extractPercent, updatePullTask]);
 
   // Persist to localStorage whenever tasks change
   useEffect(() => {
@@ -142,9 +202,8 @@ export const PullTasksProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         console.log('WebSocket message received:', message);
 
         if (message.type === 'progress' && message.data) {
-          // Update progress immediately
-          console.log('Updating progress for task', taskId, 'with data:', message.data);
-          updatePullTask(taskId, { progress: message.data });
+          // Update progress with client-side throttling to avoid UI churn
+          throttledUpdate(taskId, { progress: message.data });
         } else if (message.type === 'status' && message.data) {
           const status = message.data;
           console.log('Updating status for task', taskId, 'with data:', status);
