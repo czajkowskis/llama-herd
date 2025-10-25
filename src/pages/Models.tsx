@@ -213,6 +213,231 @@ export const Models: React.FC = () => {
     { name: 'Qwen 7B Chat', tag: 'qwen:7b-chat-q4_0', size: 1_900_000_000, family: 'qwen', quant: 'q4_0', notes: 'Alibaba Qwen model' },
     { name: 'Vicuna 13B', tag: 'vicuna:13b-q4_0', size: 3_000_000_000, family: 'vicuna', quant: 'q4_0', notes: 'Fine-tuned Llama-based model' },
     { name: 'Orca Mini 7B', tag: 'orca-mini:7b-q4_0', size: 1_800_000_000, family: 'orca', quant: 'q4_0', notes: 'Microsoft Orca model' },
+    
+    {
+        "name": "GPT-OSS 20B",
+        "tag": "gpt-oss:20b",
+        "size": 14000000000,
+        "family": "gpt-oss",
+        "quant": "q4_0",
+        "notes": "OpenAI’s open-weight model for powerful reasoning and agentic tasks, designed for lower latency and local use"
+    },
+    {
+        "name": "GPT-OSS 120B",
+        "tag": "gpt-oss:120b",
+        "size": 65000000000,
+        "family": "gpt-oss",
+        "quant": "q4_0",
+        "notes": "OpenAI’s open-weight model for powerful reasoning and agentic tasks, high-end capabilities"
+    },
+    {
+        "name": "Qwen3-VL 235B",
+        "tag": "qwen3-vl:235b-cloud",
+        "size": 125000000000,
+        "family": "qwen",
+        "quant": "cloud",
+        "notes": "The most powerful vision-language model in the Qwen family, supports text and image input"
+    },
+    {
+        "name": "DeepSeek-R1 1.5B",
+        "tag": "deepseek-r1:1.5b",
+        "size": 1500000000,
+        "family": "deepseek",
+        "quant": "q4_0",
+        "notes": "Open reasoning model, lightweight and efficient"
+    },
+    {
+        "name": "DeepSeek-R1 7B",
+        "tag": "deepseek-r1:7b",
+        "size": 4700000000,
+        "family": "deepseek",
+        "quant": "q4_0",
+        "notes": "Open reasoning model, balanced performance and size"
+    },
+    {
+        "name": "DeepSeek-R1 8B",
+        "tag": "deepseek-r1:8b",
+        "size": 5200000000,
+        "family": "deepseek",
+        "quant": "q4_0",
+        "notes": "Open reasoning model, optimized for reasoning and coding"
+    },
+    {
+        "name": "DeepSeek-R1 14B",
+        "tag": "deepseek-r1:14b",
+        "size": 9000000000,
+        "family": "deepseek",
+        "quant": "q4_0",
+        "notes": "Open reasoning model, high reasoning capabilities"
+    },
+    {
+        "name": "DeepSeek-R1 32B",
+        "tag": "deepseek-r1:32b",
+        "size": 18000000000,
+        "family": "deepseek",
+        "quant": "q4_0",
+        "notes": "Open reasoning model, advanced reasoning and agentic tasks"
+    },
+    {
+        "name": "DeepSeek-R1 70B",
+        "tag": "deepseek-r1:70b",
+        "size": 40000000000,
+        "family": "deepseek",
+        "quant": "q4_0",
+        "notes": "Open reasoning model, top-tier reasoning and coding"
+    },
+    {
+        "name": "DeepSeek-R1 671B",
+        "tag": "deepseek-r1:671b",
+        "size": 404000000000,
+        "family": "deepseek",
+        "quant": "q2_0",
+        "notes": "Open reasoning model, flagship model for cloud or high-end hardware"
+    },
+    {
+        "name": "Qwen3-Coder 30B",
+        "tag": "qwen3-coder:30b",
+        "size": 19000000000,
+        "family": "qwen",
+        "quant": "q4_0",
+        "notes": "Alibaba's performant long context model for agentic and coding tasks"
+    },
+    {
+        "name": "Qwen3-Coder 480B",
+        "tag": "qwen3-coder:480b-cloud",
+        "size": 240000000000,
+        "family": "qwen",
+        "quant": "q2_0",
+        "notes": "Alibaba's performant long context model for agentic and coding tasks, cloud-only"
+    },
+    {
+        "name": "Gemma3 270M",
+        "tag": "gemma3:270m",
+        "size": 300000000,
+        "family": "gemma",
+        "quant": "q4_0",
+        "notes": "Google’s most capable model that runs on a single GPU, ultra-lightweight, multimodal"
+    },
+    {
+        "name": "Gemma3 1B",
+        "tag": "gemma3:1b",
+        "size": 800000000,
+        "family": "gemma",
+        "quant": "q4_0",
+        "notes": "Google’s most capable model that runs on a single GPU, compact, multimodal"
+    },
+    {
+        "name": "Gemma3 4B",
+        "tag": "gemma3:4b",
+        "size": 3300000000,
+        "family": "gemma",
+        "quant": "q4_0",
+        "notes": "Google’s most capable model that runs on a single GPU, balanced performance, multimodal"
+    },
+    {
+        "name": "Gemma3 12B",
+        "tag": "gemma3:12b",
+        "size": 9000000000,
+        "family": "gemma",
+        "quant": "q4_0",
+        "notes": "Google’s most capable model that runs on a single GPU, high performance, multimodal"
+    },
+    {
+        "name": "Gemma3 27B",
+        "tag": "gemma3:27b",
+        "size": 17000000000,
+        "family": "gemma",
+        "quant": "q4_0",
+        "notes": "Google’s most capable model that runs on a single GPU, top-tier multimodal model"
+    },
+    {
+        "name": "GLM-4.6",
+        "tag": "glm-4.6:cloud",
+        "size": 216000000000,
+        "family": "glm",
+        "quant": "cloud",
+        "notes": "Advanced agentic, reasoning, and coding capabilities, cloud-only, 198K context"
+    },
+    {
+        "name": "EmbeddingGemma 300M",
+        "tag": "embeddinggemma:latest",
+        "size": 600000000,
+        "family": "gemma",
+        "quant": "bf16",
+        "notes": "Google’s 300M parameter embedding model, state-of-the-art for its size"
+    },
+    {
+        "name": "Qwen3 0.6B",
+        "tag": "qwen3:0.6b",
+        "size": 400000000,
+        "family": "qwen",
+        "quant": "q4_0",
+        "notes": "Latest generation of Qwen models, ultra-lightweight"
+    },
+    {
+        "name": "Qwen3 1.7B",
+        "tag": "qwen3:1.7b",
+        "size": 1100000000,
+        "family": "qwen",
+        "quant": "q4_0",
+        "notes": "Latest generation of Qwen models, lightweight and fast"
+    },
+    {
+        "name": "Qwen3 4B",
+        "tag": "qwen3:4b",
+        "size": 2500000000,
+        "family": "qwen",
+        "quant": "q4_0",
+        "notes": "Latest generation of Qwen models, balanced performance"
+    },
+    {
+        "name": "Qwen3 8B",
+        "tag": "qwen3:8b",
+        "size": 5200000000,
+        "family": "qwen",
+        "quant": "q4_0",
+        "notes": "Latest generation of Qwen models, high performance"
+    },
+    {
+        "name": "Qwen3 14B",
+        "tag": "qwen3:14b",
+        "size": 8000000000,
+        "family": "qwen",
+        "quant": "q4_0",
+        "notes": "Latest generation of Qwen models, advanced reasoning"
+    },
+    {
+        "name": "Qwen3 30B",
+        "tag": "qwen3:30b",
+        "size": 16000000000,
+        "family": "qwen",
+        "quant": "q4_0",
+        "notes": "Latest generation of Qwen models, MoE, high reasoning"
+    },
+    {
+        "name": "Qwen3 32B",
+        "tag": "qwen3:32b",
+        "size": 18000000000,
+        "family": "qwen",
+        "quant": "q4_0",
+        "notes": "Latest generation of Qwen models, dense, top-tier"
+    },
+    {
+        "name": "Qwen3 235B",
+        "tag": "qwen3:235b",
+        "size": 125000000000,
+        "family": "qwen",
+        "quant": "q2_0",
+        "notes": "Latest generation of Qwen models, flagship MoE model"
+    },
+    {
+        "name": "DeepSeek-V3.1 671B",
+        "tag": "deepseek-v3.1:latest",
+        "size": 404000000000,
+        "family": "deepseek",
+        "quant": "q4_0",
+        "notes": "Hybrid model supporting both thinking and non-thinking modes, cloud or high-end hardware"
+    }
   ];
 
   // Catalog cache (24 hours TTL)
@@ -434,7 +659,9 @@ export const Models: React.FC = () => {
   }, [installed]);
 
   const startPull = (tag: string, sizeHint?: number) => {
-    if (installed.includes(tag)) return; // prevent duplicate pull
+    // Prevent duplicate pull if the model is already installed according to
+    // the live-installed list or annotated in the backend catalog.
+    if (installed.includes(tag) || (catalog.find(c => c.tag === tag) as any)?.installed) return; // prevent duplicate pull
     if (!connected) return;
     
     // Show confirmation popup with storage requirements
@@ -635,7 +862,8 @@ export const Models: React.FC = () => {
 
   // function to pull all models in a family
   const pullAllInFamily = (familyName: string) => {
-    const familyModels = catalog.filter(item => item.family === familyName && !installed.includes(item.tag));
+    // Skip models already installed according to live state or annotated in the catalog
+    const familyModels = catalog.filter(item => item.family === familyName && !(installed.includes(item.tag) || ((item as any).installed ?? false)));
     if (familyModels.length === 0) return;
     
     const totalSize = familyModels.reduce((sum, item) => sum + (item.size || 0), 0);
@@ -831,7 +1059,23 @@ export const Models: React.FC = () => {
           className="p-2 rounded-lg border"
           style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)', borderColor: 'var(--color-border)' }}
         />
-        <Button onClick={() => startPull(addTag)} disabled={!addTag || (installed?.includes(addTag) ?? false) || !connected} title={connected ? ((installed?.includes(addTag) ?? false) ? 'Already installed' : 'Pull model by tag') : 'Ollama is not connected.'} aria-label="Pull by tag">
+        <Button
+          onClick={() => startPull(addTag)}
+          disabled={
+            !addTag ||
+            (installed?.includes(addTag) ?? false) ||
+            (catalog.some(c => c.tag === addTag && (c as any).installed)) ||
+            !connected
+          }
+          title={
+            !connected
+              ? 'Ollama is not connected.'
+              : ((installed?.includes(addTag) ?? false) || catalog.some(c => c.tag === addTag && (c as any).installed))
+                ? 'Already installed'
+                : 'Pull model by tag'
+          }
+          aria-label="Pull by tag"
+        >
           Pull
         </Button>
       </div>
@@ -893,40 +1137,63 @@ export const Models: React.FC = () => {
     );
   };
 
-  const Installed = () => (
-    <div>
-      {!installed || installed.length === 0 ? (
-        <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>No local models found.</p>
-      ) : (
-        <div className="space-y-3">
-          {installed.map(tag => {
-            const label = catalog.find(i => i.tag === tag)?.name || deriveModelName(tag);
-            return (
-              <div key={tag} className="p-3 rounded-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <div className="font-medium" style={{ color: 'var(--color-text-primary)' }}>{label}</div>
-                    {label !== tag && (
-                      <div className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>{tag}</div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant={defaultModel === tag ? 'primary' : 'secondary'} onClick={() => setDefaultModel(tag)} aria-label={`Set ${tag} as default`}>
-                      {defaultModel === tag ? 'Default' : 'Set default'}
-                    </Button>
-                    <Button variant="secondary" onClick={() => navigator.clipboard?.writeText(tag)} aria-label={`Copy tag ${tag}`} title="Copy tag">
-                      <Icon><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></Icon>
-                    </Button>
-                    <Button variant="secondary" onClick={() => removeModel(tag)} aria-label={`Remove ${tag}`}>Remove</Button>
+  const Installed = () => {
+    const [copiedTag, setCopiedTag] = React.useState<string | null>(null);
+
+    return (
+      <div>
+        {!installed || installed.length === 0 ? (
+          <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>No local models found.</p>
+        ) : (
+          <div className="space-y-3">
+            {installed.map(tag => {
+              const label = catalog.find(i => i.tag === tag)?.name || deriveModelName(tag);
+              return (
+                <div key={tag} className="p-3 rounded-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="font-medium" style={{ color: 'var(--color-text-primary)' }}>{label}</div>
+                      {label !== tag && (
+                        <div className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>{tag}</div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button variant={defaultModel === tag ? 'primary' : 'secondary'} onClick={() => setDefaultModel(tag)} aria-label={`Set ${tag} as default`}>
+                        {defaultModel === tag ? 'Default' : 'Set default'}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard?.writeText(tag);
+                            setCopiedTag(tag);
+                            window.setTimeout(() => setCopiedTag((cur) => (cur === tag ? null : cur)), 2000);
+                          } catch (err) {
+                            console.error('Failed to copy tag', err);
+                          }
+                        }}
+                        aria-label={`Copy tag ${tag}`}
+                        title={copiedTag === tag ? 'Copied!' : 'Copy tag'}
+                      >
+                        <Icon>
+                          {copiedTag === tag ? (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-400"><polyline points="20 6 9 17 4 12" /></svg>
+                          ) : (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                          )}
+                        </Icon>
+                      </Button>
+                      <Button variant="secondary" onClick={() => removeModel(tag)} aria-label={`Remove ${tag}`}>Remove</Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const Discover = () => {
     const searchRef = useRef<HTMLInputElement | null>(null);
@@ -968,7 +1235,9 @@ export const Models: React.FC = () => {
 
         <div key={`discover-${resetCounter}`} className="space-y-4">
           {Object.entries(groupModelsByBaseName(discoverFiltered)).map(([baseName, variants]) => {
-            const allInstalled = variants.every(item => (installed?.includes(item.tag)) ?? false);
+            // Consider an item installed if either the live installed list reports it
+            // or the backend-catalog annotated it as installed.
+            const allInstalled = variants.every(item => ((installed?.includes(item.tag) ?? false) || ((item as any).installed ?? false)));
             const somePulling = variants.some(item => !!pulling[item.tag]);
             const familyName = variants[0].family;
             const isExpanded = expandedGroups.has(baseName);
@@ -1006,7 +1275,7 @@ export const Models: React.FC = () => {
                     {isExpanded && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {variants.map(item => {
-                          const isInstalled = (installed?.includes(item.tag)) ?? false;
+                          const isInstalled = (installed?.includes(item.tag) ?? false) || ((item as any).installed ?? false);
                           const isPulling = !!pulling[item.tag];
                           
                           return (

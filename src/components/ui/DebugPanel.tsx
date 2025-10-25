@@ -21,6 +21,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<DebugMessage | null>(null);
+  const [copiedFor, setCopiedFor] = useState<string | null>(null);
 
   const displayedMessages = messages.slice(-maxMessages);
 
@@ -203,10 +204,12 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   copyToClipboard(JSON.stringify(msg.data, null, 2));
+                                  setCopiedFor(msg.timestamp);
+                                  window.setTimeout(() => setCopiedFor((cur) => (cur === msg.timestamp ? null : cur)), 2000);
                                 }}
                                 className="text-xs text-blue-400 hover:text-blue-300"
                               >
-                                Copy
+                                {copiedFor === msg.timestamp ? 'Copied!' : 'Copy'}
                               </button>
                             </div>
                             <pre className="text-xs text-gray-300 font-mono whitespace-pre-wrap break-words max-h-40 overflow-y-auto">
