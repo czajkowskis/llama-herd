@@ -2,7 +2,7 @@ import React, { useState, createContext, useContext } from 'react';
 import './App.css';
 import { BrowserRouter, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Sidebar } from './components/common/Sidebar';
-import { LiveExperimentView } from './components/experiment/LiveExperimentView';
+import { LiveExperimentView } from './features/experiments/components/LiveExperimentView';
 import { useUIPreferences } from './hooks/useUIPreferences';
 import { PullTasksProvider } from './contexts/PullTasksContext';
 import { AppRoutes, ROUTES } from './routes';

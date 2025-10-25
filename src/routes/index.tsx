@@ -4,13 +4,13 @@ import { ErrorBoundary } from '../components/common/ErrorBoundary';
 import { useNavigationCallbacks, ExperimentView } from '../App';
 
 // Lazy load pages for better performance
-const NewExperiment = React.lazy(() => import('../pages/NewExperiment').then(module => ({ default: module.NewExperiment })));
-const LiveExperiments = React.lazy(() => import('../pages/LiveExperiments').then(module => ({ default: module.LiveExperiments })));
-const History = React.lazy(() => import('../pages/History').then(module => ({ default: module.History })));
-const Models = React.lazy(() => import('../pages/Models').then(module => ({ default: module.Models })));
+const NewExperiment = React.lazy(() => import('../features/experiments/components/NewExperimentPage').then(module => ({ default: module.NewExperiment })));
+const LiveExperiments = React.lazy(() => import('../features/experiments/components/LiveExperimentsPage').then(module => ({ default: module.LiveExperiments })));
+const History = React.lazy(() => import('../features/history/components/HistoryPage').then(module => ({ default: module.History })));
+const Models = React.lazy(() => import('../features/models/components/ModelsPage').then(module => ({ default: module.Models })));
 const Settings = React.lazy(() => import('../pages/Settings').then(module => ({ default: module.Settings })));
 const About = React.lazy(() => import('../pages/About').then(module => ({ default: module.About })));
-const ConversationViewer = React.lazy(() => import('../pages/ConversationViewer').then(module => ({ default: module.ConversationViewer })));
+const ConversationViewer = React.lazy(() => import('../features/history/components/ConversationViewerPage').then(module => ({ default: module.ConversationViewer })));
 
 // Loading component
 const LoadingFallback: React.FC = () => (
