@@ -1,207 +1,208 @@
 # LLaMa-Herd
 
-A React-based application for creating and managing multi-agent conversations using Ollama models and Microsoft's Autogen framework.
+**A Multi-Agent Conversation Platform for AI Research and Development**
 
-## Features
+LLaMa-Herd is a multi-agent conversation platform that facilitates creation, configuration, and orchestration of conversations between multiple AI agents. Built with modern web technologies and designed for researchers, developers, and AI enthusiasts, it provides an environment for exploring multi-agent interactions and collaborative AI systems.
 
-- **Multi-Agent Conversations**: Create and manage conversations between multiple AI agents
-- **Ollama Integration**: Use local Ollama models for agent responses
-- **Autogen Integration**: Leverage Microsoft's Autogen framework for sophisticated multi-agent interactions
-- **Real-time Updates**: Live WebSocket updates during experiments
-- **Conversation Import**: Import existing conversations from JSON files
-- **Agent Configuration**: Customize agent prompts, models, and visual appearance
-- **Task Management**: Create and manage tasks for agent conversations
-- **Modern UI**: Beautiful, responsive interface built with React and Tailwind CSS
+## Key Features
 
-## Architecture
+- **Multi-Agent Experiments**: Create and run experiments with multiple AI agents working together
+- **Real-time Monitoring**: Live WebSocket updates during experiments with connection status tracking
+- **Custom Agent Configuration**: Define agents with specific personalities, language models, and behaviors
+- **Experiment Management**: Track experiment status, iterations, and conversation history
+- **History & Analysis**: View and analyze completed experiments and imported conversations
+- **Model Management**: Pull and manage Ollama models with progress tracking
+- **Import/Export**: Import conversations and export experiment data in various formats
+- **Ollama Integration**: Seamless integration with local Ollama models
+- **Testing Infrastructure**: Comprehensive testing with unit, integration, and E2E tests
 
-The application consists of two main components:
+## Prerequisites
 
-1. **Frontend (React/TypeScript)**: User interface for creating and managing experiments
-2. **Backend (FastAPI/Python)**: Handles Autogen integration and real-time communication
+- **Python 3.10+** with pip
+- **Node.js 16+** with npm
+- **Ollama** installed and running ([Download from ollama.ai](https://ollama.ai))
 
-## Environment Variables (Frontend)
+## Installation & Setup
 
-The frontend uses environment variables to configure API endpoints. These are managed via `.env` files, consistent with Create React App.
-
-Create a `.env` file in the root of the project by copying the example:
+### 1. Clone the Repository
 
 ```bash
-cp .env.example .env
+git clone <repository-url>
+cd llama-herd
 ```
 
-The following variables are available:
+### 2. Backend Setup
 
-- `REACT_APP_API_BASE_URL`: The base URL for the backend API (e.g., `http://localhost:8000`).
-- `REACT_APP_OLLAMA_BASE_URL`: The base URL for the Ollama API (e.g., `http://localhost:11434`).
-
-These variables are embedded at build time. If you change them, you will need to restart the development server.
-
-## Quick Start
-
-### Prerequisites
-
-1. **Node.js** (v16 or higher)
-2. **Python 3.8+**
-3. **Ollama** - Download from [ollama.ai](https://ollama.ai)
-
-### Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone <repository-url>
-   cd llama-herd
-   ```
-
-2. **Install frontend dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Install backend dependencies:**
-   ```bash
-   cd backend
-   pip install -r requirements.txt
-   cd ..
-   ```
-
-4. **Start Ollama:**
-   ```bash
-   ollama serve
-   ```
-
-5. **Pull required models:**
-   ```bash
-   ollama pull llama2
-   # Add other models as needed
-   ```
-
-### Running the Application
-
-1. **Start the backend:**
-   ```bash
-   cd backend
-   ./start.sh
-   # Or manually: python main.py
-   ```
-
-2. **Start the frontend (in a new terminal):**
-   ```bash
-   npm start
-   ```
-
-3. **Open your browser:**
-   Navigate to `http://localhost:3000`
-
-## Usage
-
-### Creating Experiments
-
-1. **Create a Task**: Define what you want your agents to discuss or accomplish
-2. **Add Agents**: Create agents with custom prompts, models, and visual styles
-3. **Start Experiment**: Click "Start Experiment" to begin the Autogen group chat
-4. **Monitor Progress**: Watch real-time updates as agents interact with each other
-
-### Importing Conversations
-
-1. **Upload JSON Files**: Import existing conversations from JSON files
-2. **Configure Agents**: Customize agent names, colors, and models
-3. **View Conversations**: Browse and interact with imported conversations
-
-## API Documentation
-
-The backend provides a REST API and WebSocket endpoints:
-
-- **API Docs**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-
-### Key Endpoints
-
-- `POST /api/experiments/start` - Start a new experiment
-- `GET /api/experiments/{id}` - Get experiment status
-- `WS /ws/experiments/{id}` - Real-time updates
-
-## Development
-
-### Frontend Structure
-
-```
-src/
-├── components/          # React components
-│   ├── agent/          # Agent management
-│   ├── conversation/    # Conversation display
-│   ├── experiment/     # Experiment management
-│   └── ui/            # Reusable UI components
-├── pages/             # Page components
-├── services/          # API services
-└── types/            # TypeScript definitions
-```
-
-### Backend Structure
-
-```
-backend/
-├── main.py           # FastAPI application
-├── requirements.txt  # Python dependencies
-├── test_backend.py  # Backend testing
-└── start.sh         # Startup script
-```
-
-### Testing
-
-**Test the backend:**
 ```bash
 cd backend
-python test_backend.py
+
+# Create virtual environment (recommended)
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### 3. Frontend Setup
+
+```bash
+# From project root
+npm install
+```
+
+### 4. Ollama Setup
+
+```bash
+# Install Ollama (if not already installed)
+# Visit https://ollama.ai for installation instructions
+
+# Start Ollama server
+ollama serve
+
+# Pull some models (in a new terminal)
+ollama pull llama2
+ollama pull codellama
+# Add other models as needed
+```
+
+## Running the Application
+
+### Option 1: Quick Start (Recommended)
+
+```bash
+# Start both backend and proxy server
+cd backend
+./start_with_proxy.sh
+```
+
+This script will:
+- Check dependencies
+- Start the Ollama proxy server on port 8080
+- Start the FastAPI backend on port 8000
+- Handle cleanup when stopped
+
+### Option 2: Manual Startup
+
+**Terminal 1 - Start Ollama Proxy:**
+```bash
+cd backend
+python3 ollama_proxy.py
+```
+
+**Terminal 2 - Start Backend:**
+```bash
+cd backend
+python3 main.py
+```
+
+**Terminal 3 - Start Frontend:**
+```bash
+npm start
+```
+
+### Access the Application
+
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+
+## Project Structure
+
+```
+llama-herd/
+├── backend/                    # FastAPI backend
+│   ├── app/
+│   │   ├── api/               # API routes and WebSocket handlers
+│   │   ├── core/              # Configuration and core utilities
+│   │   ├── schemas/           # Pydantic models
+│   │   ├── services/          # Business logic services
+│   │   ├── storage/           # Data persistence layer
+│   │   └── utils/             # Utility functions
+│   ├── data/                  # Application data storage
+│   ├── tests/                 # Backend tests
+│   ├── main.py               # Application entry point
+│   ├── ollama_proxy.py       # Ollama API proxy
+│   └── start_with_proxy.sh   # Startup script
+├── src/                       # React frontend
+│   ├── components/           # Reusable UI components
+│   ├── features/             # Feature-specific components
+│   │   ├── experiments/      # Experiment management
+│   │   ├── history/          # History and analysis
+│   │   └── models/           # Model management
+│   ├── services/             # API services
+│   ├── hooks/                # Custom React hooks
+│   └── types/                # TypeScript type definitions
+├── tests/                     # Frontend E2E tests
+└── build/                     # Production build output
 ```
 
 ## Configuration
 
-### Models
+### Backend Configuration
 
-The application works with any Ollama model. Popular options include:
-- `llama2` - Meta's Llama 2
-- `codellama` - Code-focused model
-- `mistral` - Mistral AI's model
-- `neural-chat` - Intel's conversational model
+The backend can be configured via environment variables or `.env` file:
 
-### Agent Prompts
+```bash
+# API Configuration
+API_HOST=0.0.0.0
+API_PORT=8000
+API_TITLE="LLaMa-Herd Backend"
+API_VERSION="1.0.0"
 
-Customize agent behavior by modifying their system prompts. Example prompts:
-- **Expert Agent**: "You are an expert in [field]. Provide detailed, accurate information."
-- **Critic Agent**: "You are a critical thinker. Question assumptions and identify potential issues."
-- **Facilitator Agent**: "You are a conversation facilitator. Help guide the discussion and summarize points."
+# CORS Configuration
+CORS_ORIGINS="http://localhost:3000,http://localhost:3001"
 
-## Troubleshooting
+# Ollama Configuration
+OLLAMA_BASE_URL=http://localhost:8080/v1
+OLLAMA_URL=http://localhost:11434
+OLLAMA_TIMEOUT=300
 
-### Common Issues
+# Storage Configuration
+DATA_DIRECTORY=data
+EXPERIMENTS_DIRECTORY=experiments
 
-1. **Ollama not running**: Start with `ollama serve`
-2. **Model not found**: Pull the model with `ollama pull <model-name>`
-3. **Backend connection failed**: Ensure the backend is running on port 8000
-4. **CORS errors**: Backend is configured for `http://localhost:3000`
+# Experiment Configuration
+DEFAULT_MAX_ROUNDS=8
+DEFAULT_TEMPERATURE=0.7
+EXPERIMENT_TIMEOUT_SECONDS=3600
+ITERATION_TIMEOUT_SECONDS=300
+```
 
-### Logs
+### Frontend Configuration
 
-- **Frontend**: Check browser console for errors
-- **Backend**: Check terminal output for Python errors
-- **Ollama**: Check Ollama logs for model issues
+Frontend configuration is handled through:
+- `src/config/index.ts` - API endpoints and settings
+- Browser localStorage - UI preferences and Ollama connection
+- Settings page - User-configurable options
 
-## Contributing
+## API Documentation
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+### REST Endpoints
+
+**Experiments:**
+- `POST /api/experiments/start` - Start a new experiment
+- `GET /api/experiments/{experiment_id}` - Get experiment details
+- `GET /api/experiments` - List all experiments
+- `DELETE /api/experiments/{experiment_id}` - Delete an experiment
+
+**Models:**
+- `GET /api/models` - List available Ollama models
+- `POST /api/models/pull` - Pull a new model
+- `GET /api/models/pull/{task_id}` - Get pull task status
+
+**Conversations:**
+- `GET /api/conversations` - List conversations
+- `GET /api/conversations/{conversation_id}` - Get conversation details
+
+### WebSocket Endpoints
+
+- `WS /ws/experiments/{experiment_id}` - Real-time experiment updates
+
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Acknowledgments
-
-- [Microsoft Autogen](https://github.com/microsoft/autogen) - Multi-agent conversation framework
-- [Ollama](https://ollama.ai) - Local LLM server
-- [React](https://reactjs.org) - Frontend framework
-- [FastAPI](https://fastapi.tiangolo.com) - Backend framework
+**Happy experimenting with multi-agent conversations!**
