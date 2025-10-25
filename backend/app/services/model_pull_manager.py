@@ -754,4 +754,6 @@ class ModelPullManager:
 
 
 # Global instance (do not start cleanup thread at import time)
-pull_manager = ModelPullManager(start_cleanup=False)
+# Use the new simplified manager
+from .pull_task_manager import PullTaskManager
+pull_manager = PullTaskManager(start_cleanup=False)

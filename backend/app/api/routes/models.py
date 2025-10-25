@@ -11,6 +11,7 @@ from datetime import datetime
 
 from ...core.config import settings
 from ...utils.logging import get_logger
+from ...utils.error_handling import handle_ollama_errors
 from ...services.model_pull_manager import pull_manager
 
 logger = get_logger(__name__)
@@ -62,42 +63,63 @@ def check_ollama_connection():
     except:
         return False
 
-@router.get("/list")
-async def list_models():
-    """List all installed models."""
-    try:
+def _serialize_pull_task(task) -> PullTaskStatus:
+    """Serialize a PullTask to PullTaskStatus response model."""
+    return PullTaskStatus(
+        task_id=task.task_id,
+        model_name=task.model_name,
+        status=task.status,
+        progress=task.progress,
+        error=task.error,
+        created_at=task.created_at.isoformat() if task.created_at else None,
+        started_at=task.started_at.isoformat() if task.started_at else None,
+        completed_at=task.completed_at.isoformat() if task.completed_at else None,
+    )
+
+def _serialize_pull_task_for_websocket(task) -> Dict[str, Any]:
+    """Serialize a PullTask to dictionary format for WebSocket messages."""
+    return {
+        "task_id": task.task_id,
+        "model_name": task.model_name,
+        "status": task.status,
+        "progress": task.progress,
+        "error": task.error,
+        "created_at": task.created_at.isoformat() if task.created_at else None,
+        "started_at": task.started_at.isoformat() if task.started_at else None,
+        "completed_at": task.completed_at.isoformat() if task.completed_at else None,
+    }
+
+def require_ollama_connection(func):
+    """Decorator to check Ollama connection before executing endpoint."""
+    async def wrapper(*args, **kwargs):
         if not check_ollama_connection():
             raise HTTPException(status_code=503, detail="Ollama service is not available")
+        return await func(*args, **kwargs)
+    return wrapper
 
-        response = requests.get(f"{OLLAMA_URL}/api/tags", timeout=30)
-        if response.status_code != 200:
-            error_detail = response.text or "Failed to fetch models from Ollama"
-            # Try to provide more specific error messages
-            if "connection refused" in error_detail.lower():
-                error_detail = "Cannot connect to Ollama. Please ensure Ollama is running and accessible."
-            elif "no such file" in error_detail.lower():
-                error_detail = "Ollama service not found. Please install and start Ollama."
-            raise HTTPException(status_code=response.status_code, detail=error_detail)
+@router.get("/list")
+@require_ollama_connection
+@handle_ollama_errors
+async def list_models():
+    """List all installed models."""
+    response = requests.get(f"{OLLAMA_URL}/api/tags", timeout=30)
+    if response.status_code != 200:
+        error_detail = response.text or "Failed to fetch models from Ollama"
+        # Try to provide more specific error messages
+        if "connection refused" in error_detail.lower():
+            error_detail = "Cannot connect to Ollama. Please ensure Ollama is running and accessible."
+        elif "no such file" in error_detail.lower():
+            error_detail = "Ollama service not found. Please install and start Ollama."
+        raise HTTPException(status_code=response.status_code, detail=error_detail)
 
-        data = response.json()
-        return ListModelsResponse(models=data.get("models", []))
-
-    except HTTPException:
-        # Re-raise HTTPExceptions (they're already properly formatted)
-        raise
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error connecting to Ollama: {e}")
-        raise HTTPException(status_code=503, detail="Failed to connect to Ollama service")
-    except Exception as e:
-        logger.error(f"Error listing models: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+    data = response.json()
+    return ListModelsResponse(models=data.get("models", []))
 
 @router.post("/pull")
+@require_ollama_connection
 async def pull_model(request: PullModelRequest) -> PullModelResponse:
     """Start pulling a model in the background and return task ID."""
     try:
-        if not check_ollama_connection():
-            raise HTTPException(status_code=503, detail="Ollama service is not available")
 
         # Check if model is already being pulled. Allow retry if the existing task
         # appears inactive (no live thread or stale progress).
@@ -169,16 +191,7 @@ async def get_pull_status(task_id: str) -> PullTaskStatus:
     if not task:
         raise HTTPException(status_code=404, detail="Pull task not found")
 
-    return PullTaskStatus(
-        task_id=task.task_id,
-        model_name=task.model_name,
-        status=task.status,
-        progress=task.progress,
-        error=task.error,
-        created_at=task.created_at.isoformat() if task.created_at else None,
-        started_at=task.started_at.isoformat() if task.started_at else None,
-        completed_at=task.completed_at.isoformat() if task.completed_at else None,
-    )
+    return _serialize_pull_task(task)
 
 
 @router.get("/pull/{task_id}/health")
@@ -232,16 +245,7 @@ async def list_pull_tasks() -> Dict[str, PullTaskStatus]:
     result = {}
 
     for task_id, task in tasks.items():
-        result[task_id] = PullTaskStatus(
-            task_id=task.task_id,
-            model_name=task.model_name,
-            status=task.status,
-            progress=task.progress,
-            error=task.error,
-            created_at=task.created_at.isoformat() if task.created_at else None,
-            started_at=task.started_at.isoformat() if task.started_at else None,
-            completed_at=task.completed_at.isoformat() if task.completed_at else None,
-        )
+        result[task_id] = _serialize_pull_task(task)
 
     return result
 
@@ -259,16 +263,7 @@ async def websocket_pull_progress(websocket: WebSocket, task_id: str):
     # Send initial status
     await websocket.send_text(json.dumps({
         "type": "status",
-        "data": {
-            "task_id": task.task_id,
-            "model_name": task.model_name,
-            "status": task.status,
-            "progress": task.progress,
-            "error": task.error,
-            "created_at": task.created_at.isoformat() if task.created_at else None,
-            "started_at": task.started_at.isoformat() if task.started_at else None,
-            "completed_at": task.completed_at.isoformat() if task.completed_at else None,
-        }
+        "data": _serialize_pull_task_for_websocket(task)
     }))
 
     # Get the current event loop for the callback
@@ -302,16 +297,7 @@ async def websocket_pull_progress(websocket: WebSocket, task_id: str):
                 if current_task:
                     await websocket.send_text(json.dumps({
                         "type": "status",
-                        "data": {
-                            "task_id": current_task.task_id,
-                            "model_name": current_task.model_name,
-                            "status": current_task.status,
-                            "progress": current_task.progress,
-                            "error": current_task.error,
-                            "created_at": current_task.created_at.isoformat() if current_task.created_at else None,
-                            "started_at": current_task.started_at.isoformat() if current_task.started_at else None,
-                            "completed_at": current_task.completed_at.isoformat() if current_task.completed_at else None,
-                        }
+                        "data": _serialize_pull_task_for_websocket(current_task)
                     }))
 
                     # If task is completed, we can close the connection
@@ -325,16 +311,7 @@ async def websocket_pull_progress(websocket: WebSocket, task_id: str):
                     # Send final status and exit
                     await websocket.send_text(json.dumps({
                         "type": "status",
-                        "data": {
-                            "task_id": current_task.task_id,
-                            "model_name": current_task.model_name,
-                            "status": current_task.status,
-                            "progress": current_task.progress,
-                            "error": current_task.error,
-                            "created_at": current_task.created_at.isoformat() if current_task.created_at else None,
-                            "started_at": current_task.started_at.isoformat() if current_task.started_at else None,
-                            "completed_at": current_task.completed_at.isoformat() if current_task.completed_at else None,
-                        }
+                        "data": _serialize_pull_task_for_websocket(current_task)
                     }))
                     break
                 # Continue listening if task is still running
@@ -346,31 +323,21 @@ async def websocket_pull_progress(websocket: WebSocket, task_id: str):
         pull_manager.unregister_progress_callback(task_id)
 
 @router.get("/version")
+@require_ollama_connection
+@handle_ollama_errors
 async def get_version():
     """Get Ollama version information."""
-    try:
-        if not check_ollama_connection():
-            raise HTTPException(status_code=503, detail="Ollama service is not available")
+    response = requests.get(f"{OLLAMA_URL}/api/version", timeout=10)
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail="Failed to get version")
 
-        response = requests.get(f"{OLLAMA_URL}/api/version", timeout=10)
-        if response.status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail="Failed to get version")
-
-        return response.json()
-
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error getting Ollama version: {e}")
-        raise HTTPException(status_code=503, detail="Failed to connect to Ollama service")
-    except Exception as e:
-        logger.error(f"Unexpected error getting version: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+    return response.json()
 
 @router.delete("/delete/{model_name}")
+@require_ollama_connection
 async def delete_model(model_name: str) -> ModelOperationResponse:
     """Delete a model from Ollama."""
     try:
-        if not check_ollama_connection():
-            raise HTTPException(status_code=503, detail="Ollama service is not available")
 
         # Check if model exists
         list_response = requests.get(f"{OLLAMA_URL}/api/tags", timeout=30)
@@ -406,24 +373,18 @@ async def get_model_catalog():
     return {"models": catalog}
 
 def _get_model_catalog_data():
-    """Get the static model catalog data."""
-    return [
-        # Llama family
-        {"name": "Llama 3 8B Instruct Q4", "tag": "llama3:8b-instruct-q4_0", "size": 1900000000, "family": "llama", "quant": "q4_0", "notes": "Latest Llama 3 model, great for general chat"},
-        {"name": "Llama 3 8B Instruct Q5", "tag": "llama3:8b-instruct-q5_0", "size": 2400000000, "family": "llama", "quant": "q5_0", "notes": "Higher quality quantization"},
-        {"name": "Llama 3 70B Instruct Q4", "tag": "llama3:70b-instruct-q4_0", "size": 15000000000, "family": "llama", "quant": "q4_0", "notes": "Large 70B model for complex tasks"},
-
-        # Code Llama family
-        {"name": "Code Llama 7B Q4", "tag": "codellama:7b-instruct-q4_0", "size": 1800000000, "family": "codellama", "quant": "q4_0", "notes": "Specialized for coding tasks"},
-        {"name": "Code Llama 13B Q4", "tag": "codellama:13b-instruct-q4_0", "size": 3500000000, "family": "codellama", "quant": "q4_0", "notes": "Larger Code Llama"},
-        {"name": "Code Llama 34B Q4", "tag": "codellama:34b-instruct-q4_0", "size": 8000000000, "family": "codellama", "quant": "q4_0", "notes": "Very large Code Llama"},
-
-        # Mistral family
-        {"name": "Mistral 7B Instruct Q5", "tag": "mistral:7b-instruct-q5_1", "size": 1700000000, "family": "mistral", "quant": "q5_1", "notes": "Fast and efficient"},
-        {"name": "Mixtral 8x7B Instruct Q3", "tag": "mixtral:8x7b-instruct-v0.1-q3_K_M", "size": 7500000000, "family": "mistral", "quant": "q3_K_M", "notes": "Mixture of experts"},
-
-        # Other models
-        {"name": "Phi-3 Mini 3.8B Q4", "tag": "phi3:3.8b-mini-instruct-4k-q4_0", "size": 900000000, "family": "phi", "quant": "q4_0", "notes": "Microsoft Phi-3"},
-        {"name": "Gemma 7B Q4", "tag": "gemma:7b-instruct-q4_0", "size": 1800000000, "family": "gemma", "quant": "q4_0", "notes": "Google Gemma"},
-        {"name": "Qwen 7B Chat Q4", "tag": "qwen:7b-chat-q4_0", "size": 1900000000, "family": "qwen", "quant": "q4_0", "notes": "Alibaba Qwen"},
-    ]
+    """Get the model catalog data from JSON file."""
+    import os
+    from pathlib import Path
+    
+    # Get the path to the catalog file relative to this module
+    current_dir = Path(__file__).parent
+    catalog_path = current_dir.parent / "data" / "model_catalog.json"
+    
+    try:
+        with open(catalog_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        logger.warning(f"Failed to load model catalog from {catalog_path}: {e}")
+        # Return empty list as fallback
+        return []

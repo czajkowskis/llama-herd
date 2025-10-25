@@ -3,6 +3,7 @@ Structured logging utilities for LLaMa-Herd.
 """
 import logging
 import json
+import os
 import sys
 from datetime import datetime, UTC
 from typing import Any, Dict, Optional
@@ -149,7 +150,6 @@ def log_with_context(logger_instance: logging.Logger, level: str, message: str, 
 # Initialize default logger
 # Use keyvalue format by default for better readability in development
 # Can be switched to JSON in production via environment variable
-import os
 log_format = os.getenv('LOG_FORMAT', 'keyvalue')
 log_level = os.getenv('LOG_LEVEL', 'INFO')
 
