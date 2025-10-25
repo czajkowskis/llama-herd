@@ -64,12 +64,12 @@ class BackendStorageService {
       if (response.ok) {
         const data = await response.json();
         return data.experiments.map((exp: any) => ({
-          id: exp.experiment_id,
+          id: exp.experimentId,
           title: exp.title,
           task: { id: '', prompt: exp.title.replace('Experiment: ', ''), datasetItems: [] },
           agents: exp.agents || [],
           status: exp.status,
-          createdAt: exp.created_at,
+          createdAt: exp.createdAt || new Date().toISOString(),
           iterations: 1,
           currentIteration: 0
         }));
@@ -87,14 +87,14 @@ class BackendStorageService {
       if (response.ok) {
         const data = await response.json();
         return {
-          id: data.experiment_id,
+          id: data.experimentId,
           title: data.title || `Experiment ${id}`,
           task: { id: '', prompt: '', datasetItems: [] },
           agents: data.agents || [],
           status: data.status,
-          createdAt: data.created_at || new Date().toISOString(),
+          createdAt: data.createdAt || new Date().toISOString(),
           iterations: data.iterations || 1,
-          currentIteration: data.current_iteration || 0
+          currentIteration: data.currentIteration || 0
         };
       }
       return null;

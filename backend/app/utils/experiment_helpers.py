@@ -47,6 +47,8 @@ def get_experiment_with_fallback(experiment_id: str) -> Optional[Dict[str, Any]]
         
         return {
             "experiment_id": experiment_id,
+            "title": stored_experiment.get('title', f'Experiment {experiment_id}'),
+            "task": stored_experiment.get('task'),
             "status": stored_experiment.get('status', 'unknown'),
             "conversation": None,  # No live conversation for stored experiments
             "conversations": conversations,

@@ -131,11 +131,14 @@ export class ReconnectingWebSocket {
     }
   }
 
-  private onClose() {
+  private onClose(event: CloseEvent) {
     this.stopHeartbeat();
-    // If server indicated a terminal close, mark as completed; otherwise disconnected
-    if (this.terminalClosed) {
+    
+    // If server indicated a terminal close OR normal close (code 1000), mark as completed
+    // WebSocket code 1000 = normal closure, no need to reconnect
+    if (this.terminalClosed || event.code === 1000) {
       this.setState('completed');
+      this.shouldStop = true;
     } else {
       this.setState('disconnected');
       if (!this.shouldStop) {
