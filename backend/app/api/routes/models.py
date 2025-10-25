@@ -113,6 +113,7 @@ def _serialize_pull_task_for_websocket(task) -> Dict[str, Any]:
 
 def require_ollama_connection(func):
     """Decorator to check Ollama connection before executing endpoint."""
+    @functools.wraps(func)
     async def wrapper(*args, **kwargs):
         if not check_ollama_connection():
             raise HTTPException(status_code=503, detail="Ollama service is not available")
