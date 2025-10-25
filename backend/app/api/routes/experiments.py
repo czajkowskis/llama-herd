@@ -1,14 +1,14 @@
 from fastapi import APIRouter, HTTPException
 from datetime import datetime
 
-from ...schemas.experiment import ExperimentRequest, ExperimentStatusResponse
+from ...schemas.experiment import ExperimentRequest
 from ...core.exceptions import ValidationError, NotFoundError, ExperimentError
 from ...services.experiment_service import ExperimentService
 from ...services.conversation_service import ConversationService
 from ...services.autogen_service import autogen_service
 from ...storage import get_storage
 from ...utils.logging import get_logger, log_with_context, set_experiment_context
-from ...utils.case_converter import normalize_dict_to_snake, normalize_dict_to_camel
+from ...utils.case_converter import normalize_dict_to_snake
 from ...utils.experiment_helpers import get_experiment_with_fallback, truncate_title, get_experiment_list_with_storage
 from ...core.state import state_manager
 
@@ -96,38 +96,19 @@ async def get_experiment(experiment_id: str):
             )
         
         # For active experiments, get live conversation from service
-        live_conversation = None
         if experiment_data.get("status") in ["running", "pending"]:
             live_conversation = ConversationService.get_live_conversation(experiment_id)
-        
-        # Create properly structured response
-        response = ExperimentStatusResponse(
-            experiment_id=experiment_data["experiment_id"],
-            status=experiment_data["status"],
-            conversation=live_conversation,
-            conversations=experiment_data.get("conversations", []),
-            iterations=experiment_data.get("iterations", 1),
-            current_iteration=experiment_data.get("current_iteration", 0),
-            error=experiment_data.get("error"),
-            task=experiment_data.get("task"),
-            agents=experiment_data.get("agents"),
-            created_at=experiment_data.get("created_at"),
-            completed_at=experiment_data.get("completed_at")
-        )
-        
-        # Convert to camelCase for frontend
-        response_dict = response.model_dump()
-        response_dict = normalize_dict_to_camel(response_dict, deep=True)
+            experiment_data["conversation"] = live_conversation
         
         log_with_context(
             logger,
             'info',
             f"Retrieved experiment",
             experiment_id=experiment_id,
-            conversation_count=len(response.conversations)
+            conversation_count=len(experiment_data.get("conversations", []))
         )
         
-        return response_dict
+        return experiment_data
         
     except (NotFoundError, ValidationError, ExperimentError) as e:
         # These will be handled by exception handlers
@@ -152,11 +133,8 @@ async def list_experiments():
     try:
         experiments = get_experiment_list_with_storage()
         
-        # Convert to camelCase for frontend
-        experiments_camel = [normalize_dict_to_camel(exp, deep=True) for exp in experiments]
-        
         logger.info(f"Listed {len(experiments)} experiments")
-        return {"experiments": experiments_camel}
+        return {"experiments": experiments}
         
     except Exception as e:
         log_with_context(
@@ -280,8 +258,6 @@ async def update_experiment(experiment_id: str, experiment: dict):
         normalized_experiment = normalize_dict_to_snake(experiment, deep=True)
         
         # Extract only updatable fields to prevent overwriting system fields
-        # Note: This endpoint only allows updating metadata fields, not core experiment data
-        # Core fields like agents, task, conversations are managed by other endpoints
         updatable_fields = ['title', 'status', 'completed_at']
         updates = {k: v for k, v in normalized_experiment.items() if k in updatable_fields}
         

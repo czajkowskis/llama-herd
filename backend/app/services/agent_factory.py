@@ -2,7 +2,6 @@
 Factory for creating AutoGen agents.
 """
 from typing import List
-import asyncio
 from autogen_agentchat.agents import AssistantAgent
 from autogen_core.models import ChatCompletionClient
 
@@ -18,20 +17,23 @@ class AgentFactory:
     """Factory for creating AutoGen agents."""
     
     @staticmethod
-    async def create_autogen_agents(
+    def create_autogen_agents(
         agents: List[AgentModel],
         message_handler: 'MessageHandler'
     ) -> List[AssistantAgent]:
-        """Create AutoGen agents from agent models."""
+        """Create AutoGen agents from agent models using the new AutoGen 0.7.5 API."""
         autogen_agents = []
         
         for agent_config in agents:
             # Validate agent configuration
             AgentService.validate_agent_config(agent_config)
             
-            # Create agent
-            agent = await AgentFactory._create_standard_agent(
-                agent_config, message_handler
+            # Create model client (ChatCompletionClient)
+            model_client = AgentService.create_agent_config(agent_config)
+            
+            # Create standard agent using new API
+            agent = AgentFactory._create_standard_agent(
+                agent_config, model_client
             )
             
             autogen_agents.append(agent)
@@ -40,28 +42,17 @@ class AgentFactory:
         return autogen_agents
     
     @staticmethod
-    async def _create_standard_agent(
+    def _create_standard_agent(
         agent_config: AgentModel,
-        message_handler: 'MessageHandler'
+        model_client: ChatCompletionClient
     ) -> AssistantAgent:
-        """Create a standard AutoGen agent."""
+        """Create a standard AutoGen agent using the new AutoGen 0.7.5 API."""
         
-        # Get model client
-        model_client = AgentService.create_agent_config(agent_config)
-        
-        # Sanitize agent name to be a valid Python identifier (replace spaces with underscores)
-        agent_name = agent_config.name.replace(" ", "_")
-        
-        # Create agent with new API
-        # The model is specified via model_client, and system message contains the agent's prompt
+        # Create agent using new API with model_client instead of llm_config dict
         agent = AssistantAgent(
-            name=agent_name,
-            model_client=model_client,
+            name=agent_config.name,
             system_message=agent_config.prompt,
+            model_client=model_client,
         )
-        
-        # Subscribe to messages from this agent
-        # The new API uses event-driven messaging
-        # We'll handle message logging through the team's event system
         
         return agent

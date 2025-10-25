@@ -1,7 +1,7 @@
 """
 Service for managing experiment iterations.
 """
-import asyncio
+import threading
 from typing import List
 from datetime import datetime
 
@@ -22,10 +22,11 @@ class IterationManager:
     """Service for managing experiment iterations."""
     
     def __init__(self):
+        self.conversation_runner = ConversationRunner()
         self.notifier = ExperimentNotifier()
         self.storage = get_storage()
     
-    async def run_experiment(
+    def run_experiment(
         self,
         experiment_id: str,
         task: TaskModel,
@@ -50,10 +51,10 @@ class IterationManager:
             # Run iterations
             if dataset_items and isinstance(dataset_items, list) and len(dataset_items) > 0:
                 logger.info(f"Running dataset iterations for experiment {experiment_id}")
-                await self._run_dataset_iterations(experiment_id, dataset_items, agents)
+                self._run_dataset_iterations(experiment_id, dataset_items, agents)
             else:
                 logger.info(f"Running manual iterations for experiment {experiment_id}")
-                await self._run_manual_iterations(experiment_id, task.prompt, agents, iterations)
+                self._run_manual_iterations(experiment_id, task.prompt, agents, iterations)
             
             logger.info(f"Experiment {experiment_id} iterations completed, marking as completed")
             
@@ -104,22 +105,20 @@ class IterationManager:
                 except Exception as e2:
                     logger.error(f"Failed to send fallback final notification for {experiment_id}: {str(e2)}")
     
-    async def _run_dataset_iterations(self, experiment_id: str, dataset_items: List, agents: List[AgentModel]):
+    def _run_dataset_iterations(self, experiment_id: str, dataset_items: List, agents: List[AgentModel]):
         """Run experiment over dataset items."""
         for idx, item in enumerate(dataset_items, start=1):
-            await self._run_single_iteration(experiment_id, item.task, agents, idx)
+            self._run_single_iteration(experiment_id, item.task, agents, idx)
             self._snapshot_conversation(experiment_id, f"Dataset item {idx}")
     
-    async def _run_manual_iterations(self, experiment_id: str, prompt: str, agents: List[AgentModel], iterations: int):
+    def _run_manual_iterations(self, experiment_id: str, prompt: str, agents: List[AgentModel], iterations: int):
         """Run experiment with manual iterations."""
         for iteration in range(1, iterations + 1):
-            await self._run_single_iteration(experiment_id, prompt, agents, iteration)
+            self._run_single_iteration(experiment_id, prompt, agents, iteration)
             self._snapshot_conversation(experiment_id, f"Run {iteration}")
     
-    async def _run_single_iteration(self, experiment_id: str, prompt: str, agents: List[AgentModel], iteration: int):
+    def _run_single_iteration(self, experiment_id: str, prompt: str, agents: List[AgentModel], iteration: int):
         """Run a single iteration."""
-        logger.info(f"[{experiment_id}] Starting iteration {iteration}")
-        
         # Update current iteration
         state_manager.update_experiment_status(experiment_id, 'running', current_iteration=iteration)
         self.notifier.notify_status(experiment_id, 'running', iteration)
@@ -136,37 +135,33 @@ class IterationManager:
         except Exception as e:
             logger.warning(f"Failed to notify conversation start for {experiment_id} iter {iteration}: {str(e)}")
         
-        # Create message handler
+        # Create message handler and run conversation
         from ..services.message_handler import MessageHandler
         message_handler = MessageHandler(experiment_id)
-        
-        # Create a fresh ConversationRunner for each iteration to prevent agent state carryover
-        conversation_runner = ConversationRunner()
-        
-        # Run conversation with timeout using asyncio.wait_for
+        # Run conversation in a thread so we can enforce iteration-level timeout
+        conv_thread = threading.Thread(
+            target=self.conversation_runner.run_conversation,
+            args=(experiment_id, prompt, agents, message_handler),
+            daemon=True
+        )
+        conv_thread.start()
+
+        # Wait for iteration to complete with configured timeout
         try:
-            logger.info(f"[{experiment_id}] Starting conversation runner with {len(agents)} agents")
-            await asyncio.wait_for(
-                conversation_runner.run_conversation(experiment_id, prompt, agents, message_handler),
-                timeout=settings.iteration_timeout_seconds
-            )
-            logger.info(f"[{experiment_id}] Iteration {iteration} completed successfully")
-        except asyncio.TimeoutError:
-            # Iteration timed out
-            logger.error(f"Iteration {iteration} for {experiment_id} timed out after {settings.iteration_timeout_seconds}s")
-            # Mark error and emit final status for this experiment
-            state_manager.update_experiment_status(experiment_id, 'error', error='iteration_timeout')
-            self.storage.update_experiment(experiment_id, {
-                'status': 'error',
-                'error': 'iteration_timeout',
-                'completed_at': datetime.now().isoformat()
-            })
-            self.notifier.notify_error(experiment_id, 'iteration_timeout')
-            raise
+            conv_thread.join(timeout=settings.iteration_timeout_seconds)
+            if conv_thread.is_alive():
+                # Iteration timed out
+                logger.error(f"Iteration {iteration} for {experiment_id} timed out after {settings.iteration_timeout_seconds}s")
+                # Mark error and emit final status for this experiment
+                state_manager.update_experiment_status(experiment_id, 'error', error='iteration_timeout')
+                self.storage.update_experiment(experiment_id, {
+                    'status': 'error',
+                    'error': 'iteration_timeout',
+                    'completed_at': datetime.now().isoformat()
+                })
+                self.notifier.notify_error(experiment_id, 'iteration_timeout')
         except Exception as e:
-            logger.error(f"[{experiment_id}] Error during conversation: {str(e)}")
-            import traceback
-            logger.error(f"[{experiment_id}] Traceback: {traceback.format_exc()}")
+            logger.error(f"Error while waiting for conversation thread: {str(e)}")
             raise
     
     def _snapshot_conversation(self, experiment_id: str, title: str):
