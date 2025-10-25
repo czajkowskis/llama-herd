@@ -1163,6 +1163,7 @@ export const Models: React.FC = () => {
                       </Button>
                       <Button
                         variant="secondary"
+                        className="transform transition-all duration-200 hover:scale-110 hover:shadow-lg hover:bg-purple-500/10 motion-reduce:transform-none motion-reduce:transition-none"
                         onClick={async () => {
                           try {
                             await navigator.clipboard?.writeText(tag);

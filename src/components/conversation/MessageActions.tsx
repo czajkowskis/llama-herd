@@ -22,7 +22,7 @@ export const CopyButton: React.FC<CopyButtonProps> = ({ onCopyText }) => {
   return (
     <button
       onClick={handleClick}
-      className="p-1 rounded hover:bg-gray-700 transition-colors duration-150 opacity-0 group-hover:opacity-100 focus:opacity-100 flex items-center"
+      className="text-gray-400 p-1.5 rounded-full transition-all duration-200 hover:bg-purple-500/20 hover:text-purple-400 hover:scale-110 hover:shadow-lg opacity-0 group-hover:opacity-100 focus:opacity-100 flex items-center motion-reduce:transform-none motion-reduce:transition-none"
       aria-label={copied ? 'Copied' : 'Copy message text'}
       title={copied ? 'Copied!' : 'Copy text'}
     >
