@@ -57,8 +57,8 @@ describe('HistoryPage', () => {
     mockBackendStorageService.getConversations.mockResolvedValue(mockConversations);
     mockExperimentService.listExperiments.mockResolvedValue({
       experiments: [
-        { experiment_id: 'exp-1', title: 'Test Experiment 1', status: 'completed', created_at: '2024-01-15T10:00:00Z', agent_count: 1 },
-        { experiment_id: 'exp-2', title: 'Test Experiment 2', status: 'running', created_at: '2024-01-16T10:00:00Z', agent_count: 1 }
+        { experiment_id: 'exp-1', title: 'Test Experiment 1', status: 'completed', created_at: '2024-01-15T10:00:00Z', agent_count: 1, message_count: 5 },
+        { experiment_id: 'exp-2', title: 'Test Experiment 2', status: 'running', created_at: '2024-01-16T10:00:00Z', agent_count: 1, message_count: 3 }
       ]
     });
   });

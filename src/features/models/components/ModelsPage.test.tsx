@@ -26,11 +26,16 @@ const mockUsePullTasks = usePullTasks as jest.MockedFunction<typeof usePullTasks
 describe('ModelsPage', () => {
   const mockInstalledModels = ['llama2', 'codellama', 'mistral'];
   const mockPullTasks = {
+    pullTasks: {},
+    hasActivePulls: false,
     activePulls: [],
-    completedPulls: [],
-    addPullTask: jest.fn(),
-    removePullTask: jest.fn(),
-    updatePullTask: jest.fn(),
+    isLoading: false,
+    error: null,
+    refetch: jest.fn(),
+    dismissedIds: new Set<string>(),
+    dismissTask: jest.fn(),
+    dismissByModelName: jest.fn(),
+    dismissAllErrors: jest.fn(),
   };
 
   beforeEach(() => {

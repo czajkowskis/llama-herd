@@ -33,7 +33,7 @@ describe('experimentService', () => {
           id: 'agent-1',
           name: 'Test Agent',
           model: 'llama2',
-          systemPrompt: 'Test prompt',
+          prompt: 'Test prompt',
           color: '#3B82F6'
         }
       ];
@@ -76,7 +76,7 @@ describe('experimentService', () => {
           id: 'agent-1',
           name: 'Test Agent',
           model: 'llama2',
-          systemPrompt: 'Test prompt',
+          prompt: 'Test prompt',
           color: '#3B82F6'
         }
       ];
@@ -99,7 +99,7 @@ describe('experimentService', () => {
           id: 'agent-1',
           name: 'Test Agent',
           model: 'llama2',
-          systemPrompt: 'Test prompt',
+          prompt: 'Test prompt',
           color: '#3B82F6'
         }
       ];

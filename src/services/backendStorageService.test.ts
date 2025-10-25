@@ -16,7 +16,7 @@ describe('backendStorageService', () => {
           {
             experiment_id: 'exp-1',
             title: 'Test Experiment',
-            agents: [{ id: 'agent-1', name: 'Test Agent', model: 'llama2', systemPrompt: 'Test prompt', color: '#3B82F6' }],
+            agents: [{ id: 'agent-1', name: 'Test Agent', model: 'llama2', prompt: 'Test prompt', color: '#3B82F6' }],
             status: 'completed',
             created_at: '2024-01-15T10:00:00Z'
           }
@@ -100,7 +100,7 @@ describe('backendStorageService', () => {
         id: 'exp-1',
         title: 'Test Experiment',
         task: { id: 'task-1', prompt: 'Test task', description: 'Test description' },
-        agents: [{ id: 'agent-1', name: 'Test Agent', model: 'llama2', systemPrompt: 'Test prompt', color: '#3B82F6' }],
+        agents: [{ id: 'agent-1', name: 'Test Agent', model: 'llama2', prompt: 'Test prompt', color: '#3B82F6' }],
         status: 'completed',
         createdAt: '2024-01-15T10:00:00Z',
         completedAt: '2024-01-15T11:00:00Z',
@@ -133,7 +133,7 @@ describe('backendStorageService', () => {
         id: 'exp-1',
         title: 'Test Experiment',
         task: { id: 'task-1', prompt: 'Test task', description: 'Test description' },
-        agents: [{ id: 'agent-1', name: 'Test Agent', model: 'llama2', systemPrompt: 'Test prompt', color: '#3B82F6' }],
+        agents: [{ id: 'agent-1', name: 'Test Agent', model: 'llama2', prompt: 'Test prompt', color: '#3B82F6' }],
         status: 'completed',
         createdAt: '2024-01-15T10:00:00Z',
         completedAt: '2024-01-15T11:00:00Z',
@@ -156,7 +156,7 @@ describe('backendStorageService', () => {
         id: 'exp-1',
         title: 'Test Experiment',
         task: { id: 'task-1', prompt: 'Test task', description: 'Test description' },
-        agents: [{ id: 'agent-1', name: 'Test Agent', model: 'llama2', systemPrompt: 'Test prompt', color: '#3B82F6' }],
+        agents: [{ id: 'agent-1', name: 'Test Agent', model: 'llama2', prompt: 'Test prompt', color: '#3B82F6' }],
         status: 'completed',
         createdAt: '2024-01-15T10:00:00Z',
         completedAt: '2024-01-15T11:00:00Z',

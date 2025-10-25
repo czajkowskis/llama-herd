@@ -97,3 +97,4 @@ export class TestHelpers {
     await this.page.screenshot({ path: `test-results/${name}.png`, fullPage: true });
   }
 }
+

@@ -16,16 +16,16 @@ export const handlers = [
   http.post('*/api/experiments/start', async ({ request }) => {
     const body = await request.json();
     return HttpResponse.json({
-      experimentId: 'test-exp-1',
+      experiment_id: 'test-exp-1',
       status: 'running',
-      message: 'Experiment started successfully'
+      websocket_url: 'ws://localhost:8000/ws/experiments/test-exp-1'
     });
   }),
 
   http.get('*/api/experiments/:id', ({ params }) => {
     const { id } = params;
     return HttpResponse.json({
-      experimentId: id,
+      experiment_id: id,
       status: 'running',
       conversation: {
         id: 'conv-1',
@@ -66,7 +66,7 @@ export const handlers = [
   http.post('*/api/experiments/:id/stop', ({ params }) => {
     const { id } = params;
     return HttpResponse.json({
-      experimentId: id,
+      experiment_id: id,
       status: 'stopped',
       message: 'Experiment stopped successfully'
     });
@@ -76,38 +76,20 @@ export const handlers = [
     return HttpResponse.json({
       experiments: [
         {
-          id: 'exp-1',
-          name: 'Test Experiment 1',
+          experiment_id: 'exp-1',
+          title: 'Test Experiment 1',
           status: 'completed',
-          createdAt: '2024-01-15T10:00:00Z',
-          task: {
-            prompt: 'Test task 1',
-            description: 'Test description 1'
-          },
-          agents: [
-            {
-              name: 'Agent 1',
-              model: 'llama2',
-              color: '#3B82F6'
-            }
-          ]
+          created_at: '2024-01-15T10:00:00Z',
+          agent_count: 1,
+          message_count: 5
         },
         {
-          id: 'exp-2',
-          name: 'Test Experiment 2',
+          experiment_id: 'exp-2',
+          title: 'Test Experiment 2',
           status: 'running',
-          createdAt: '2024-01-16T10:00:00Z',
-          task: {
-            prompt: 'Test task 2',
-            description: 'Test description 2'
-          },
-          agents: [
-            {
-              name: 'Agent 2',
-              model: 'codellama',
-              color: '#10B981'
-            }
-          ]
+          created_at: '2024-01-16T10:00:00Z',
+          agent_count: 1,
+          message_count: 3
         }
       ]
     });
@@ -176,3 +158,4 @@ export const handlers = [
     );
   }),
 ];
+
