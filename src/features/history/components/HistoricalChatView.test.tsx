@@ -31,7 +31,6 @@ describe('HistoricalChatView', () => {
         id: 'agent-1',
         name: 'Test Agent 1',
         model: 'llama2',
-        systemPrompt: 'Test prompt 1',
         color: '#3B82F6'
       }
     ],

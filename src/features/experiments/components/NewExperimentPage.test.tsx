@@ -19,7 +19,11 @@ describe('NewExperimentPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockOllamaService.listModels.mockResolvedValue(['llama2', 'codellama']);
-    mockExperimentService.startExperiment.mockResolvedValue({ experimentId: 'test-exp-1' });
+    mockExperimentService.startExperiment.mockResolvedValue({ 
+      experiment_id: 'test-exp-1',
+      status: 'running',
+      websocket_url: 'ws://localhost:8000/ws/experiments/test-exp-1'
+    });
   });
 
   it('should render the new experiment page', () => {

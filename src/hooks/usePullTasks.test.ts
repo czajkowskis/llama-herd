@@ -2,6 +2,8 @@
 // This is a placeholder test since the actual hook implementation
 // depends on complex context and service integrations
 
+export {};
+
 describe('usePullTasks', () => {
   it('should be a valid hook', () => {
     // This is a basic test to ensure the hook file can be imported

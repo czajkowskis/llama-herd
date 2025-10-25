@@ -150,3 +150,4 @@ test.describe('Settings Management', () => {
     await expect(page.locator('.preview-message')).toHaveClass(/sparse/);
   });
 });
+
