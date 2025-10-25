@@ -124,12 +124,8 @@ export const History: React.FC = () => {
     if (!experimentToDelete) return;
     
     try {
-      const success = await backendStorageService.deleteExperiment(experimentToDelete.id);
-      if (success) {
-        await loadHistory();
-      } else {
-        setError('Failed to delete experiment. Please try again later.');
-      }
+      await backendStorageService.deleteExperiment(experimentToDelete.id);
+      await loadHistory();
     } catch (error) {
       console.error('Failed to delete experiment:', error);
       setError('Failed to delete experiment. Please try again later.');
@@ -281,22 +277,15 @@ export const History: React.FC = () => {
     try {
       const deletePromises = Array.from(selectedItems).map(async (id) => {
         if (activeTab === 'experiments') {
-          return await backendStorageService.deleteExperiment(id);
+          await backendStorageService.deleteExperiment(id);
         } else {
-          return await backendStorageService.deleteConversation(id);
+          await backendStorageService.deleteConversation(id);
         }
       });
-      const results = await Promise.all(deletePromises);
-      
-      // Check if all deletions were successful
-      const allSuccessful = results.every(result => result === true);
-      if (allSuccessful) {
-        setSelectedItems(new Set());
-        setSelectMode(false);
-        await loadHistory();
-      } else {
-        setError('Some items could not be deleted. Please try again later.');
-      }
+      await Promise.all(deletePromises);
+      setSelectedItems(new Set());
+      setSelectMode(false);
+      await loadHistory();
     } catch (error) {
       console.error('Failed to bulk delete items:', error);
       setError('Failed to delete selected items. Please try again later.');

@@ -4,6 +4,10 @@ import { usePullTasks } from '../hooks/usePullTasks';
 import { Button } from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
 import { ConfirmationPopup } from '../components/ui/ConfirmationPopup';
+import { useOllamaConnection } from '../features/models/hooks/useOllamaConnection';
+import { useModelPulling } from '../features/models/hooks/useModelPulling';
+import { InstalledModels } from '../features/models/components/InstalledModels';
+import { DiscoverModels } from '../features/models/components/DiscoverModels';
 
 type TabKey = 'installed' | 'discover';
 
@@ -16,139 +20,17 @@ type CatalogItem = {
   notes?: string;
 };
 
-type PullingState = {
-  progress?: number;
-  total?: number;
-  completed?: number;
-  error?: string;
-  controller?: AbortController; // Not persisted, recreated on mount
-  startTime?: number;
-  lastUpdateTime?: number;
-  speed?: number; // bytes per second
-};
-
 const SIZE_CONFIRM_THRESHOLD = 2 * 1024 * 1024 * 1024; // 2GB
-const PULLING_STATE_KEY = 'llama-herd-pulling-models';
 
-// Connection retry configuration
-const INITIAL_RETRY_DELAY = 5000; // 5 seconds
-const MAX_RETRY_DELAY = 300000; // 5 minutes
-const MAX_RETRY_ATTEMPTS = 10;
-
-// Helper to save pulling state to localStorage (without controllers and runtime data)
-const savePullingState = (state: Record<string, PullingState>) => {
-  const persistable: Record<string, Omit<PullingState, 'controller' | 'startTime' | 'lastUpdateTime' | 'speed'>> = {};
-  Object.entries(state).forEach(([tag, data]) => {
-    persistable[tag] = {
-      progress: data.progress,
-      total: data.total,
-      completed: data.completed,
-      error: data.error,
-    };
-  });
-  localStorage.setItem(PULLING_STATE_KEY, JSON.stringify(persistable));
-};
-
-// Helper to load pulling state from localStorage
-const loadPullingState = (): Record<string, PullingState> => {
-  try {
-    const saved = localStorage.getItem(PULLING_STATE_KEY);
-    if (!saved) return {};
-    const parsed = JSON.parse(saved);
-    // Convert back to PullingState format (controllers will be added when needed)
-    const state: Record<string, PullingState> = {};
-    Object.entries(parsed).forEach(([tag, data]: [string, any]) => {
-      state[tag] = {
-        progress: data.progress,
-        total: data.total,
-        completed: data.completed,
-        error: data.error,
-      };
-    });
-    return state;
-  } catch (e) {
-    console.error('Failed to load pulling state:', e);
-    return {};
-  }
-};
-
-// Custom hook for Ollama connection with retry logic
-const useOllamaConnection = () => {
-  const [connected, setConnected] = useState<boolean>(false);
-  const [version, setVersion] = useState<string>('');
-  const [connectionError, setConnectionError] = useState<string>('');
-  const [isRetrying, setIsRetrying] = useState<boolean>(false);
-  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const retryCountRef = useRef<number>(0);
-
-  const checkConnection = async () => {
-    try {
-      const v = await ollamaService.getVersion();
-      setConnected(true);
-      setVersion(v);
-      setConnectionError('');
-      retryCountRef.current = 0; // Reset retry count on success
-      setIsRetrying(false);
-    } catch (error: any) {
-      setConnected(false);
-      setVersion('');
-      setConnectionError(error.message || 'Connection failed');
-      scheduleRetry();
-    }
-  };
-
-  const scheduleRetry = () => {
-    if (retryCountRef.current >= MAX_RETRY_ATTEMPTS) {
-      setConnectionError('Maximum retry attempts reached. Please check Ollama installation.');
-      setIsRetrying(false);
-      return;
-    }
-
-    setIsRetrying(true);
-    const delay = Math.min(INITIAL_RETRY_DELAY * Math.pow(2, retryCountRef.current), MAX_RETRY_DELAY);
-    retryCountRef.current += 1;
-
-    retryTimeoutRef.current = setTimeout(() => {
-      checkConnection();
-    }, delay);
-  };
-
-  const manualRetry = () => {
-    if (retryTimeoutRef.current) {
-      clearTimeout(retryTimeoutRef.current);
-      retryTimeoutRef.current = null;
-    }
-    retryCountRef.current = 0;
-    checkConnection();
-  };
-
-  useEffect(() => {
-    checkConnection();
-    return () => {
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  return {
-    connected,
-    version,
-    connectionError,
-    isRetrying,
-    manualRetry,
-  };
-};
 
 export const Models: React.FC = () => {
   const [active, setActive] = useState<TabKey>('installed');
   const [installed, setInstalled] = useState<string[]>([]);
   const [defaultModel, setDefaultModel] = useState<string>(() => localStorage.getItem('llama-herd-default-ollama-model') || '');
+  const { pulling, startPull, cancelPull, dismissNotification, dismissAllNotifications } = useModelPulling();
   const [query, setQuery] = useState('');
   const [family, setFamily] = useState('');
   const [quant, setQuant] = useState('');
-  const [addTag, setAddTag] = useState('');
-  const [pulling, setPulling] = useState<Record<string, PullingState>>(() => loadPullingState());
   const [resetCounter, setResetCounter] = useState(0);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [showConfirmPopup, setShowConfirmPopup] = useState(false);
@@ -490,22 +372,7 @@ export const Models: React.FC = () => {
     return () => { mounted = false; };
   }, []);
 
-  // Initialize expanded groups when catalog changes
-  useEffect(() => {
-    const groups = groupModelsByBaseName(catalog);
-    setExpandedGroups(new Set());
-  }, [catalog]);
 
-  // Derived discover list with basic search/filter
-  const discoverFiltered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return catalog.filter(item => {
-      const matchesText = !q || item.name.toLowerCase().includes(q) || item.tag.toLowerCase().includes(q);
-      const matchesFamily = !family || item.family === family;
-      const matchesQuant = !quant || item.quant === quant;
-      return matchesText && matchesFamily && matchesQuant;
-    });
-  }, [catalog, query, family, quant]);
 
   // Installed models
   useEffect(() => {
@@ -521,30 +388,6 @@ export const Models: React.FC = () => {
         if (!mounted) return;
         setInstalled(Array.isArray(models) ? models : []);
         
-        // Clean up stale downloads: if a model is installed, remove it from pulling state
-        // If a model was being pulled but isn't installed, mark it with an error
-        setPulling(prev => {
-          const updated = { ...prev };
-          let changed = false;
-          
-          Object.keys(updated).forEach(tag => {
-            if (models.includes(tag)) {
-              // Model was completed while we were away
-              delete updated[tag];
-              changed = true;
-            } else if (!updated[tag].error) {
-              // Model was being pulled but has no controller (stale from page reload)
-              // Mark it as interrupted so user can retry
-              updated[tag] = {
-                ...updated[tag],
-                error: 'Download interrupted. Click retry to resume.',
-              };
-              changed = true;
-            }
-          });
-          
-          return changed ? updated : prev;
-        });
       } catch (e) {
         // keep installed empty when disconnected
       }
@@ -558,68 +401,9 @@ export const Models: React.FC = () => {
     else localStorage.removeItem('llama-herd-default-ollama-model');
   }, [defaultModel]);
 
-  // Persist pulling state to localStorage whenever it changes
-  useEffect(() => {
-    savePullingState(pulling);
-  }, [pulling]);
 
   // Merge PullTasksContext (server-backed + websocket-updated) into the local pulling state
   const { pullTasks, dismissByModelName, dismissAllErrors, dismissTask } = usePullTasks();
-
-  useEffect(() => {
-    // pullTasks is a map of task_id -> task data
-    setPulling(prev => {
-      const updated = { ...prev };
-      Object.values(pullTasks).forEach((t: any) => {
-        const tag = t.model_name;
-        if (!tag) return;
-
-        if (t.status === 'running' || t.status === 'pending') {
-          const total = t.progress?.total ?? undefined;
-          const completed = t.progress?.completed ?? undefined;
-          const progressPercent = (typeof total === 'number' && typeof completed === 'number' && total > 0)
-            ? Math.min(100, Math.floor((completed / total) * 100))
-            : undefined;
-
-          // Derive speed and ETA from server timestamps when possible
-          let speed: number | undefined = undefined;
-          let lastUpdateTime: number | undefined = undefined;
-          // Use started_at from server if available to estimate average speed
-          if (t.started_at && typeof completed === 'number') {
-            try {
-              const started = new Date(t.started_at).getTime();
-              const now = Date.now();
-              const elapsedSec = Math.max(1, (now - started) / 1000);
-              speed = completed / elapsedSec; // bytes per second (average)
-              lastUpdateTime = now;
-            } catch (e) {
-              // ignore parse errors
-            }
-          }
-
-          updated[tag] = {
-            ...updated[tag],
-            // keep any existing controller if present (local active pulls)
-            controller: updated[tag]?.controller,
-            total,
-            completed,
-            progress: progressPercent,
-            error: t.error ?? undefined,
-            lastUpdateTime: lastUpdateTime ?? updated[tag]?.lastUpdateTime,
-            speed: speed ?? updated[tag]?.speed,
-            startTime: t.started_at ? new Date(t.started_at).getTime() : updated[tag]?.startTime,
-          } as PullingState;
-        } else if (t.status === 'error') {
-          updated[tag] = {
-            ...updated[tag],
-            controller: updated[tag]?.controller,
-            error: t.error || 'Download interrupted. Click retry to resume.'
-          } as PullingState;
-        }
-      });
-      return updated;
-    });
-  }, [pullTasks]);
 
   // On mount (and when connection is available), fetch server-side persisted pull tasks
   // and merge them into the local `pulling` state so persisted tasks are visible in the UI.
@@ -642,23 +426,8 @@ export const Models: React.FC = () => {
     return () => { mounted = false; };
   }, [connected]);
 
-  // Clean up pulling state for models that are now installed
-  useEffect(() => {
-    if (installed.length === 0) return;
-    setPulling(prev => {
-      const updated = { ...prev };
-      let changed = false;
-      installed.forEach(tag => {
-        if (updated[tag] && !updated[tag].error) {
-          delete updated[tag];
-          changed = true;
-        }
-      });
-      return changed ? updated : prev;
-    });
-  }, [installed]);
 
-  const startPull = (tag: string, sizeHint?: number) => {
+  const handleStartPull = (tag: string, sizeHint?: number) => {
     // Prevent duplicate pull if the model is already installed according to
     // the live-installed list or annotated in the backend catalog.
     if (installed.includes(tag) || (catalog.find(c => c.tag === tag) as any)?.installed) return; // prevent duplicate pull
@@ -676,92 +445,8 @@ export const Models: React.FC = () => {
     setShowConfirmPopup(false);
     setPendingPull(null);
     
-    const controller = new AbortController();
-    const startTime = Date.now();
-    setPulling(prev => ({ ...prev, [tag]: { controller, progress: 0, startTime } }));
-    
-    // Run the pull operation in the background without blocking the UI
-    // Use setTimeout to ensure this runs after the current call stack clears
-    setTimeout(() => {
-      (async () => {
-        try {
-          let lastUpdateTime = 0;
-          const UPDATE_THROTTLE = 200; // Update UI at most every 200ms
-          
-          await ollamaService.pullModel(tag, (p) => {
-            const now = Date.now();
-            // Throttle state updates to avoid overwhelming React
-            if (now - lastUpdateTime < UPDATE_THROTTLE && p.completed !== p.total) {
-              return;
-            }
-            lastUpdateTime = now;
-            
-            setPulling(prev => {
-              const total = p.total ?? prev[tag]?.total;
-              const completed = p.completed ?? 0;
-              const progress = total && total > 0 ? Math.min(100, Math.floor((completed / total) * 100)) : undefined;
-              
-              // Calculate speed and ETA
-              const currentTime = Date.now();
-              const startTime = prev[tag]?.startTime || currentTime;
-              const elapsed = (currentTime - startTime) / 1000; // seconds
-              const speed = elapsed > 0 ? completed / elapsed : 0; // bytes per second
-              const remaining = total && total > completed ? (total - completed) / speed : 0;
-              
-              return { 
-                ...prev, 
-                [tag]: { 
-                  ...prev[tag], 
-                  controller, 
-                  total, 
-                  completed,
-                  progress, 
-                  error: p.error,
-                  lastUpdateTime: currentTime,
-                  speed: speed > 0 ? speed : prev[tag]?.speed
-                } 
-              };
-            });
-          }, controller.signal);
-          // refresh installed after pull success
-          const models = await ollamaService.listModels();
-          setInstalled(Array.isArray(models) ? models : []);
-          // keep progress visible briefly then clear
-          setTimeout(() => {
-            setPulling(prev => {
-              const { [tag]: _, ...rest } = prev;
-              return rest;
-            });
-          }, 400);
-        } catch (e: any) {
-          // If aborted, don't surface an error or re-add the entry
-          const aborted = e?.name === 'AbortError' || /aborted/i.test(e?.message || '') || controller.signal.aborted;
-          if (aborted) {
-            // Remove from pulling state when cancelled
-            setPulling(prev => {
-              const { [tag]: _, ...rest } = prev;
-              return rest;
-            });
-          } else {
-            // Check if it was a network error that might be recoverable
-            const networkError = /network|timeout|connection|fetch/i.test(e?.message || '');
-            const errorMessage = networkError 
-              ? 'Download interrupted due to network issues. You can retry to continue downloading.'
-              : e?.message || 'Pull failed';
-            
-            setPulling(prev => ({ 
-              ...prev, 
-              [tag]: { 
-                ...prev[tag], 
-                controller: undefined, // Clear controller so it's not considered active
-                error: errorMessage,
-                completed: prev[tag]?.completed || 0 // Preserve progress
-              } 
-            }));
-          }
-        }
-      })();
-    }, 0);
+    // Use the hook's startPull function
+    startPull(tag, sizeHint);
   };
 
   const cancelConfirmPull = () => {
@@ -792,88 +477,10 @@ export const Models: React.FC = () => {
     setPendingRemoval(null);
   };
 
-  const cancelPull = (tag: string) => {
-    (async () => {
-      const ctl = pulling[tag]?.controller;
-      // Abort local controller if present
-      try {
-        if (ctl) ctl.abort();
-      } catch (e) {
-        console.warn('Failed to abort local controller', e);
-      }
-
-      // Also attempt to cancel server-side pull if one exists for this model
-      try {
-        const serverTask = Object.values(pullTasks).find((t: any) => t.model_name === tag && (t.status === 'running' || t.status === 'pending')) as any | undefined;
-        if (serverTask && serverTask.task_id) {
-          await ollamaService.cancelModelPull(serverTask.task_id);
-        }
-      } catch (e) {
-        console.warn('Failed to cancel server-side pull task', e);
-      }
-
-      // Remove from state immediately
-      setPulling(prev => {
-        const { [tag]: _, ...rest } = prev;
-        return rest;
-      });
-    })();
-  };
-
-  const dismissNotification = (tag: string) => {
-    // Dismiss server-persisted tasks for this model (so they don't reappear)
-    try {
-      dismissByModelName(tag);
-    } catch (e) {
-      // ignore
-    }
-
-    // Remove local-only pulling entry
-    setPulling(prev => {
-      const { [tag]: _, ...rest } = prev;
-      return rest;
-    });
-  };
-
-  const dismissAllNotifications = () => {
-    // Dismiss server-side error tasks so they don't reappear
-    try {
-      dismissAllErrors();
-    } catch (e) {
-      // ignore
-    }
-
-    // Remove local-only error entries as well
-    setPulling(prev => {
-      const next: Record<string, PullingState> = { ...prev };
-      Object.keys(prev).forEach(tag => {
-        if (prev[tag]?.error) {
-          delete next[tag];
-        }
-      });
-      return next;
-    });
-  };
 
   const removeModel = (tag: string) => {
     setPendingRemoval(tag);
     setShowConfirmPopup(true);
-  };
-
-  // function to pull all models in a family
-  const pullAllInFamily = (familyName: string) => {
-    // Skip models already installed according to live state or annotated in the catalog
-    const familyModels = catalog.filter(item => item.family === familyName && !(installed.includes(item.tag) || ((item as any).installed ?? false)));
-    if (familyModels.length === 0) return;
-    
-    const totalSize = familyModels.reduce((sum, item) => sum + (item.size || 0), 0);
-    const confirmMessage = `Pull all ${familyModels.length} ${familyName} models? Total size: ~${(totalSize / (1024**3)).toFixed(1)} GB`;
-    
-    if (window.confirm(confirmMessage)) {
-      familyModels.forEach(item => {
-        setTimeout(() => startPull(item.tag, item.size), Math.random() * 1000); // Stagger starts
-      });
-    }
   };
 
   // Group models by base name (excluding size and quantization)
@@ -908,6 +515,7 @@ export const Models: React.FC = () => {
       return newSet;
     });
   };
+
 
   // UI helpers
   const renderProgress = (tag: string, opts?: { showCancel?: boolean }) => {
@@ -975,10 +583,7 @@ export const Models: React.FC = () => {
                         }
                       } else {
                         // Fallback: remove local-only entry
-                        setPulling(prev => {
-                          const { [tag]: _, ...rest } = prev;
-                          return rest;
-                        });
+                        dismissNotification(tag);
                       }
                     } catch (e) {
                       // ignore errors
@@ -1050,35 +655,6 @@ export const Models: React.FC = () => {
           )}
         </div>
       </div>
-      <div className="flex gap-2">
-        <input
-          value={addTag}
-          onChange={(e) => setAddTag(e.target.value)}
-          placeholder="Add by tag (e.g., llama3:8b-instruct-q4_0)"
-          aria-label="Add model by exact tag"
-          className="p-2 rounded-lg border"
-          style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)', borderColor: 'var(--color-border)' }}
-        />
-        <Button
-          onClick={() => startPull(addTag)}
-          disabled={
-            !addTag ||
-            (installed?.includes(addTag) ?? false) ||
-            (catalog.some(c => c.tag === addTag && (c as any).installed)) ||
-            !connected
-          }
-          title={
-            !connected
-              ? 'Ollama is not connected.'
-              : ((installed?.includes(addTag) ?? false) || catalog.some(c => c.tag === addTag && (c as any).installed))
-                ? 'Already installed'
-                : 'Pull model by tag'
-          }
-          aria-label="Pull by tag"
-        >
-          Pull
-        </Button>
-      </div>
     </div>
   );
 
@@ -1137,212 +713,7 @@ export const Models: React.FC = () => {
     );
   };
 
-  const Installed = () => {
-    const [copiedTag, setCopiedTag] = React.useState<string | null>(null);
 
-    return (
-      <div>
-        {!installed || installed.length === 0 ? (
-          <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>No local models found.</p>
-        ) : (
-          <div className="space-y-3">
-            {installed.map(tag => {
-              const label = catalog.find(i => i.tag === tag)?.name || deriveModelName(tag);
-              return (
-                <div key={tag} className="p-3 rounded-xl group" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <div className="font-medium" style={{ color: 'var(--color-text-primary)' }}>{label}</div>
-                      {label !== tag && (
-                        <div className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>{tag}</div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant={defaultModel === tag ? 'primary' : 'secondary'} onClick={() => setDefaultModel(tag)} aria-label={`Set ${tag} as default`}>
-                        {defaultModel === tag ? 'Default' : 'Set default'}
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        className="text-gray-400 hover:text-purple-400 transform transition-all duration-200 hover:scale-110 hover:shadow-lg hover:bg-purple-500/10 motion-reduce:transform-none motion-reduce:transition-none"
-                        onClick={async () => {
-                          try {
-                            await navigator.clipboard?.writeText(tag);
-                            setCopiedTag(tag);
-                            window.setTimeout(() => setCopiedTag((cur) => (cur === tag ? null : cur)), 2000);
-                          } catch (err) {
-                            console.error('Failed to copy tag', err);
-                          }
-                        }}
-                        aria-label={`Copy tag ${tag}`}
-                        title={copiedTag === tag ? 'Copied!' : 'Copy tag'}
-                      >
-                        <Icon>
-                          {copiedTag === tag ? (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-400"><polyline points="20 6 9 17 4 12" /></svg>
-                          ) : (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                          )}
-                        </Icon>
-                      </Button>
-                      <button
-                        onClick={() => removeModel(tag)}
-                        aria-label={`Remove ${tag}`}
-                        title="Remove"
-                        className="p-1 rounded transition-colors duration-150 text-white hover:text-red-400 hover:bg-red-500/20 focus:opacity-100 flex items-center"
-                      >
-                        <Icon>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-current">
-                            <polyline points="3 6 5 6 21 6" />
-                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                            <path d="M10 11v6" />
-                            <path d="M14 11v6" />
-                            <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
-                          </svg>
-                        </Icon>
-                        <span className="sr-only">Remove</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const Discover = () => {
-    const searchRef = useRef<HTMLInputElement | null>(null);
-    return (
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <input
-            ref={searchRef}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by name or tag"
-            aria-label="Search models"
-            className="flex-1 p-2 rounded-lg border"
-            style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)', borderColor: 'var(--color-border)' }}
-          />
-        <select value={family} onChange={(e) => setFamily(e.target.value)} aria-label="Filter by family" className="p-2 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)', borderColor: 'var(--color-border)' }}>
-          <option value="">All Families</option>
-          <option value="llama">Llama</option>
-          <option value="codellama">Code Llama</option>
-          <option value="mistral">Mistral</option>
-          <option value="phi">Phi</option>
-          <option value="gemma">Gemma</option>
-          <option value="qwen">Qwen</option>
-          <option value="vicuna">Vicuna</option>
-          <option value="orca">Orca</option>
-        </select>
-        <select value={quant} onChange={(e) => setQuant(e.target.value)} aria-label="Filter by quantization" className="p-2 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)', borderColor: 'var(--color-border)' }}>
-          <option value="">All Quants</option>
-          <option value="q3_K_M">q3_K_M</option>
-          <option value="q4_0">q4_0</option>
-          <option value="q5_0">q5_0</option>
-          <option value="q5_1">q5_1</option>
-          <option value="fp16">fp16</option>
-        </select>
-          {(query || family || quant) && (
-            <Button variant="secondary" onClick={() => { setQuery(''); setFamily(''); setQuant(''); if (searchRef.current) searchRef.current.value = ''; setResetCounter((v) => v + 1); }} aria-label="Clear filters">Clear</Button>
-          )}
-        </div>
-
-        <div key={`discover-${resetCounter}`} className="space-y-4">
-          {Object.entries(groupModelsByBaseName(discoverFiltered)).map(([baseName, variants]) => {
-            // Consider an item installed if either the live installed list reports it
-            // or the backend-catalog annotated it as installed.
-            const allInstalled = variants.every(item => ((installed?.includes(item.tag) ?? false) || ((item as any).installed ?? false)));
-            const somePulling = variants.some(item => !!pulling[item.tag]);
-            const familyName = variants[0].family;
-            const isExpanded = expandedGroups.has(baseName);
-            
-            return (
-              <div key={baseName} className="p-4 rounded-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div 
-                      className="flex items-center gap-2 cursor-pointer mb-2" 
-                      onClick={() => toggleGroupExpanded(baseName)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          toggleGroupExpanded(baseName);
-                        }
-                      }}
-                      aria-expanded={isExpanded}
-                      aria-label={`Toggle ${baseName} variants`}
-                    >
-                      <div className="font-medium text-lg" style={{ color: 'var(--color-text-primary)' }}>{baseName}</div>
-                      <Icon className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-90' : ''}`}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="9,18 15,12 9,6"/>
-                        </svg>
-                      </Icon>
-                    </div>
-                    <div className="text-sm mb-3" style={{ color: 'var(--color-text-tertiary)' }}>
-                      {familyName && <span className="capitalize">{familyName} family • </span>}
-                      {variants.length} variant{variants.length !== 1 ? 's' : ''} available
-                    </div>
-                    
-                    {isExpanded && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {variants.map(item => {
-                          const isInstalled = (installed?.includes(item.tag) ?? false) || ((item as any).installed ?? false);
-                          const isPulling = !!pulling[item.tag];
-                          
-                          return (
-                            <div key={item.tag} className="p-3 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)' }}>
-                              <div className="flex items-center justify-between gap-2 mb-2">
-                                <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                                  {item.name}
-                                </div>
-                                <div className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-                                  {item.size && `${(item.size/(1024**3)).toFixed(1)} GB`}
-                                </div>
-                              </div>
-                              
-                              <div className="text-xs mb-2" style={{ color: 'var(--color-text-tertiary)' }}>
-                                {item.tag}
-                              </div>
-                              
-                              {renderProgress(item.tag, { showCancel: false })}
-                              
-                              <div className="flex justify-end mt-2">
-                                <Button
-                                  className="px-3 py-1 text-sm"
-                                  onClick={() => startPull(item.tag, item.size)}
-                                  disabled={isInstalled || isPulling || !connected}
-                                  title={!connected ? 'Ollama is not connected.' : (isInstalled ? 'Installed' : 'Pull model')}
-                                  aria-label={isInstalled ? `Installed ${item.tag}` : `Pull ${item.tag}`}
-                                >
-                                  {isInstalled ? '✓' : isPulling ? 'Pulling…' : 'Pull'}
-                                </Button>
-                              </div>
-                              
-                              {pulling[item.tag]?.error && (
-                                <div className="text-red-500 text-xs mt-2" role="alert">
-                                  {pulling[item.tag]?.error} <a className="underline" href="#" onClick={(e) => { e.preventDefault(); startPull(item.tag); }}>Retry</a>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="p-4 animate-fade-in">
@@ -1355,7 +726,14 @@ export const Models: React.FC = () => {
         aria-labelledby="tab-installed"
         hidden={active !== 'installed'}
       >
-        <Installed />
+        <InstalledModels
+          installed={installed}
+          defaultModel={defaultModel}
+          onSetDefaultModel={setDefaultModel}
+          onRemoveModel={removeModel}
+          catalog={catalog}
+          deriveModelName={deriveModelName}
+        />
       </div>
       <div
         role="tabpanel"
@@ -1363,7 +741,25 @@ export const Models: React.FC = () => {
         aria-labelledby="tab-discover"
         hidden={active !== 'discover'}
       >
-        <Discover />
+        <DiscoverModels
+          catalog={catalog}
+          installed={installed}
+          pulling={pulling}
+          connected={connected}
+          onStartPull={handleStartPull}
+          onRenderProgress={renderProgress}
+          groupModelsByBaseName={groupModelsByBaseName}
+          expandedGroups={expandedGroups}
+          onToggleGroupExpanded={toggleGroupExpanded}
+          query={query}
+          setQuery={setQuery}
+          family={family}
+          setFamily={setFamily}
+          quant={quant}
+          setQuant={setQuant}
+          resetCounter={resetCounter}
+          setResetCounter={setResetCounter}
+        />
       </div>
       
       {/* Confirmation Popup */}
