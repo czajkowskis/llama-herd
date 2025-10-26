@@ -52,38 +52,44 @@ The LLaMa-Herd backend is a FastAPI application that provides:
 ### Architecture Layers
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                      FastAPI App                        │
-│  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │   Routes    │  │ WebSockets   │  │  Exception   │  │
-│  │  Handlers   │  │   Handlers   │  │  Handlers    │  │
-│  └──────┬──────┘  └──────┬───────┘  └──────┬───────┘  │
-└─────────┼─────────────────┼──────────────────┼──────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    FastAPI Backend                          │
+│  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│  │   Routes    │  │ WebSockets   │  │  Exception   │       │
+│  │  Handlers   │  │   Handlers   │  │  Handlers    │       │
+│  └──────┬──────┘  └──────┬───────┘  └──────┬───────┘       │
+└─────────┼─────────────────┼──────────────────┼───────────────┘
           │                 │                  │
-┌─────────┼─────────────────┼──────────────────┼──────────┐
-│         ▼                 ▼                  ▼          │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │              Service Layer                        │  │
-│  │  • ExperimentService                              │  │
-│  │  • ConversationService                            │  │
-│  │  • AgentService                                   │  │
-│  │  • AutogenService                                 │  │
-│  │  • ModelPullManager                               │  │
-│  └──────────────────────────────────────────────────┘  │
-│                                                          │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │              Storage Layer                        │  │
-│  │  • ExperimentStorage                              │  │
-│  │  • ConversationStorage                            │  │
-│  │  • UnifiedStorage                                 │  │
-│  └──────────────────────────────────────────────────┘  │
-│                                                          │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │         External Integrations                     │  │
-│  │  • Ollama API Client                              │  │
-│  │  • AutoGen Framework                              │  │
-│  └──────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────┘
+┌─────────┼─────────────────┼──────────────────┼───────────────┐
+│         ▼                 ▼                  ▼               │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │                  Service Layer                        │  │
+│  │  • ExperimentService                                  │  │
+│  │  • ConversationService                                │  │
+│  │  • AgentService                                       │  │
+│  │  • AutogenService                                     │  │
+│  │  • ModelPullManager                                   │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                              │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │                  Storage Layer                        │  │
+│  │  • ExperimentStorage                                  │  │
+│  │  • ConversationStorage                                │  │
+│  │  • UnifiedStorage                                     │  │
+│  └───────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
+          │                                      │
+          │                                      │
+          ▼                                      ▼
+┌──────────────────────┐          ┌──────────────────────┐
+│   Ollama Server      │          │    AutoGen Agents    │
+│  (localhost:11434)   │          │                      │
+│                      │          │  Uses OpenAI API     │
+│  • /v1/chat/         │◄─────────┤  format via Ollama   │
+│    completions       │          │                      │
+│  • /api/pull         │          │                      │
+│  • /api/tags         │          └──────────────────────┘
+└──────────────────────┘
 ```
 
 ## Installation
@@ -150,8 +156,8 @@ CORS_ALLOW_HEADERS="*"
 
 ```bash
 # Ollama API endpoints
-OLLAMA_BASE_URL=http://localhost:8080/v1    # Proxy endpoint
-OLLAMA_URL=http://localhost:11434           # Direct Ollama endpoint
+OLLAMA_BASE_URL=http://localhost:11434/v1   # Ollama's OpenAI-compatible API (used by AutoGen)
+OLLAMA_URL=http://localhost:11434           # Direct Ollama native API (used for /api/pull)
 OLLAMA_API_KEY=ollama                        # API key if required
 OLLAMA_TIMEOUT=300                           # Request timeout (seconds)
 OLLAMA_MODELS_DIR=~/.ollama/models          # Model storage directory
@@ -183,37 +189,24 @@ PULL_PROGRESS_PERCENT_DELTA=2.0         # Minimum % change for updates
 
 ## Running the Application
 
-### Quick Start (Recommended)
+### Start the Backend
 
-Use the provided startup script:
-
+**Direct Start:**
 ```bash
-./start_with_proxy.sh
-```
-
-This script:
-- Starts the Ollama proxy on port 8080
-- Starts the FastAPI backend on port 8000
-- Handles cleanup on shutdown
-
-### Manual Startup
-
-**Option 1: With Ollama Proxy**
-
-```bash
-# Terminal 1 - Start Ollama Proxy
-python3 ollama_proxy.py
-
-# Terminal 2 - Start Backend
 python3 main.py
 ```
 
-**Option 2: Development Mode**
+This will:
+- Start the FastAPI backend on port 8000
+- Connect directly to Ollama's native OpenAI-compatible endpoints at `http://localhost:11434/v1`
+- Enable auto-reload in development mode
 
+**Development Mode with Auto-reload:**
 ```bash
-# With auto-reload enabled
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
+
+**Note**: Make sure Ollama is running on port 11434 before starting the backend. The application connects directly to Ollama's OpenAI-compatible API; no proxy is needed since Ollama supports OpenAI's API format natively.
 
 ### Access Endpoints
 
@@ -330,7 +323,7 @@ backend/
 │   │   │   ├── experiments.py  # Experiment endpoints
 │   │   │   ├── conversations.py # Conversation endpoints
 │   │   │   ├── models.py        # Model endpoints
-│   │   │   └── ollama_proxy.py  # Ollama proxy
+│   │   │   └── ollama_proxy.py  # Ollama API routes
 │   │   └── ws.py                # WebSocket handlers
 │   ├── core/                    # Core functionality
 │   │   ├── config.py            # Configuration
@@ -374,8 +367,6 @@ backend/
 │   ├── integration/
 │   └── e2e/
 ├── main.py                      # Application entry point
-├── ollama_proxy.py              # Ollama proxy server
-├── start_with_proxy.sh          # Startup script
 ├── requirements.txt             # Python dependencies
 ├── pytest.ini                   # Pytest configuration
 └── mypy.ini                     # Type checking config
