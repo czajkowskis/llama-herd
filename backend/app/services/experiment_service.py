@@ -106,7 +106,9 @@ class ExperimentService:
                 status=experiment.status,
                 created_at=experiment.created_at,
                 agent_count=len(experiment.agents),
-                message_count=len(experiment.messages)
+                message_count=len(experiment.messages),
+                iterations=experiment.iterations,
+                current_iteration=experiment.current_iteration
             ))
         
         # Sort by created_at (newest first)

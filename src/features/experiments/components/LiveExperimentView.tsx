@@ -47,6 +47,8 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
   const [starredMessages, setStarredMessages] = useState<Set<string>>(new Set());
   const [exportSelection, setExportSelection] = useState<Set<string>>(new Set());
   const [newlyArrivedMessages, setNewlyArrivedMessages] = useState<Set<string>>(new Set());
+  const [totalIterations, setTotalIterations] = useState<number>(1);
+  const [currentIteration, setCurrentIteration] = useState<number>(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Track active model pulls
@@ -122,6 +124,10 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
         
         setStatus(experimentData.status);
         setError(experimentData.error || null);
+        
+        // Update iteration information
+        setTotalIterations(experimentData.iterations || 1);
+        setCurrentIteration(experimentData.current_iteration || 0);
       } catch (err: any) {
         if (mounted) {
           setError(err.message);
@@ -166,6 +172,11 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
           if (isStatusData(message.data)) {
             setStatus(message.data.status);
             
+            // Update iteration information if provided
+            if (message.data.current_iteration !== undefined) {
+              setCurrentIteration(message.data.current_iteration);
+            }
+            
             // If experiment completed, update local storage
             if (message.data.status === 'completed' && liveConversation) {
               backendStorageService.saveExperiment({
@@ -182,8 +193,8 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
                 status: 'completed',
                 createdAt: liveConversation.createdAt,
                 completedAt: new Date().toISOString(),
-                iterations: 1,
-                currentIteration: 1
+                iterations: totalIterations,
+                currentIteration: currentIteration
               });
             }
           }
@@ -497,6 +508,8 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
             setIsViewingLive(isLive);
             setViewConversation(conversation);
           }}
+          totalIterations={totalIterations}
+          currentIteration={currentIteration}
         />
 
         {/* Agents debug info removed - no longer available */}

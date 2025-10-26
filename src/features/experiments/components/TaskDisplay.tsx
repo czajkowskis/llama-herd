@@ -14,12 +14,12 @@ interface TaskDisplayProps {
 export const TaskDisplay: React.FC<TaskDisplayProps> = ({ task, onEdit, onDelete }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editPrompt, setEditPrompt] = useState(task.prompt);
-  // Removed editIterations state since iterations are no longer part of Task
+  const [editIterations, setEditIterations] = useState(task.iterations || 1);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
   const handleSave = () => {
     if (editPrompt.trim()) {
-      const updatedTask = { ...task, prompt: editPrompt };
+      const updatedTask = { ...task, prompt: editPrompt, iterations: editIterations };
       onEdit(updatedTask);
       setIsEditing(false);
     }
@@ -27,6 +27,7 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({ task, onEdit, onDelete
 
   const handleCancel = () => {
     setEditPrompt(task.prompt);
+    setEditIterations(task.iterations || 1);
     setIsEditing(false);
   };
 
@@ -101,7 +102,29 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({ task, onEdit, onDelete
             onChange={(e) => setEditPrompt(e.target.value)}
           />
           
-          {/* Iterations editing removed - iterations are now handled at experiment level */}
+          <div className="space-y-2">
+            <label htmlFor="iterations" className="block text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+              Number of iterations
+            </label>
+            <input
+              id="iterations"
+              type="number"
+              min="1"
+              max="100"
+              value={editIterations}
+              onChange={(e) => setEditIterations(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-32 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              style={{ 
+                backgroundColor: 'var(--color-bg-tertiary)', 
+                color: 'var(--color-text-primary)',
+                borderColor: 'var(--color-border)',
+                borderWidth: '1px'
+              }}
+            />
+            <p className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
+              How many times to repeat the experiment with the same task.
+            </p>
+          </div>
           
           <div className="flex justify-end space-x-3">
             <Button onClick={handleCancel} style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }} className="hover:opacity-80">
@@ -120,7 +143,17 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({ task, onEdit, onDelete
             </p>
           </div>
           
-          {/* Iterations display removed - iterations are now handled at experiment level */}
+          <div className="flex items-center space-x-2 text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
+            <Icon className="text-purple-400">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-repeat">
+                <path d="m17 2 4 4-4 4"/>
+                <path d="M3 11v-1a4 4 0 0 1 4-4h14"/>
+                <path d="m7 22-4-4 4-4"/>
+                <path d="M21 13v1a4 4 0 0 1-4 4H3"/>
+              </svg>
+            </Icon>
+            <span>Iterations: {task.iterations || 1}</span>
+          </div>
         </div>
       )}
 

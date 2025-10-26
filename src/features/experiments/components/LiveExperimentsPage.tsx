@@ -8,6 +8,8 @@ interface LiveExperimentSummary {
   created_at: string;
   agent_count: number;
   message_count: number;
+  iterations: number;
+  current_iteration: number;
 }
 
 interface LiveExperimentsProps {
@@ -102,6 +104,8 @@ export const LiveExperiments: React.FC<LiveExperimentsProps> = ({ onOpenExperime
                       <span>Agents: {exp.agent_count}</span>
                       <span className="mx-2">•</span>
                       <span>Messages: {exp.message_count}</span>
+                      <span className="mx-2">•</span>
+                      <span>Iterations: {exp.current_iteration + 1}/{exp.iterations}</span>
                       <span className="mx-2">•</span>
                       <span>{new Date(exp.created_at).toLocaleString()}</span>
                     </div>

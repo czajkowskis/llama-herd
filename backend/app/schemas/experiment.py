@@ -39,6 +39,8 @@ class ExperimentListItem(BaseModel):
     created_at: str
     agent_count: int
     message_count: int
+    iterations: int
+    current_iteration: int
 
 
 class ExperimentResponse(BaseModel):
