@@ -35,16 +35,16 @@ RUN npm ci
 COPY . .
 
 # Set build-time environment variables with defaults
-ARG REACT_APP_API_BASE_URL=
-ARG REACT_APP_OLLAMA_BASE_URL=http://localhost:11434
+ARG REACT_APP_API_BASE_URL=""
+ARG REACT_APP_OLLAMA_BASE_URL="http://ollama:11434"
 
 # Set environment variables for the build
 ENV REACT_APP_API_BASE_URL=$REACT_APP_API_BASE_URL
 ENV REACT_APP_OLLAMA_BASE_URL=$REACT_APP_OLLAMA_BASE_URL
 
 # Verify environment variables are set
-RUN echo "REACT_APP_API_BASE_URL=$REACT_APP_API_BASE_URL" && \
-    echo "REACT_APP_OLLAMA_BASE_URL=$REACT_APP_OLLAMA_BASE_URL"
+RUN echo "REACT_APP_API_BASE_URL='$REACT_APP_API_BASE_URL'" && \
+    echo "REACT_APP_OLLAMA_BASE_URL='$REACT_APP_OLLAMA_BASE_URL'"
 
 # Build the application
 RUN npm run build

@@ -4,9 +4,9 @@
  * The base URL for the backend API.
  *
  * Reads from the `REACT_APP_API_BASE_URL` environment variable.
- * Defaults to `http://localhost:8000` if not set.
+ * Defaults to empty string (relative URLs) if not set.
  */
-export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
+export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '';
 
 /**
  * The base URL for the Ollama API.
@@ -23,6 +23,12 @@ export const OLLAMA_BASE_URL = process.env.REACT_APP_OLLAMA_BASE_URL || 'http://
  * @returns The full WebSocket URL (e.g., ws://localhost:8000/ws/experiment/123).
  */
 export const buildWebSocketUrl = (path: string): string => {
+  // If API_BASE_URL is empty (relative URLs), use current host for WebSocket
+  if (!API_BASE_URL) {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${protocol}//${window.location.host}${path}`;
+  }
+  
   const url = new URL(API_BASE_URL);
   const protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
   return `${protocol}//${url.host}${path}`;
