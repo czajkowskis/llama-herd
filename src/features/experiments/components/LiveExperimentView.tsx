@@ -533,7 +533,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
         )}
 
   {/* Chat Messages */}
-  <div className={`message-list rounded-xl p-4 h-[600px] overflow-y-auto space-y-4 ${!isViewingLive ? 'historical-view-dimmed' : ''}`} style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>
+  <div className={`message-list rounded-xl p-4 h-[600px] overflow-y-auto space-y-4 ${!isViewingLive ? 'historical-view-dimmed' : ''}`} style={{ backgroundColor: 'var(--color-bg-primary)', color: 'var(--color-text-primary)' }}>
           {(() => {
             // Filter out System messages from display
             const displayMessages = viewConversation.messages.filter((m) => {
@@ -631,7 +631,10 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
                       />
                     </div>
                   </div>
-                  <div className="rounded-lg p-4 message-content" style={{ color: 'var(--color-text-secondary)' }}>
+                  <div className="rounded-lg p-4 message-content" style={{ 
+                    color: 'var(--color-text-secondary)',
+                    backgroundColor: index % 2 === 0 ? 'var(--color-bg-secondary)' : 'var(--color-bg-tertiary)'
+                  }}>
                     <ReactMarkdown
                       components={{
                         h1: (props: any) => (
