@@ -26,26 +26,26 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
   const displayedMessages = messages.slice(-maxMessages);
 
   const getMessageTypeColor = (type: DebugMessage['type']) => {
-    switch (type) {
-      case 'sent':
-        return 'text-blue-400 bg-blue-900/20';
-      case 'received':
-        return 'text-green-400 bg-green-900/20';
-      case 'error':
-        return 'text-red-400 bg-red-900/20';
-      case 'info':
-        return 'text-gray-400 bg-gray-700/20';
-      default:
-        return 'text-gray-400';
-    }
+    // This function is no longer used - we use getMessageTypeStyle instead
+    return '';
   };
 
   const getMessageTypeStyle = (type: DebugMessage['type']) => {
     switch (type) {
+      case 'sent':
+        return { 
+          color: '#60a5fa', 
+          backgroundColor: 'rgba(30, 58, 138, 0.2)' 
+        };
       case 'received':
         return { 
           color: 'var(--color-success-text)', 
           backgroundColor: 'var(--color-success-bg)' 
+        };
+      case 'error':
+        return { 
+          color: '#f87171', 
+          backgroundColor: 'rgba(153, 27, 27, 0.2)' 
         };
       case 'info':
         return { 
@@ -53,7 +53,10 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
           backgroundColor: 'var(--color-info-bg)' 
         };
       default:
-        return {};
+        return { 
+          color: 'var(--color-text-tertiary)', 
+          backgroundColor: 'transparent' 
+        };
     }
   };
 
@@ -109,7 +112,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
         className="w-full flex items-center justify-between px-4 py-3 transition-colors hover:opacity-80" style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
       >
         <div className="flex items-center space-x-2">
-          <Icon className="text-gray-400">
+          <Icon style={{ color: 'var(--color-text-tertiary)' }}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="16"
@@ -194,7 +197,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
                 {displayedMessages.map((msg, idx) => (
                   <div
                     key={idx}
-                    className={`p-3 transition-colors cursor-pointer ${getMessageTypeColor(msg.type)}`} 
+                    className={`p-3 transition-colors cursor-pointer`} 
                     style={{ 
                       borderBottomColor: 'var(--color-border)', 
                       borderBottom: '1px solid',
