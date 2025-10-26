@@ -363,7 +363,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
       case 'running':
         return 'text-yellow-400';
       case 'completed':
-        return 'text-green-400';
+        return 'text-green-600';
       case 'error':
         return 'text-red-400';
       default:
@@ -456,7 +456,6 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
             <ViewModeIndicator
               isViewingLive={isViewingLive}
               viewTitle={viewConversation.title}
-              onResumeLive={!isViewingLive ? handleResumeLive : undefined}
             />
             <div className={`flex items-center space-x-2 px-3 py-1 rounded-full ${getStatusColor(status)}`} style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>
               {getStatusIcon(status)}

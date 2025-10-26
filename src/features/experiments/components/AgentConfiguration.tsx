@@ -89,7 +89,14 @@ export const AgentConfiguration: React.FC<AgentConfigurationProps> = ({
                   <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
                     <button
                       onClick={onSaveConversationTitle}
-                      className="text-green-400 hover:text-green-300 p-1.5 rounded-full transition-colors duration-200"
+                      className="p-1.5 rounded-full transition-colors duration-200"
+                      style={{ color: 'var(--color-success)' }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = 'var(--color-success-text)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = 'var(--color-success)';
+                      }}
                       title="Save title"
                     >
                       <Icon>
