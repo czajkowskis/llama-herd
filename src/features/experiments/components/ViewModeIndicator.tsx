@@ -72,19 +72,7 @@ export const HistoricalViewBanner: React.FC<HistoricalViewBannerProps> = ({
         </div>
         <Button
           onClick={onResumeLive}
-          className="flex items-center space-x-2 whitespace-nowrap"
-          style={{ 
-            backgroundColor: 'var(--color-success)', 
-            color: 'var(--color-success-text)'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--color-success-text)';
-            e.currentTarget.style.color = 'var(--color-success-bg)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--color-success)';
-            e.currentTarget.style.color = 'var(--color-success-text)';
-          }}
+          className="flex items-center space-x-2 whitespace-nowrap bg-purple-600 hover:bg-purple-700"
         >
           <Icon>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
