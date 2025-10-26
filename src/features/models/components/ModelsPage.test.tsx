@@ -48,9 +48,7 @@ describe('ModelsPage', () => {
 
   it('should render the models page', async () => {
     await act(async () => {
-      await act(async () => {
       render(<Models />);
-    });
     });
     
     await waitFor(() => {
@@ -60,9 +58,7 @@ describe('ModelsPage', () => {
 
   it('should display installed models', async () => {
     await act(async () => {
-      await act(async () => {
       render(<Models />);
-    });
     });
     
     await waitFor(() => {
