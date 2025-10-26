@@ -68,38 +68,27 @@ ollama pull codellama
 
 ## Running the Application
 
-### Option 1: Quick Start (Recommended)
+### Start the Backend
 
-```bash
-# Start both backend and proxy server
-cd backend
-./start_with_proxy.sh
-```
-
-This script will:
-- Check dependencies
-- Start the Ollama proxy server on port 8080
-- Start the FastAPI backend on port 8000
-- Handle cleanup when stopped
-
-### Option 2: Manual Startup
-
-**Terminal 1 - Start Ollama Proxy:**
-```bash
-cd backend
-python3 ollama_proxy.py
-```
-
-**Terminal 2 - Start Backend:**
 ```bash
 cd backend
 python3 main.py
 ```
 
-**Terminal 3 - Start Frontend:**
+This will:
+- Start the FastAPI backend on port 8000
+- Connect directly to Ollama's OpenAI-compatible API at `http://localhost:11434/v1`
+- Enable auto-reload in development mode
+
+### Start the Frontend
+
+In a separate terminal:
+
 ```bash
 npm start
 ```
+
+**Note**: Make sure Ollama is running on port 11434 before starting the backend.
 
 ### Access the Application
 
@@ -122,9 +111,7 @@ llama-herd/
 │   │   └── utils/             # Utility functions
 │   ├── data/                  # Application data storage
 │   ├── tests/                 # Backend tests
-│   ├── main.py               # Application entry point
-│   ├── ollama_proxy.py       # Ollama API proxy
-│   └── start_with_proxy.sh   # Startup script
+│   └── main.py               # Application entry point
 ├── src/                       # React frontend
 │   ├── components/           # Reusable UI components
 │   ├── features/             # Feature-specific components
@@ -155,7 +142,7 @@ API_VERSION="1.0.0"
 CORS_ORIGINS="http://localhost:3000,http://localhost:3001"
 
 # Ollama Configuration
-OLLAMA_BASE_URL=http://localhost:8080/v1
+OLLAMA_BASE_URL=http://localhost:11434/v1
 OLLAMA_URL=http://localhost:11434
 OLLAMA_TIMEOUT=300
 
