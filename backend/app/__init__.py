@@ -298,6 +298,12 @@ def create_app() -> FastAPI:
             }
         )
 
+    # Health check endpoint
+    @app.get("/health")
+    async def health_check():
+        """Health check endpoint for Docker and load balancers."""
+        return {"status": "healthy", "service": "llama-herd-backend"}
+
     # Include API routers
     app.include_router(experiments_router)
     app.include_router(conversations_router)

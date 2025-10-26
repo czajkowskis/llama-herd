@@ -7,22 +7,40 @@ from typing import Union, List
 from pydantic import field_validator
 
 
-def validate_port(value: int) -> int:
+def validate_port(value: Union[int, str]) -> int:
     """Validate port number."""
+    if isinstance(value, str):
+        try:
+            value = int(value)
+        except ValueError:
+            raise ValueError(f"Port must be a valid integer, got: {value}")
+    
     if not (1 <= value <= 65535):
         raise ValueError("Port must be between 1 and 65535")
     return value
 
 
-def validate_timeout(value: int) -> int:
+def validate_timeout(value: Union[int, str]) -> int:
     """Validate timeout value."""
+    if isinstance(value, str):
+        try:
+            value = int(value)
+        except ValueError:
+            raise ValueError(f"Timeout must be a valid integer, got: {value}")
+    
     if value <= 0:
         raise ValueError("Timeout must be positive")
     return value
 
 
-def validate_temperature(value: float) -> float:
+def validate_temperature(value: Union[float, str]) -> float:
     """Validate temperature value."""
+    if isinstance(value, str):
+        try:
+            value = float(value)
+        except ValueError:
+            raise ValueError(f"Temperature must be a valid float, got: {value}")
+    
     if not (0.0 <= value <= 2.0):
         raise ValueError("Temperature must be between 0.0 and 2.0")
     return value
@@ -56,8 +74,14 @@ def validate_comma_separated_list(value: Union[str, List[str]]) -> List[str]:
     return value
 
 
-def validate_positive_int(value: int) -> int:
+def validate_positive_int(value: Union[int, str]) -> int:
     """Validate positive integer."""
+    if isinstance(value, str):
+        try:
+            value = int(value)
+        except ValueError:
+            raise ValueError(f"Value must be a valid integer, got: {value}")
+    
     if value <= 0:
         raise ValueError("Value must be positive")
     return value
@@ -67,8 +91,14 @@ def validate_positive_int(value: int) -> int:
 
 
 
-def validate_percentage(value: float) -> float:
+def validate_percentage(value: Union[float, str]) -> float:
     """Validate percentage value (0-100)."""
+    if isinstance(value, str):
+        try:
+            value = float(value)
+        except ValueError:
+            raise ValueError(f"Percentage must be a valid float, got: {value}")
+    
     if not (0.0 <= value <= 100.0):
         raise ValueError("Percentage must be between 0.0 and 100.0")
     return value
