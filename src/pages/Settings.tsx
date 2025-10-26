@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ollamaService } from '../services/ollamaService';
 import { OLLAMA_BASE_URL as DEFAULT_OLLAMA_BASE } from '../config';
 import { Button } from '../components/ui/Button';
@@ -14,8 +13,6 @@ const STORAGE_KEY_BASE = 'llama-herd-ollama-base-url';
 
 // This page component handles application settings, particularly the Ollama connection.
 export const Settings: React.FC = () => {
-  const navigate = useNavigate();
-  
   // UI Preferences hook
   const {
     theme,
@@ -170,15 +167,43 @@ export const Settings: React.FC = () => {
         {endpointError && <p className="text-red-500 mt-2 font-medium">{endpointError}</p>}
 
         <div className="mt-4 flex flex-col items-center space-y-4">
-          <Button
-            onClick={() => navigate('/models')}
-            disabled={!testResultMessage || !!testError || isTesting}
-            variant="secondary"
-            className="px-4 py-2"
+          <a 
+            href="#/models" 
+            className={`inline-flex items-center px-4 py-2 rounded-xl transition-colors ${
+              testResultMessage && !testError && !isTesting
+                ? 'cursor-pointer' 
+                : 'cursor-not-allowed opacity-50'
+            }`}
+            style={{
+              backgroundColor: testResultMessage && !testError && !isTesting 
+                ? 'var(--color-bg-tertiary)' 
+                : '#9ca3af',
+              color: testResultMessage && !testError && !isTesting 
+                ? 'var(--color-text-primary)' 
+                : '#e5e7eb',
+              border: testResultMessage && !testError && !isTesting 
+                ? '1px solid var(--color-border)' 
+                : '1px solid #9ca3af'
+            }}
+            onMouseEnter={(e) => {
+              if (testResultMessage && !testError && !isTesting) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (testResultMessage && !testError && !isTesting) {
+                e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+              }
+            }}
             aria-label="Manage models"
+            onClick={(e) => {
+              if (!testResultMessage || testError || isTesting) {
+                e.preventDefault();
+              }
+            }}
           >
             Manage Models
-          </Button>
+          </a>
           {(!testResultMessage || testError || isTesting) && (
             <p className="text-xs text-center" style={{ color: 'var(--color-text-tertiary)' }}>
               Test connection first to access model management

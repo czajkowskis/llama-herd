@@ -45,8 +45,8 @@ async def start_experiment(request: ExperimentRequest):
             'title': title,
             'status': 'running',
             'created_at': datetime.now().isoformat(),
-            'agents': [agent.dict() for agent in request.agents],
-            'task': request.task.dict(),
+            'agents': [agent.model_dump() for agent in request.agents],
+            'task': request.task.model_dump(),
             'iterations': request.iterations
         }
         

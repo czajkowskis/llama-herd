@@ -4,6 +4,7 @@ Shared test fixtures and configuration.
 import asyncio
 import tempfile
 import shutil
+import os
 from pathlib import Path
 from typing import Dict, Any, List
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -12,6 +13,10 @@ import pytest
 import httpx
 from httpx import AsyncClient
 from faker import Faker
+
+# Set environment variables for testing before importing app modules
+os.environ['DATA_DIRECTORY'] = '/tmp/test_data'
+os.environ['OLLAMA_MODELS_DIR'] = '/tmp/test_models'
 
 from app import create_app
 from app.core.config import settings
@@ -256,7 +261,9 @@ def sample_conversation() -> Dict[str, Any]:
                 'timestamp': fake.iso8601()
             }
         ],
-        'createdAt': fake.iso8601()
+        'createdAt': fake.iso8601(),
+        'source': 'import',  # Required field for Conversation schema
+        'importedAt': fake.iso8601()  # Required field for Conversation schema
     }
 
 
