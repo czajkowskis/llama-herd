@@ -105,7 +105,7 @@ export const LiveExperiments: React.FC<LiveExperimentsProps> = ({ onOpenExperime
                       <span className="mx-2">•</span>
                       <span>Messages: {exp.message_count}</span>
                       <span className="mx-2">•</span>
-                      <span>Iterations: {exp.current_iteration + 1}/{exp.iterations}</span>
+                      <span>Iterations: {exp.current_iteration}/{exp.iterations}</span>
                       <span className="mx-2">•</span>
                       <span>{new Date(exp.created_at).toLocaleString()}</span>
                     </div>
