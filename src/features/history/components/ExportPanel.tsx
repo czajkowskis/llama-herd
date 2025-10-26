@@ -660,12 +660,30 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
                   <div key={message.id} className="message" style={{ backgroundColor: exportStyle.messageBackgroundColor }}>
                     <div className="message-header">
                       {exportStyle.showAgentAvatars && (
-                        <div
-                          className="agent-avatar"
-                          style={{ backgroundColor: agent.color }}
+                        <svg
+                          width="32"
+                          height="32"
+                          style={{ marginRight: '12px' }}
                         >
-                          {agent.name.charAt(0).toUpperCase()}
-                        </div>
+                          <circle
+                            cx="16"
+                            cy="16"
+                            r="16"
+                            fill={agent.color}
+                          />
+                          <text
+                            x="16"
+                            y="16"
+                            textAnchor="middle"
+                            dominantBaseline="central"
+                            fill="white"
+                            fontSize="14"
+                            fontWeight="600"
+                            fontFamily="Inter, -apple-system, BlinkMacSystemFont, sans-serif"
+                          >
+                            {agent.name.charAt(0).toUpperCase()}
+                          </text>
+                        </svg>
                       )}
                       <div className="flex-1">
                         <span className="agent-name">{agent.name}</span>
