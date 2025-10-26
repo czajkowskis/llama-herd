@@ -129,21 +129,21 @@ class TestExperimentWorkflow:
             "agents": [
                 {
                     "id": "llama-agent",
-                    "name": "Llama Agent",
+                    "name": "Llama_Agent",
                     "prompt": "You are a Llama model assistant",
                     "color": "#FF0000",
                     "model": "llama2"
                 },
                 {
                     "id": "code-agent",
-                    "name": "Code Agent",
+                    "name": "Code_Agent",
                     "prompt": "You are a Code Llama model assistant",
                     "color": "#00FF00",
                     "model": "codellama"
                 },
                 {
                     "id": "mistral-agent",
-                    "name": "Mistral Agent",
+                    "name": "Mistral_Agent",
                     "prompt": "You are a Mistral model assistant",
                     "color": "#0000FF",
                     "model": "mistral"

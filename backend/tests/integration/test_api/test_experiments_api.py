@@ -75,7 +75,7 @@ class TestExperimentsAPI:
     async def test_get_experiment_success(self, test_client: AsyncClient, sample_experiment_request, mock_autogen_service_patch):
         """Test successful experiment retrieval via API."""
         # Arrange - start an experiment first
-        start_response = await test_client.post("/api/experiments/start", json=sample_experiment_request.dict())
+        start_response = await test_client.post("/api/experiments/start", json=sample_experiment_request.model_dump())
         assert start_response.status_code == 200
         experiment_id = start_response.json()["experiment_id"]
         
@@ -134,7 +134,7 @@ class TestExperimentsAPI:
     async def test_delete_experiment_success(self, test_client: AsyncClient, sample_experiment_request, mock_autogen_service_patch):
         """Test successful experiment deletion via API."""
         # Arrange - start an experiment first
-        start_response = await test_client.post("/api/experiments/start", json=sample_experiment_request.dict())
+        start_response = await test_client.post("/api/experiments/start", json=sample_experiment_request.model_dump())
         assert start_response.status_code == 200
         experiment_id = start_response.json()["experiment_id"]
         

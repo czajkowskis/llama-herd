@@ -5,42 +5,42 @@ import { Icon } from '../../../components/ui/Icon';
 interface ViewModeIndicatorProps {
   isViewingLive: boolean;
   viewTitle?: string;
-  onResumeLive?: () => void;
 }
 
 export const ViewModeIndicator: React.FC<ViewModeIndicatorProps> = ({
   isViewingLive,
   viewTitle,
-  onResumeLive,
 }) => {
   if (isViewingLive) {
     return (
-      <div className="flex items-center space-x-2 px-4 py-2 rounded-full bg-green-700/30 border border-green-500/50">
-        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-        <span className="text-sm font-semibold text-green-300">Live — Following</span>
+      <div 
+        className="flex items-center space-x-2 px-4 py-2 rounded-full border"
+        style={{ 
+          backgroundColor: 'var(--color-success-bg)', 
+          borderColor: 'var(--color-success)',
+          color: 'var(--color-success-text)'
+        }}
+      >
+        <div 
+          className="w-2 h-2 rounded-full animate-pulse"
+          style={{ backgroundColor: 'var(--color-success)' }}
+        ></div>
+        <span className="text-sm font-semibold">Live — Following</span>
       </div>
     );
   }
 
   return (
     <div className="flex items-center space-x-3">
-      <div className="flex items-center space-x-2 px-4 py-2 rounded-full bg-purple-700/30 border border-purple-500/50">
-        <Icon className="text-purple-300">
+      <div className="flex items-center space-x-2 px-4 py-2 rounded-full border" style={{ backgroundColor: 'rgba(107, 70, 193, 0.1)', borderColor: 'var(--color-accent)', color: 'var(--color-text-primary)' }}>
+        <Icon style={{ color: 'var(--color-accent)' }}>
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"/>
             <polyline points="12 6 12 12 16 14"/>
           </svg>
         </Icon>
-        <span className="text-sm font-semibold text-purple-300">Viewing: {viewTitle || 'Historical Run'}</span>
+        <span className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>Viewing: {viewTitle || 'Historical Run'}</span>
       </div>
-      {onResumeLive && (
-        <Button
-          onClick={onResumeLive}
-          className="bg-green-700 hover:bg-green-800 px-3 py-1 rounded-full text-sm"
-        >
-          Resume Live
-        </Button>
-      )}
     </div>
   );
 };
@@ -55,10 +55,10 @@ export const HistoricalViewBanner: React.FC<HistoricalViewBannerProps> = ({
   onResumeLive,
 }) => {
   return (
-    <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4 mb-4 animate-fade-in-up">
+    <div className="border rounded-lg p-4 mb-4 animate-fade-in-up" style={{ backgroundColor: 'rgba(107, 70, 193, 0.1)', borderColor: 'var(--color-accent)' }}>
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <Icon className="text-purple-400">
+          <Icon style={{ color: 'var(--color-accent)' }}>
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"/>
               <line x1="12" y1="8" x2="12" y2="12"/>
@@ -66,13 +66,13 @@ export const HistoricalViewBanner: React.FC<HistoricalViewBannerProps> = ({
             </svg>
           </Icon>
           <div>
-            <p className="text-purple-200 font-medium">You are viewing <strong>{runTitle}</strong> (not live).</p>
-            <p className="text-purple-300 text-sm mt-1">New messages will appear in the Live view.</p>
+            <p className="font-medium" style={{ color: 'var(--color-text-primary)' }}>You are viewing <strong>{runTitle}</strong> (not live).</p>
+            <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>New messages will appear in the Live view.</p>
           </div>
         </div>
         <Button
           onClick={onResumeLive}
-          className="bg-green-600 hover:bg-green-700 flex items-center space-x-2 whitespace-nowrap"
+          className="flex items-center space-x-2 whitespace-nowrap bg-purple-600 hover:bg-purple-700"
         >
           <Icon>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

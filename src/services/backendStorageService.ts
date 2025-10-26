@@ -24,7 +24,7 @@ export interface StoredConversation {
 }
 
 class BackendStorageService {
-  private readonly BASE_URL = 'http://localhost:8000/api';
+  private readonly BASE_URL = '/api';
 
   // Experiment storage methods
   async saveExperiment(experiment: StoredExperiment): Promise<boolean> {

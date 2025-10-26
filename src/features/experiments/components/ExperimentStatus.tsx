@@ -45,7 +45,7 @@ export const ExperimentStatus: React.FC<ExperimentStatusProps> = ({
             color: isExperimentReady ? 'var(--color-text-secondary)' : 'var(--color-text-tertiary)'
           }}>
             {isExperimentReady 
-              ? `Agents: ${agents.length}`
+              ? `Agents: ${agents.length} • Iterations: ${currentTask?.iterations || 1}`
               : getExperimentStatusMessage()
             }
           </p>

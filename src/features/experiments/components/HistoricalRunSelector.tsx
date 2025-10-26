@@ -163,14 +163,14 @@ export const HistoricalRunSelector: React.FC<HistoricalRunSelectorProps> = ({
 
   return (
     <div className="mb-4 flex items-center space-x-2">
-      <span className="text-gray-300 text-sm">Browse conversations:</span>
+      <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Browse conversations:</span>
 
       {/* Dropdown for conversations */}
       {conversations.length > 0 && (
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="px-3 py-1 rounded text-sm bg-gray-700 text-gray-300 hover:bg-gray-600 flex items-center space-x-1"
+            className="px-3 py-1 rounded text-sm flex items-center space-x-1 hover:opacity-80" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-secondary)' }}
           >
             <span>
               {selectedConversation
@@ -190,15 +190,15 @@ export const HistoricalRunSelector: React.FC<HistoricalRunSelectorProps> = ({
 
           {/* Dropdown menu */}
           {isDropdownOpen && (
-            <div className="absolute top-full left-0 mt-2 w-96 bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-50 max-h-96 overflow-hidden flex flex-col">
+            <div className="absolute top-full left-0 mt-2 w-96 rounded-lg shadow-xl z-50 max-h-96 overflow-hidden flex flex-col" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)', border: '1px solid' }}>
               {/* Search input */}
-              <div className="p-3 border-b border-gray-700">
+              <div className="p-3" style={{ borderBottomColor: 'var(--color-border)', borderBottom: '1px solid' }}>
                 <input
                   type="text"
                   placeholder="Search by title or timestamp..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-purple-500 focus:outline-none text-sm"
+                  className="w-full px-3 py-2 rounded border focus:border-purple-500 focus:outline-none text-sm" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)', borderColor: 'var(--color-border)' }}
                   autoFocus
                 />
               </div>
@@ -206,7 +206,7 @@ export const HistoricalRunSelector: React.FC<HistoricalRunSelectorProps> = ({
               {/* Conversations list */}
               <div className="overflow-y-auto flex-1">
                 {filteredRuns.length === 0 ? (
-                  <div className="p-4 text-center text-gray-400 text-sm">
+                  <div className="p-4 text-center text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                     No conversations found
                   </div>
                 ) : (
@@ -217,9 +217,13 @@ export const HistoricalRunSelector: React.FC<HistoricalRunSelectorProps> = ({
                     return (
                       <div
                         key={conv.id}
-                        className={`relative flex items-center px-3 py-2 hover:bg-gray-700 cursor-pointer transition-colors border-b border-gray-700 ${
-                          isSelected ? 'bg-purple-900 bg-opacity-30' : ''
-                        }`}
+                        className={`relative flex items-center px-3 py-2 cursor-pointer transition-colors`}
+                        style={{ 
+                          borderBottomColor: 'var(--color-border)', 
+                          borderBottom: '1px solid',
+                          backgroundColor: isSelected ? 'rgba(107, 70, 193, 0.1)' : 'transparent',
+                          color: 'var(--color-text-primary)'
+                        }}
                         onClick={() => {
                           onSelectConversation(conv);
                           setIsDropdownOpen(false);
@@ -230,9 +234,9 @@ export const HistoricalRunSelector: React.FC<HistoricalRunSelectorProps> = ({
                         {/* Pin button */}
                         <button
                           onClick={(e) => togglePin(conv.id, e)}
-                          className={`mr-2 p-1 rounded hover:bg-gray-600 transition-colors ${
-                            runPreview.isPinned ? 'text-yellow-400' : 'text-gray-500'
-                          }`}
+                          className={`mr-2 p-1 rounded transition-colors ${
+                            runPreview.isPinned ? 'text-yellow-400' : ''
+                          }`} style={{ color: runPreview.isPinned ? undefined : 'var(--color-text-tertiary)' }}
                           title={runPreview.isPinned ? 'Unpin conversation' : 'Pin conversation'}
                         >
                           <svg className="w-4 h-4" fill={runPreview.isPinned ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
@@ -243,34 +247,34 @@ export const HistoricalRunSelector: React.FC<HistoricalRunSelectorProps> = ({
                         {/* Conversation info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-baseline space-x-2">
-                            <span className="font-medium text-white text-sm truncate">
+                            <span className="font-medium text-sm truncate" style={{ color: 'var(--color-text-primary)' }}>
                               {highlightMatch(conv.title, searchQuery)}
                             </span>
                             {isSelected && (
                               <span className="text-xs text-purple-400">●</span>
                             )}
                           </div>
-                          <div className="text-xs text-gray-400 mt-0.5">
+                          <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
                             {highlightMatch(formatTimestamp(conv.createdAt), searchQuery)}
                           </div>
                         </div>
 
                         {/* Message count */}
-                        <div className="ml-2 text-xs text-gray-500">
+                        <div className="ml-2 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
                           {conv.messages.length} msg{conv.messages.length !== 1 ? 's' : ''}
                         </div>
 
                         {/* Tooltip preview */}
                         {hoveredRunId === conv.id && conv.messages.length > 0 && (
                           <div
-                            className="absolute left-full top-0 ml-2 w-80 bg-gray-900 border border-gray-600 rounded-lg shadow-xl p-3 z-50 pointer-events-none"
+                            className="absolute left-full top-0 ml-2 w-80 rounded-lg shadow-xl p-3 z-50 pointer-events-none" style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)', border: '1px solid' }}
                             ref={tooltipRef}
                           >
-                            <div className="text-xs text-gray-300 whitespace-pre-wrap max-h-32 overflow-hidden">
+                            <div className="text-xs whitespace-pre-wrap max-h-32 overflow-hidden" style={{ color: 'var(--color-text-secondary)' }}>
                               {getPreviewMessages(conv)}
                             </div>
                             {conv.messages.length > 2 && (
-                              <div className="text-xs text-gray-500 mt-2">
+                              <div className="text-xs mt-2" style={{ color: 'var(--color-text-tertiary)' }}>
                                 +{conv.messages.length - 2} more messages...
                               </div>
                             )}
@@ -283,7 +287,7 @@ export const HistoricalRunSelector: React.FC<HistoricalRunSelectorProps> = ({
               </div>
 
               {/* Footer with count */}
-              <div className="p-2 border-t border-gray-700 bg-gray-850 text-xs text-gray-400 text-center">
+              <div className="p-2 text-xs text-center" style={{ borderTopColor: 'var(--color-border)', borderTop: '1px solid', backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-secondary)' }}>
                 {filteredRuns.length} of {conversations.length} conversations
                 {pinnedRuns.size > 0 && ` • ${pinnedRuns.size} pinned`}
               </div>

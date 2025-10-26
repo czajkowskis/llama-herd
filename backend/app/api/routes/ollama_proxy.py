@@ -57,7 +57,7 @@ async def proxy_generate(request: Request):
 
 
 @router.post('/api/ollama/test/list')
-async def test_list_proxy(request: Request):
+async def proxy_test_list(request: Request):
     """Proxy a model list request to an arbitrary Ollama endpoint provided by the client.
 
     Expected JSON body: { "endpoint": "http://host:11434" }

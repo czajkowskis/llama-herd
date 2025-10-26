@@ -26,7 +26,7 @@ class TestExperimentSchemas:
                 iterations=1
             )
         
-        assert "At least one agent is required" in str(exc_info.value)
+        assert "List should have at least 1 item" in str(exc_info.value)
     
     def test_experiment_request_requires_valid_agent(self):
         """Test that agents must have non-empty fields."""
@@ -93,7 +93,7 @@ class TestExperimentSchemas:
                 iterations=0  # Zero or negative should fail
             )
         
-        assert "Iterations must be at least 1" in str(exc_info.value)
+        assert "Input should be greater than or equal to 1" in str(exc_info.value)
     
     def test_experiment_request_valid_temperature(self):
         """Test that temperature must be within range."""
@@ -116,7 +116,7 @@ class TestExperimentSchemas:
                 iterations=1
             )
         
-        assert "Temperature must be between 0 and 1" in str(exc_info.value)
+        assert "Input should be less than or equal to 1" in str(exc_info.value)
     
     def test_valid_experiment_request(self):
         """Test that a valid experiment request is accepted."""

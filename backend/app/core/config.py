@@ -7,7 +7,7 @@ Environment variable names match the setting names (case-insensitive).
 Example:
     export API_HOST=0.0.0.0
     export API_PORT=8000
-    export OLLAMA_BASE_URL=http://localhost:8080/v1
+    export OLLAMA_BASE_URL=http://localhost:11434/v1
 """
 from pydantic_settings import BaseSettings
 from pydantic import Field, field_validator, model_validator
@@ -68,12 +68,12 @@ class Settings(BaseSettings):
     
     # Ollama Configuration
     ollama_base_url: str = Field(
-        default="http://localhost:8080/v1",
-        description="Base URL for Ollama API"
+        default="http://localhost:11434/v1",
+        description="Base URL for Ollama's OpenAI-compatible API (AutoGen uses this)"
     )
     ollama_url: str = Field(
         default="http://localhost:11434",
-        description="Direct URL for Ollama server (for model operations)"
+        description="Direct URL for Ollama server (for native API operations like /api/pull)"
     )
     ollama_api_key: str = Field(
         default="ollama",
@@ -84,7 +84,7 @@ class Settings(BaseSettings):
         description="Timeout in seconds for Ollama API requests"
     )
     ollama_models_dir: str = Field(
-        default="~/.ollama/models",
+        default="/app/data/models",
         description="Directory where Ollama stores downloaded models"
     )
     

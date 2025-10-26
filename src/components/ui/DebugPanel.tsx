@@ -26,17 +26,37 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
   const displayedMessages = messages.slice(-maxMessages);
 
   const getMessageTypeColor = (type: DebugMessage['type']) => {
+    // This function is no longer used - we use getMessageTypeStyle instead
+    return '';
+  };
+
+  const getMessageTypeStyle = (type: DebugMessage['type']) => {
     switch (type) {
       case 'sent':
-        return 'text-blue-400 bg-blue-900/20';
+        return { 
+          color: '#60a5fa', 
+          backgroundColor: 'rgba(30, 58, 138, 0.2)' 
+        };
       case 'received':
-        return 'text-green-400 bg-green-900/20';
+        return { 
+          color: 'var(--color-success-text)', 
+          backgroundColor: 'var(--color-success-bg)' 
+        };
       case 'error':
-        return 'text-red-400 bg-red-900/20';
+        return { 
+          color: '#f87171', 
+          backgroundColor: 'rgba(153, 27, 27, 0.2)' 
+        };
       case 'info':
-        return 'text-gray-400 bg-gray-700/20';
+        return { 
+          color: 'var(--color-info-text)', 
+          backgroundColor: 'var(--color-info-bg)' 
+        };
       default:
-        return 'text-gray-400';
+        return { 
+          color: 'var(--color-text-tertiary)', 
+          backgroundColor: 'transparent' 
+        };
     }
   };
 
@@ -86,13 +106,13 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
   };
 
   return (
-    <div className="border border-gray-700 rounded-lg overflow-hidden">
+    <div className="rounded-lg overflow-hidden" style={{ borderColor: 'var(--color-border)', border: '1px solid' }}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-gray-800 hover:bg-gray-750 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 transition-colors hover:opacity-80" style={{ backgroundColor: 'var(--color-bg-tertiary)' }}
       >
         <div className="flex items-center space-x-2">
-          <Icon className="text-gray-400">
+          <Icon style={{ color: 'var(--color-text-tertiary)' }}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="16"
@@ -108,8 +128,8 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
               <polyline points="8 6 2 12 8 18" />
             </svg>
           </Icon>
-          <span className="text-sm font-medium text-white">Debug Panel</span>
-          <span className="text-xs text-gray-400">
+          <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>Debug Panel</span>
+          <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
             ({displayedMessages.length} message{displayedMessages.length !== 1 ? 's' : ''})
           </span>
           {serverError && (
@@ -118,7 +138,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
             </span>
           )}
         </div>
-        <Icon className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}>
+        <Icon className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="16"
@@ -136,9 +156,9 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
       </button>
 
       {isOpen && (
-        <div className="bg-gray-900 border-t border-gray-700">
+        <div className="border-t" style={{ backgroundColor: 'var(--color-bg-tertiary)', borderTopColor: 'var(--color-border)' }}>
           {serverError && (
-            <div className="p-4 bg-red-900/20 border-b border-red-900/50">
+            <div className="p-4 bg-red-900/20" style={{ borderBottomColor: 'var(--color-border)', borderBottom: '1px solid' }}>
               <div className="flex items-start space-x-2">
                 <Icon className="text-red-400 flex-shrink-0 mt-0.5">
                   <svg
@@ -169,15 +189,20 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
 
           <div className="max-h-96 overflow-y-auto">
             {displayedMessages.length === 0 ? (
-              <div className="p-4 text-center text-gray-500 text-sm">
+              <div className="p-4 text-center text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
                 No messages yet
               </div>
             ) : (
-              <div className="divide-y divide-gray-800">
+              <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
                 {displayedMessages.map((msg, idx) => (
                   <div
                     key={idx}
-                    className={`p-3 hover:bg-gray-800/50 transition-colors cursor-pointer ${getMessageTypeColor(msg.type)}`}
+                    className={`p-3 transition-colors cursor-pointer`} 
+                    style={{ 
+                      borderBottomColor: 'var(--color-border)', 
+                      borderBottom: '1px solid',
+                      ...getMessageTypeStyle(msg.type)
+                    }}
                     onClick={() => setSelectedMessage(selectedMessage?.timestamp === msg.timestamp ? null : msg)}
                   >
                     <div className="flex items-start space-x-2">
@@ -186,7 +211,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
                       </Icon>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline justify-between mb-1">
-                          <span className="text-xs font-mono text-gray-400">
+                          <span className="text-xs font-mono" style={{ color: 'var(--color-text-secondary)' }}>
                             {new Date(msg.timestamp).toLocaleTimeString()}
                           </span>
                           <span className="text-xs font-semibold uppercase">
@@ -197,9 +222,9 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
                           {msg.content}
                         </div>
                         {selectedMessage?.timestamp === msg.timestamp && msg.data && (
-                          <div className="mt-2 p-2 bg-black/30 rounded">
+                          <div className="mt-2 p-2 rounded" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
                             <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs text-gray-400">Raw Data:</span>
+                              <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Raw Data:</span>
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -212,7 +237,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
                                 {copiedFor === msg.timestamp ? 'Copied!' : 'Copy'}
                               </button>
                             </div>
-                            <pre className="text-xs text-gray-300 font-mono whitespace-pre-wrap break-words max-h-40 overflow-y-auto">
+                            <pre className="text-xs font-mono whitespace-pre-wrap break-words max-h-40 overflow-y-auto" style={{ color: 'var(--color-text-secondary)' }}>
                               {JSON.stringify(msg.data, null, 2)}
                             </pre>
                           </div>

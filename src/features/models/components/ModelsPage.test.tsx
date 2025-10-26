@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { Models } from './ModelsPage';
 import { ollamaService } from '../../../services/ollamaService';
@@ -47,7 +47,11 @@ describe('ModelsPage', () => {
   });
 
   it('should render the models page', async () => {
-    render(<Models />);
+    await act(async () => {
+      await act(async () => {
+      render(<Models />);
+    });
+    });
     
     await waitFor(() => {
       expect(screen.getByText('Models')).toBeInTheDocument();
@@ -55,7 +59,11 @@ describe('ModelsPage', () => {
   });
 
   it('should display installed models', async () => {
-    render(<Models />);
+    await act(async () => {
+      await act(async () => {
+      render(<Models />);
+    });
+    });
     
     await waitFor(() => {
       expect(screen.getByText('Llama2')).toBeInTheDocument();
@@ -65,7 +73,9 @@ describe('ModelsPage', () => {
   });
 
   it('should switch between installed and discover tabs', async () => {
-    render(<Models />);
+    await act(async () => {
+      render(<Models />);
+    });
     
     // Initially on installed tab
     expect(screen.getByText('Installed')).toBeInTheDocument();
@@ -87,7 +97,9 @@ describe('ModelsPage', () => {
   });
 
   it('should show connection status', async () => {
-    render(<Models />);
+    await act(async () => {
+      render(<Models />);
+    });
     
     await waitFor(() => {
       expect(screen.getByText(/Connected/)).toBeInTheDocument();
@@ -97,7 +109,9 @@ describe('ModelsPage', () => {
   it('should handle connection errors', async () => {
     mockOllamaService.getVersion.mockRejectedValue(new Error('Connection failed'));
     
-    render(<Models />);
+    await act(async () => {
+      render(<Models />);
+    });
     
     await waitFor(() => {
       expect(screen.getByText(/Connection failed/)).toBeInTheDocument();
@@ -105,7 +119,9 @@ describe('ModelsPage', () => {
   });
 
   it('should allow setting default model', async () => {
-    render(<Models />);
+    await act(async () => {
+      render(<Models />);
+    });
     
     await waitFor(() => {
       expect(screen.getByText('Llama2')).toBeInTheDocument();
@@ -122,7 +138,9 @@ describe('ModelsPage', () => {
   });
 
   it('should allow deleting models', async () => {
-    render(<Models />);
+    await act(async () => {
+      render(<Models />);
+    });
     
     await waitFor(() => {
       expect(screen.getByText('Llama2')).toBeInTheDocument();
@@ -140,7 +158,9 @@ describe('ModelsPage', () => {
   });
 
   it('should show model sizes', async () => {
-    render(<Models />);
+    await act(async () => {
+      render(<Models />);
+    });
     
     await waitFor(() => {
       // Should show size information for models (if available)
@@ -152,27 +172,33 @@ describe('ModelsPage', () => {
   it('should handle empty installed models list', async () => {
     mockOllamaService.listModels.mockResolvedValue([]);
     
-    render(<Models />);
+    await act(async () => {
+      render(<Models />);
+    });
     
     await waitFor(() => {
       expect(screen.getByText(/No local models found/)).toBeInTheDocument();
     });
   });
 
-  it('should show loading state', () => {
+  it('should show loading state', async () => {
     // Mock a slow loading response
     mockOllamaService.listModels.mockImplementation(() => 
       new Promise(resolve => setTimeout(() => resolve(mockInstalledModels), 100))
     );
     
-    render(<Models />);
+    await act(async () => {
+      render(<Models />);
+    });
     
     // Should show loading state initially (may not be visible due to fast loading)
     expect(screen.getByText('Models')).toBeInTheDocument();
   });
 
   it('should refresh models list', async () => {
-    render(<Models />);
+    await act(async () => {
+      render(<Models />);
+    });
     
     await waitFor(() => {
       expect(screen.getByText('Llama2')).toBeInTheDocument();

@@ -18,20 +18,127 @@ LLaMa-Herd is a multi-agent conversation platform that facilitates creation, con
 
 ## Prerequisites
 
+### Option 1: Docker (Recommended)
+- **Docker** and **Docker Compose** installed
+- **Git** for cloning the repository
+
+### Option 2: Manual Installation
 - **Python 3.10+** with pip
 - **Node.js 16+** with npm
 - **Ollama** installed and running ([Download from ollama.ai](https://ollama.ai))
 
 ## Installation & Setup
 
-### 1. Clone the Repository
+### Option 1: Docker Setup (Recommended)
+
+#### 1. Clone the Repository
 
 ```bash
 git clone <repository-url>
 cd llama-herd
 ```
 
-### 2. Backend Setup
+#### 2. Configure Environment (Optional)
+
+```bash
+# Copy the example environment file
+cp env.example .env
+
+# Edit .env with your preferred settings (optional)
+# The defaults work well for most use cases
+```
+
+#### 3. Start with Docker Compose
+
+**Development Mode (with hot-reload):**
+```bash
+docker-compose --profile dev up
+```
+
+**Production Mode:**
+```bash
+docker-compose --profile prod up -d
+```
+
+#### 4. Pull AI Models
+
+```bash
+# Pull some common models
+docker-compose exec ollama ollama pull llama2
+docker-compose exec ollama ollama pull codellama
+
+# Or pull any other model you need
+docker-compose exec ollama ollama pull <model-name>
+```
+
+#### 5. Access the Application
+
+- **Development**: http://localhost:3000
+- **Production**: http://localhost:80
+- **Backend API**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/docs
+- **Ollama API**: http://localhost:11435
+
+#### 6. Useful Docker Commands
+
+```bash
+# View logs
+docker-compose logs [service-name]
+
+# Follow logs in real-time
+docker-compose logs -f backend
+
+# Stop services
+docker-compose down
+
+# Stop and remove volumes (fresh start)
+docker-compose down -v
+
+# Rebuild containers
+docker-compose build --no-cache
+
+# Check service health
+docker-compose ps
+
+# Execute commands in containers
+docker-compose exec backend python --version
+docker-compose exec frontend-dev npm --version
+
+# Pull models in Ollama container
+docker-compose exec ollama ollama pull llama2
+docker-compose exec ollama ollama list
+
+# Restart a specific service
+docker-compose restart backend
+
+# Check container resource usage
+docker stats
+```
+
+**Quick Start for Testing:**
+```bash
+# 1. Start the application in development mode
+docker-compose --profile dev up
+
+# 2. Pull some models (in a new terminal)
+docker-compose exec ollama ollama pull llama2:7b
+
+# 3. Open browser to http://localhost:3000
+
+# 4. When done testing, stop services
+docker-compose down
+```
+
+### Option 2: Manual Installation
+
+#### 1. Clone the Repository
+
+```bash
+git clone <repository-url>
+cd llama-herd
+```
+
+#### 2. Backend Setup
 
 ```bash
 cd backend
@@ -68,38 +175,27 @@ ollama pull codellama
 
 ## Running the Application
 
-### Option 1: Quick Start (Recommended)
+### Start the Backend
 
-```bash
-# Start both backend and proxy server
-cd backend
-./start_with_proxy.sh
-```
-
-This script will:
-- Check dependencies
-- Start the Ollama proxy server on port 8080
-- Start the FastAPI backend on port 8000
-- Handle cleanup when stopped
-
-### Option 2: Manual Startup
-
-**Terminal 1 - Start Ollama Proxy:**
-```bash
-cd backend
-python3 ollama_proxy.py
-```
-
-**Terminal 2 - Start Backend:**
 ```bash
 cd backend
 python3 main.py
 ```
 
-**Terminal 3 - Start Frontend:**
+This will:
+- Start the FastAPI backend on port 8000
+- Connect directly to Ollama's OpenAI-compatible API at `http://localhost:11434/v1`
+- Enable auto-reload in development mode
+
+### Start the Frontend
+
+In a separate terminal:
+
 ```bash
 npm start
 ```
+
+**Note**: Make sure Ollama is running on port 11434 before starting the backend.
 
 ### Access the Application
 
@@ -122,9 +218,7 @@ llama-herd/
 │   │   └── utils/             # Utility functions
 │   ├── data/                  # Application data storage
 │   ├── tests/                 # Backend tests
-│   ├── main.py               # Application entry point
-│   ├── ollama_proxy.py       # Ollama API proxy
-│   └── start_with_proxy.sh   # Startup script
+│   └── main.py               # Application entry point
 ├── src/                       # React frontend
 │   ├── components/           # Reusable UI components
 │   ├── features/             # Feature-specific components
@@ -155,7 +249,7 @@ API_VERSION="1.0.0"
 CORS_ORIGINS="http://localhost:3000,http://localhost:3001"
 
 # Ollama Configuration
-OLLAMA_BASE_URL=http://localhost:8080/v1
+OLLAMA_BASE_URL=http://localhost:11434/v1
 OLLAMA_URL=http://localhost:11434
 OLLAMA_TIMEOUT=300
 
@@ -200,6 +294,113 @@ Frontend configuration is handled through:
 
 - `WS /ws/experiments/{experiment_id}` - Real-time experiment updates
 
+## Docker Troubleshooting
+
+### Common Issues
+
+**1. Port Already in Use**
+```bash
+# Check what's using the port
+sudo lsof -i :8000
+sudo lsof -i :3000
+sudo lsof -i :11434
+sudo lsof -i :11435
+
+# Stop conflicting services (e.g., local Ollama)
+sudo systemctl stop ollama
+# or
+pkill ollama
+
+# Or change ports in docker-compose.yml if needed
+```
+
+**2. Permission Issues**
+```bash
+# Fix Docker permissions (Linux)
+sudo usermod -aG docker $USER
+# Log out and back in, then try again
+```
+
+**3. Container Won't Start**
+```bash
+# Check container logs
+docker-compose logs [service-name]
+
+# Check container health
+docker-compose ps
+
+# Rebuild containers
+docker-compose build --no-cache
+```
+
+**4. Ollama Models Not Loading**
+```bash
+# Check Ollama container logs
+docker-compose logs ollama
+
+# Pull models manually
+docker-compose exec ollama ollama pull llama2
+
+# Check available models
+docker-compose exec ollama ollama list
+```
+
+**5. Frontend Not Connecting to Backend**
+```bash
+# Check if backend is healthy
+curl http://localhost:8000/health
+
+# Check CORS settings in .env file
+# Ensure REACT_APP_API_BASE_URL is correct
+```
+
+**6. Data Not Persisting**
+```bash
+# Check volume mounts
+docker volume ls | grep llama-herd
+
+# Inspect volume contents
+docker run --rm -v llama-herd-experiment-data:/data alpine ls -la /data
+```
+
+**7. Clean Slate Reset**
+```bash
+# Stop and remove all containers, networks, and volumes
+docker-compose down -v
+
+# Remove all images (WARNING: This removes ALL Docker images)
+docker system prune -a
+
+# Start fresh
+docker-compose --profile dev up
+```
+
+### Performance Tips
+
+**1. Faster Builds**
+```bash
+# Use BuildKit for faster builds
+export DOCKER_BUILDKIT=1
+docker-compose build
+```
+
+**2. Resource Limits**
+```bash
+# Add resource limits to docker-compose.yml services:
+deploy:
+  resources:
+    limits:
+      memory: 2G
+      cpus: '1.0'
+```
+
+**3. Development Hot Reload**
+```bash
+# Ensure file watching works in Docker
+# Add to .env:
+CHOKIDAR_USEPOLLING=true
+WATCHPACK_POLLING=true
+```
 
 ## License
 

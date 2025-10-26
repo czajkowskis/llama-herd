@@ -30,7 +30,7 @@ describe('backendStorageService', () => {
 
       const result = await backendStorageService.getExperiments();
 
-      expect(mockFetch).toHaveBeenCalledWith('http://localhost:8000/api/experiments');
+      expect(mockFetch).toHaveBeenCalledWith('/api/experiments');
 
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('exp-1');
@@ -77,7 +77,7 @@ describe('backendStorageService', () => {
 
       const result = await backendStorageService.getConversations();
 
-      expect(mockFetch).toHaveBeenCalledWith('http://localhost:8000/api/conversations');
+      expect(mockFetch).toHaveBeenCalledWith('/api/conversations');
 
       expect(result).toEqual(mockConversations);
     });
@@ -115,7 +115,7 @@ describe('backendStorageService', () => {
       const result = await backendStorageService.saveExperiment(mockExperiment);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8000/api/experiments/exp-1',
+        '/api/experiments/exp-1',
         expect.objectContaining({
           method: 'PUT',
           headers: {
@@ -185,7 +185,7 @@ describe('backendStorageService', () => {
       const result = await backendStorageService.deleteExperiment('exp-1');
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8000/api/experiments/exp-1',
+        '/api/experiments/exp-1',
         expect.objectContaining({
           method: 'DELETE',
         })
@@ -268,7 +268,7 @@ describe('backendStorageService', () => {
       const result = await backendStorageService.deleteConversation('conv-1');
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8000/api/conversations/conv-1',
+        '/api/conversations/conv-1',
         expect.objectContaining({
           method: 'DELETE',
         })

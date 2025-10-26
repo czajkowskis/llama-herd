@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Conversation } from '../../../types/index.d';
 import { Button } from '../../../components/ui/Button';
+import { Icon } from '../../../components/ui/Icon';
 
 interface RunSelectorProps {
   completedConversations: Conversation[];
@@ -9,6 +10,8 @@ interface RunSelectorProps {
   status: string;
   liveConversation: Conversation | null;
   onSelectRun: (conversation: Conversation | null, isLive: boolean) => void;
+  totalIterations: number;
+  currentIteration: number;
 }
 
 interface RunPreview {
@@ -69,6 +72,8 @@ export const RunSelector: React.FC<RunSelectorProps> = ({
   status,
   liveConversation,
   onSelectRun,
+  totalIterations,
+  currentIteration,
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -168,13 +173,33 @@ export const RunSelector: React.FC<RunSelectorProps> = ({
   };
 
   return (
-    <div className="mb-4 flex items-center space-x-2">
-      <span className="text-gray-300 text-sm">Browse runs:</span>
+    <div className="mb-4 flex items-center space-x-4">
+      {/* Iteration progress display */}
+      <div className="flex items-center space-x-2 px-3 py-2 rounded-lg" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>
+        <Icon className="text-purple-400">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-repeat">
+            <path d="m17 2 4 4-4 4"/>
+            <path d="M3 11v-1a4 4 0 0 1 4-4h14"/>
+            <path d="m7 22-4-4 4-4"/>
+            <path d="M21 13v1a4 4 0 0 1-4 4H3"/>
+          </svg>
+        </Icon>
+        <span className="text-sm font-medium">
+          Iteration {currentIteration} of {totalIterations}
+        </span>
+      </div>
+      
+      <div className="flex items-center space-x-2">
+        <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Browse runs:</span>
       
       {/* In progress indicator */}
       {completedConversations.length === 0 && status === 'running' && (
-        <button className="px-3 py-1 rounded text-sm bg-gray-800 text-gray-500 cursor-default" disabled>
-          Run 1 (in progress)
+        <button 
+          className="px-3 py-1 rounded text-sm cursor-default" 
+          style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' }}
+          disabled
+        >
+          Iteration {currentIteration} of {totalIterations} (in progress)
         </button>
       )}
 
@@ -183,7 +208,12 @@ export const RunSelector: React.FC<RunSelectorProps> = ({
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="px-3 py-1 rounded text-sm bg-gray-700 text-gray-300 hover:bg-gray-600 flex items-center space-x-1"
+            className="px-3 py-1 rounded text-sm flex items-center space-x-1 hover:opacity-80 transition-opacity"
+            style={{ 
+              backgroundColor: 'var(--color-bg-tertiary)', 
+              color: 'var(--color-text-primary)',
+              border: '1px solid var(--color-border)'
+            }}
           >
             <span>
               {!isViewingLive && selectedConversation 
@@ -203,15 +233,32 @@ export const RunSelector: React.FC<RunSelectorProps> = ({
 
           {/* Dropdown menu */}
           {isDropdownOpen && (
-            <div className="absolute top-full left-0 mt-2 w-96 bg-gray-800 border border-gray-600 rounded-lg shadow-xl z-50 max-h-96 overflow-hidden flex flex-col">
+            <div 
+              className="absolute top-full left-0 mt-2 w-96 rounded-lg shadow-xl z-50 max-h-96 overflow-hidden flex flex-col"
+              style={{ 
+                backgroundColor: 'var(--color-bg-secondary)', 
+                border: '1px solid var(--color-border)' 
+              }}
+            >
               {/* Search input */}
-              <div className="p-3 border-b border-gray-700">
+              <div className="p-3" style={{ borderBottom: '1px solid var(--color-border)' }}>
                 <input
                   type="text"
                   placeholder="Search by title or timestamp..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-purple-500 focus:outline-none text-sm"
+                  className="w-full px-3 py-2 rounded text-sm focus:outline-none"
+                  style={{ 
+                    backgroundColor: 'var(--color-bg-tertiary)', 
+                    color: 'var(--color-text-primary)',
+                    border: '1px solid var(--color-border)'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = 'var(--color-accent)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = 'var(--color-border)';
+                  }}
                   autoFocus
                 />
               </div>
@@ -219,7 +266,7 @@ export const RunSelector: React.FC<RunSelectorProps> = ({
               {/* Runs list */}
               <div className="overflow-y-auto flex-1">
                 {filteredRuns.length === 0 ? (
-                  <div className="p-4 text-center text-gray-400 text-sm">
+                  <div className="p-4 text-center text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
                     No runs found
                   </div>
                 ) : (
@@ -230,22 +277,43 @@ export const RunSelector: React.FC<RunSelectorProps> = ({
                     return (
                       <div
                         key={conv.id}
-                        className={`relative flex items-center px-3 py-2 hover:bg-gray-700 cursor-pointer transition-colors border-b border-gray-700 ${
-                          isSelected ? 'bg-purple-900 bg-opacity-30' : ''
-                        }`}
+                        className="relative flex items-center px-3 py-2 cursor-pointer transition-colors"
+                        style={{
+                          backgroundColor: isSelected ? 'rgba(107, 70, 193, 0.1)' : 'transparent',
+                          color: 'var(--color-text-primary)',
+                          borderBottom: '1px solid var(--color-border)'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                          }
+                          setHoveredRunId(conv.id);
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }
+                          setHoveredRunId(null);
+                        }}
                         onClick={() => {
                           onSelectRun(conv, false);
                           setIsDropdownOpen(false);
                         }}
-                        onMouseEnter={() => setHoveredRunId(conv.id)}
-                        onMouseLeave={() => setHoveredRunId(null)}
                       >
                         {/* Pin button */}
                         <button
                           onClick={(e) => togglePin(conv.id, e)}
-                          className={`mr-2 p-1 rounded hover:bg-gray-600 transition-colors ${
-                            runPreview.isPinned ? 'text-yellow-400' : 'text-gray-500'
-                          }`}
+                          className="mr-2 p-1 rounded transition-colors"
+                          style={{ 
+                            color: runPreview.isPinned ? '#fbbf24' : 'var(--color-text-tertiary)',
+                            backgroundColor: 'transparent'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
                           title={runPreview.isPinned ? 'Unpin run' : 'Pin run'}
                         >
                           <svg className="w-4 h-4" fill={runPreview.isPinned ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
@@ -256,34 +324,37 @@ export const RunSelector: React.FC<RunSelectorProps> = ({
                         {/* Run info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-baseline space-x-2">
-                            <span className="font-medium text-white text-sm truncate">
+                            <span className="font-medium text-sm truncate" style={{ color: 'var(--color-text-primary)' }}>
                               {highlightMatch(conv.title, searchQuery)}
                             </span>
                             {isSelected && (
-                              <span className="text-xs text-purple-400">●</span>
+                              <span className="text-xs" style={{ color: 'var(--color-accent)' }}>●</span>
                             )}
                           </div>
-                          <div className="text-xs text-gray-400 mt-0.5">
+                          <div className="text-xs mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
                             {highlightMatch(formatTimestamp(conv.createdAt), searchQuery)}
                           </div>
                         </div>
 
                         {/* Message count */}
-                        <div className="ml-2 text-xs text-gray-500">
+                        <div className="ml-2 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
                           {conv.messages.length} msg{conv.messages.length !== 1 ? 's' : ''}
                         </div>
 
                         {/* Tooltip preview */}
                         {hoveredRunId === conv.id && conv.messages.length > 0 && (
                           <div 
-                            className="absolute left-full top-0 ml-2 w-80 bg-gray-900 border border-gray-600 rounded-lg shadow-xl p-3 z-50 pointer-events-none"
-                            ref={tooltipRef}
+                            className="absolute left-full top-0 ml-2 w-80 rounded-lg shadow-xl p-3 z-50 pointer-events-none"
+                            style={{ 
+                              backgroundColor: 'var(--color-bg-primary)', 
+                              border: '1px solid var(--color-border)' 
+                            }}
                           >
-                            <div className="text-xs text-gray-300 whitespace-pre-wrap max-h-32 overflow-hidden">
+                            <div className="text-xs whitespace-pre-wrap max-h-32 overflow-hidden" style={{ color: 'var(--color-text-secondary)' }}>
                               {getPreviewMessages(conv)}
                             </div>
                             {conv.messages.length > 2 && (
-                              <div className="text-xs text-gray-500 mt-2">
+                              <div className="text-xs mt-2" style={{ color: 'var(--color-text-tertiary)' }}>
                                 +{conv.messages.length - 2} more messages...
                               </div>
                             )}
@@ -296,7 +367,14 @@ export const RunSelector: React.FC<RunSelectorProps> = ({
               </div>
 
               {/* Footer with count */}
-              <div className="p-2 border-t border-gray-700 bg-gray-850 text-xs text-gray-400 text-center">
+              <div 
+                className="p-2 text-xs text-center"
+                style={{ 
+                  borderTop: '1px solid var(--color-border)', 
+                  backgroundColor: 'var(--color-bg-tertiary)', 
+                  color: 'var(--color-text-tertiary)' 
+                }}
+              >
                 {filteredRuns.length} of {completedConversations.length} runs
                 {pinnedRuns.size > 0 && ` • ${pinnedRuns.size} pinned`}
               </div>
@@ -304,6 +382,7 @@ export const RunSelector: React.FC<RunSelectorProps> = ({
           )}
         </div>
       )}
+      </div>
     </div>
   );
 };

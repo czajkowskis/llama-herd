@@ -56,7 +56,7 @@ export const HistoricalExperimentView: React.FC<HistoricalExperimentViewProps> =
   if (loading) {
     return (
       <div className="p-8 space-y-6 animate-fade-in">
-        <div className="bg-gray-800 p-6 rounded-2xl shadow-xl">
+        <div className="p-6 rounded-2xl shadow-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400"></div>
           </div>
@@ -68,7 +68,7 @@ export const HistoricalExperimentView: React.FC<HistoricalExperimentViewProps> =
   if (error) {
     return (
       <div className="p-8 space-y-6 animate-fade-in">
-        <div className="bg-gray-800 p-6 rounded-2xl shadow-xl">
+        <div className="p-6 rounded-2xl shadow-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
           <div className="flex items-center justify-center h-32">
             <div className="text-lg text-red-400">{error}</div>
           </div>
@@ -79,7 +79,7 @@ export const HistoricalExperimentView: React.FC<HistoricalExperimentViewProps> =
 
   return (
     <div className="p-8 space-y-6 animate-fade-in">
-      <div className="bg-gray-800 p-6 rounded-2xl shadow-xl">
+      <div className="p-6 rounded-2xl shadow-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
             <Icon className="text-purple-400 text-xl">
@@ -87,14 +87,14 @@ export const HistoricalExperimentView: React.FC<HistoricalExperimentViewProps> =
                 <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
               </svg>
             </Icon>
-            <h2 className="text-xl font-semibold text-white">{experiment.title}</h2>
-            <div className="flex items-center space-x-2 px-3 py-1 rounded-full bg-gray-700 text-green-400">
+            <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>{experiment.title}</h2>
+            <div className="flex items-center space-x-2 px-3 py-1 rounded-full" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-success)' }}>
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
               <span className="text-sm font-medium">Completed</span>
             </div>
-            <div className="text-xs text-gray-400 ml-4">
+            <div className="text-xs ml-4" style={{ color: 'var(--color-text-tertiary)' }}>
               {conversations.length} conversation{conversations.length !== 1 ? 's' : ''} • Created {formatDate(experiment.createdAt)}
             </div>
           </div>
@@ -115,7 +115,7 @@ export const HistoricalExperimentView: React.FC<HistoricalExperimentViewProps> =
                 Export
               </Button>
             )}
-            <Button onClick={onBack} className="bg-gray-600 hover:bg-gray-700">
+            <Button onClick={onBack} style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }} className="hover:opacity-80">
               Back
             </Button>
           </div>
@@ -129,7 +129,7 @@ export const HistoricalExperimentView: React.FC<HistoricalExperimentViewProps> =
         />
 
         {/* Conversation Display */}
-        <div className="message-list bg-gray-900 rounded-xl p-4 h-[600px] overflow-y-auto space-y-4">
+        <div className="message-list rounded-xl p-4 h-[600px] overflow-y-auto space-y-4" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>
           {selectedConversation ? (
             <HistoricalChatView
               conversation={selectedConversation}
@@ -137,8 +137,8 @@ export const HistoricalExperimentView: React.FC<HistoricalExperimentViewProps> =
           ) : (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <div className="text-lg mb-2 text-gray-400">No conversations found</div>
-                <div className="text-sm text-gray-500">This experiment doesn't have any stored conversations yet.</div>
+                <div className="text-lg mb-2" style={{ color: 'var(--color-text-secondary)' }}>No conversations found</div>
+                <div className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>This experiment doesn't have any stored conversations yet.</div>
               </div>
             </div>
           )}
