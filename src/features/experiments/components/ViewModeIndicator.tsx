@@ -15,9 +15,9 @@ export const ViewModeIndicator: React.FC<ViewModeIndicatorProps> = ({
 }) => {
   if (isViewingLive) {
     return (
-      <div className="flex items-center space-x-2 px-4 py-2 rounded-full bg-green-700/30 border border-green-500/50">
-        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-        <span className="text-sm font-semibold text-green-300">Live — Following</span>
+      <div className="flex items-center space-x-2 px-4 py-2 rounded-full border" style={{ backgroundColor: 'var(--color-success-bg)', borderColor: 'var(--color-success)', color: 'var(--color-success-text)' }}>
+        <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--color-success)' }}></div>
+        <span className="text-sm font-semibold">Live — Following</span>
       </div>
     );
   }
@@ -36,7 +36,7 @@ export const ViewModeIndicator: React.FC<ViewModeIndicatorProps> = ({
       {onResumeLive && (
         <Button
           onClick={onResumeLive}
-          className="bg-green-700 hover:bg-green-800 px-3 py-1 rounded-full text-sm"
+          className="px-3 py-1 rounded-full text-sm" style={{ backgroundColor: 'var(--color-success)', color: 'white' }}
         >
           Resume Live
         </Button>
@@ -72,7 +72,7 @@ export const HistoricalViewBanner: React.FC<HistoricalViewBannerProps> = ({
         </div>
         <Button
           onClick={onResumeLive}
-          className="bg-green-600 hover:bg-green-700 flex items-center space-x-2 whitespace-nowrap"
+          className="flex items-center space-x-2 whitespace-nowrap" style={{ backgroundColor: 'var(--color-success)', color: 'white' }}
         >
           <Icon>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

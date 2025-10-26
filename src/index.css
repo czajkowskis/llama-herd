@@ -15,6 +15,12 @@
     --color-border: #4b5563;
     --color-accent: #a855f7;
     --color-accent-hover: #9333ea;
+    --color-success: #10b981;
+    --color-success-bg: #064e3b;
+    --color-success-text: #6ee7b7;
+    --color-info: #6b7280;
+    --color-info-bg: #374151;
+    --color-info-text: #9ca3af;
   }
 
   :root.light {
@@ -28,6 +34,12 @@
     --color-border: #d6d3d1;          /* Subtle border */
     --color-accent: #9333ea;          /* Vivid purple for better contrast */
     --color-accent-hover: #7e22ce;    /* Darker purple on hover */
+    --color-success: #059669;          /* Darker green for light theme */
+    --color-success-bg: #d1fae5;       /* Light green background */
+    --color-success-text: #065f46;    /* Dark green text */
+    --color-info: #6b7280;            /* Medium gray for light theme */
+    --color-info-bg: #f3f4f6;         /* Light gray background */
+    --color-info-text: #374151;       /* Dark gray text */
   }
 
   body {

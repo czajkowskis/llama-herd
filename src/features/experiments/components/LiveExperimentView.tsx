@@ -394,7 +394,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
   if (error) {
     return (
       <div className="p-8 space-y-6 animate-fade-in">
-        <div className="bg-gray-800 p-6 rounded-2xl shadow-xl">
+        <div className="p-6 rounded-2xl shadow-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-3">
               <Icon className="text-red-400 text-xl">
@@ -404,9 +404,9 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
                   <line x1="9" y1="9" x2="15" y2="15"/>
                 </svg>
               </Icon>
-              <h2 className="text-xl font-semibold text-white">Experiment Error</h2>
+              <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>Experiment Error</h2>
             </div>
-            <Button onClick={onBack} className="bg-gray-600 hover:bg-gray-700">
+            <Button onClick={onBack} style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }} className="hover:opacity-80">
               Back
             </Button>
           </div>
@@ -421,7 +421,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
   if (!viewConversation) {
     return (
       <div className="p-8 space-y-6 animate-fade-in">
-        <div className="bg-gray-800 p-6 rounded-2xl shadow-xl">
+        <div className="p-6 rounded-2xl shadow-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400"></div>
           </div>
@@ -433,7 +433,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
   return (
     <div className="p-8 space-y-6 animate-fade-in">
       <PullNotification activePulls={activePulls} />
-      <div className="bg-gray-800 p-6 rounded-2xl shadow-xl">
+      <div className="p-6 rounded-2xl shadow-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
             <Icon className="text-purple-400 text-xl">
@@ -441,13 +441,13 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
                 <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
               </svg>
             </Icon>
-            <h2 className="text-xl font-semibold text-white">{viewConversation.title}</h2>
+            <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>{viewConversation.title}</h2>
             <ViewModeIndicator
               isViewingLive={isViewingLive}
               viewTitle={viewConversation.title}
               onResumeLive={!isViewingLive ? handleResumeLive : undefined}
             />
-            <div className={`flex items-center space-x-2 px-3 py-1 rounded-full bg-gray-700 ${getStatusColor(status)}`}>
+            <div className={`flex items-center space-x-2 px-3 py-1 rounded-full ${getStatusColor(status)}`} style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>
               {getStatusIcon(status)}
               <span className="text-sm font-medium capitalize">{status}</span>
             </div>
@@ -480,7 +480,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
                 Export
               </Button>
             )}
-            <Button onClick={onBack} className="bg-gray-600 hover:bg-gray-700">
+            <Button onClick={onBack} style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }} className="hover:opacity-80">
               Back
             </Button>
           </div>
@@ -520,7 +520,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
         )}
 
   {/* Chat Messages */}
-  <div className={`message-list bg-gray-900 rounded-xl p-4 h-[600px] overflow-y-auto space-y-4 ${!isViewingLive ? 'historical-view-dimmed' : ''}`}>
+  <div className={`message-list rounded-xl p-4 h-[600px] overflow-y-auto space-y-4 ${!isViewingLive ? 'historical-view-dimmed' : ''}`} style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>
           {(() => {
             // Filter out System messages from display
             const displayMessages = viewConversation.messages.filter((m) => {
@@ -565,9 +565,9 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
                 <div className="flex-1 message-content-wrapper">
                   <div className={`flex items-center justify-between mb-1 message-header ${isRightAligned ? 'flex-row-reverse' : ''}`}>
                     <div className="flex items-center flex-wrap gap-2">
-                      <span className="font-semibold text-white">{agent.name}</span>
-                      <span className="message-timestamp">{formatTimestamp(message.timestamp)}</span>
-                      <span className="message-model-badge">{agent.model}</span>
+                      <span className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>{agent.name}</span>
+                      <span className="message-timestamp" style={{ color: 'var(--color-text-secondary)' }}>{formatTimestamp(message.timestamp)}</span>
+                      <span className="message-model-badge" style={{ color: 'var(--color-text-tertiary)' }}>{agent.model}</span>
                       {isStarred && (
                         <span className="ml-2 text-yellow-400" title="Starred message">
                           <Icon>
@@ -618,17 +618,17 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
                       />
                     </div>
                   </div>
-                  <div className="rounded-lg p-4 text-gray-200 message-content">
+                  <div className="rounded-lg p-4 message-content" style={{ color: 'var(--color-text-secondary)' }}>
                     <ReactMarkdown
                       components={{
                         h1: (props: any) => (
-                          <h1 className="text-xl font-semibold text-white mt-2 mb-2" {...props} />
+                          <h1 className="text-xl font-semibold mt-2 mb-2" style={{ color: 'var(--color-text-primary)' }} {...props} />
                         ),
                         h2: (props: any) => (
-                          <h2 className="text-lg font-semibold text-white mt-2 mb-2" {...props} />
+                          <h2 className="text-lg font-semibold mt-2 mb-2" style={{ color: 'var(--color-text-primary)' }} {...props} />
                         ),
                         h3: (props: any) => (
-                          <h3 className="text-base font-semibold text-white mt-2 mb-2" {...props} />
+                          <h3 className="text-base font-semibold mt-2 mb-2" style={{ color: 'var(--color-text-primary)' }} {...props} />
                         ),
                         p: (props: any) => (
                           <p className="mb-2 leading-relaxed" {...props} />
@@ -646,7 +646,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
                           <a className="text-blue-400 underline hover:text-blue-300" target="_blank" rel="noreferrer" {...props} />
                         ),
                         hr: (props: any) => (
-                          <hr className="border-gray-700 my-4" {...props} />
+                          <hr className="my-4" style={{ borderColor: 'var(--color-border)' }} {...props} />
                         ),
                         code: ({ node, inline, className, children, ...props }: any) => (
                           <CodeBlock inline={inline} className={className}>

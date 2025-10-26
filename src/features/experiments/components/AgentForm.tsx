@@ -293,7 +293,7 @@ export const AgentForm: React.FC<AgentFormProps> = ({
       />
 
       <div className="flex justify-end space-x-4">
-        <Button onClick={onCancel} className="bg-gray-600 hover:bg-gray-700">
+        <Button onClick={onCancel} style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }} className="hover:opacity-80">
           Close
         </Button>
         <Button onClick={handleSave}>

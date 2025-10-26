@@ -104,7 +104,7 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({ task, onEdit, onDelete
           {/* Iterations editing removed - iterations are now handled at experiment level */}
           
           <div className="flex justify-end space-x-3">
-            <Button onClick={handleCancel} className="bg-gray-600 hover:bg-gray-700">
+            <Button onClick={handleCancel} style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }} className="hover:opacity-80">
               Cancel
             </Button>
             <Button onClick={handleSave} className="bg-purple-600 hover:bg-purple-700">

@@ -70,7 +70,7 @@ export const TaskImportForm: React.FC<TaskImportFormProps> = ({ onTaskImport }) 
 
   return (
     <div className="space-y-8 animate-fade-in-up p-6 mb-8">
-      <p className="text-gray-300 mb-6 leading-relaxed">
+      <p className="mb-6 leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
         You can import the dataset as a json file. It should include the list of objects with two properties -
         task and answer. If you want the results to be automatically computed enter the expected format of
         the solution (as a regex) that could be found in the last message in the conversation. Make sure too
@@ -95,10 +95,10 @@ export const TaskImportForm: React.FC<TaskImportFormProps> = ({ onTaskImport }) 
               onChange={(e) => setImportedTaskFile(e.target.files ? e.target.files[0] : null)}
             />
           </label>
-          {importedTaskFile && <p className="text-sm text-gray-400 mt-2">Selected: {importedTaskFile.name}</p>}
+          {importedTaskFile && <p className="text-sm mt-2" style={{ color: 'var(--color-text-secondary)' }}>Selected: {importedTaskFile.name}</p>}
         </div>
         <div className="flex-1 p-4">
-          <label htmlFor="regex-input" className="block text-gray-300 text-sm mb-3 font-medium">
+          <label htmlFor="regex-input" className="block text-sm mb-3 font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             Expected solution format (regex)
           </label>
           <Input
