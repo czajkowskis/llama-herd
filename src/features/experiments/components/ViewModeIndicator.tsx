@@ -15,9 +15,9 @@ export const ViewModeIndicator: React.FC<ViewModeIndicatorProps> = ({
 }) => {
   if (isViewingLive) {
     return (
-      <div className="flex items-center space-x-2 px-4 py-2 rounded-full border" style={{ backgroundColor: 'var(--color-success-bg)', borderColor: 'var(--color-success)', color: 'var(--color-success-text)' }}>
-        <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--color-success)' }}></div>
-        <span className="text-sm font-semibold">Live — Following</span>
+      <div className="flex items-center space-x-2 px-4 py-2 rounded-full bg-green-700/30 border border-green-500/50">
+        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+        <span className="text-sm font-semibold text-green-300">Live — Following</span>
       </div>
     );
   }
@@ -25,7 +25,7 @@ export const ViewModeIndicator: React.FC<ViewModeIndicatorProps> = ({
   return (
     <div className="flex items-center space-x-3">
       <div className="flex items-center space-x-2 px-4 py-2 rounded-full border" style={{ backgroundColor: 'rgba(107, 70, 193, 0.1)', borderColor: 'var(--color-accent)', color: 'var(--color-text-primary)' }}>
-        <Icon className="text-purple-600">
+        <Icon style={{ color: 'var(--color-accent)' }}>
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"/>
             <polyline points="12 6 12 12 16 14"/>
@@ -36,7 +36,7 @@ export const ViewModeIndicator: React.FC<ViewModeIndicatorProps> = ({
       {onResumeLive && (
         <Button
           onClick={onResumeLive}
-          className="px-3 py-1 rounded-full text-sm" style={{ backgroundColor: 'var(--color-success)', color: 'white' }}
+          className="bg-green-700 hover:bg-green-800 px-3 py-1 rounded-full text-sm"
         >
           Resume Live
         </Button>
@@ -58,7 +58,7 @@ export const HistoricalViewBanner: React.FC<HistoricalViewBannerProps> = ({
     <div className="border rounded-lg p-4 mb-4 animate-fade-in-up" style={{ backgroundColor: 'rgba(107, 70, 193, 0.1)', borderColor: 'var(--color-accent)' }}>
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <Icon className="text-purple-600">
+          <Icon style={{ color: 'var(--color-accent)' }}>
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"/>
               <line x1="12" y1="8" x2="12" y2="12"/>
@@ -72,7 +72,7 @@ export const HistoricalViewBanner: React.FC<HistoricalViewBannerProps> = ({
         </div>
         <Button
           onClick={onResumeLive}
-          className="flex items-center space-x-2 whitespace-nowrap" style={{ backgroundColor: 'var(--color-success)', color: 'white' }}
+          className="bg-green-600 hover:bg-green-700 flex items-center space-x-2 whitespace-nowrap"
         >
           <Icon>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

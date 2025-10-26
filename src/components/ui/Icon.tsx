@@ -4,11 +4,12 @@ import React from 'react';
 interface IconProps {
   children: React.ReactNode;
   className?: string;
+  style?: React.CSSProperties;
 }
 
-export const Icon: React.FC<IconProps> = ({ children, className }) => {
+export const Icon: React.FC<IconProps> = ({ children, className, style }) => {
   return (
-    <span className={`flex items-center justify-center ${className}`}>
+    <span className={`flex items-center justify-center ${className}`} style={style}>
       {children}
     </span>
   );
