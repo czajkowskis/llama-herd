@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from fastapi import WebSocket, WebSocketDisconnect
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional, Callable
 import requests
 import json
@@ -44,38 +44,52 @@ router = APIRouter(prefix="/api/models", tags=["models"])
 OLLAMA_URL = getattr(settings, 'ollama_url', 'http://localhost:11434')
 
 class ModelInfo(BaseModel):
-    name: str
-    size: int
-    digest: str
-    modified_at: str
-    details: Optional[Dict[str, Any]] = None
+    """Information about an installed Ollama model."""
+    
+    name: str = Field(..., description="Model name", example="llama2")
+    size: int = Field(..., description="Model size in bytes", example=3825819519)
+    digest: str = Field(..., description="Model digest hash", example="sha256:abc123...")
+    modified_at: str = Field(..., description="Last modification timestamp (ISO format)", example="2024-01-15T10:30:00Z")
+    details: Optional[Dict[str, Any]] = Field(None, description="Additional model details", example={"format": "gguf", "family": "llama"})
 
 class ListModelsResponse(BaseModel):
-    models: List[ModelInfo]
+    """Response containing list of installed models."""
+    
+    models: List[ModelInfo] = Field(..., description="List of installed models", example=[])
 
 class PullModelRequest(BaseModel):
-    name: str
+    """Request to pull a model from Ollama."""
+    
+    name: str = Field(..., description="Model name to pull (e.g., 'llama2')", example="llama2")
 
 class PullModelResponse(BaseModel):
-    task_id: str
-    message: str
+    """Response after initiating a model pull."""
+    
+    task_id: str = Field(..., description="Unique task ID for tracking pull progress", example="task_abc123")
+    message: str = Field(..., description="Status message", example="Started pulling model llama2")
 
 class PullTaskStatus(BaseModel):
-    task_id: str
-    model_name: str
-    status: str
-    progress: Optional[Dict[str, Any]] = None
-    error: Optional[str] = None
-    created_at: str
-    started_at: Optional[str] = None
-    completed_at: Optional[str] = None
+    """Status information for a model pull task."""
+    
+    task_id: str = Field(..., description="Unique task ID", example="task_abc123")
+    model_name: str = Field(..., description="Model being pulled", example="llama2")
+    status: str = Field(..., description="Task status (pending, running, completed, error, cancelled)", example="running")
+    progress: Optional[Dict[str, Any]] = Field(None, description="Progress information", example={"completed": 50.5, "total": 100.0})
+    error: Optional[str] = Field(None, description="Error message if failed", example=None)
+    created_at: str = Field(..., description="Creation timestamp (ISO format)", example="2024-01-15T10:30:00Z")
+    started_at: Optional[str] = Field(None, description="Start timestamp (ISO format)", example="2024-01-15T10:30:05Z")
+    completed_at: Optional[str] = Field(None, description="Completion timestamp (ISO format)", example=None)
 
 class DeleteModelRequest(BaseModel):
-    name: str
+    """Request to delete a model."""
+    
+    name: str = Field(..., description="Model name to delete", example="llama2")
 
 class ModelOperationResponse(BaseModel):
-    success: bool
-    message: str
+    """Response for model operations (delete, etc.)."""
+    
+    success: bool = Field(..., description="Whether the operation succeeded", example=True)
+    message: str = Field(..., description="Operation result message", example="Model llama2 deleted successfully")
 
 def check_ollama_connection():
     """Check if Ollama is reachable."""

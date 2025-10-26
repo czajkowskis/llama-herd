@@ -19,9 +19,16 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/api/experiments", tags=["experiments"])
 
 
-@router.post("/start")
+@router.post("/start", summary="Start a new experiment", description="Create and start a new multi-agent experiment with the specified task and agents.")
 async def start_experiment(request: ExperimentRequest):
-    """Start a new experiment."""
+    """
+    Start a new multi-agent experiment.
+    
+    This endpoint creates a new experiment with the provided configuration and starts it in the background.
+    The experiment will run until completion, error, or timeout.
+    
+    Returns the experiment ID and WebSocket URL for real-time updates.
+    """
     try:
         # Create experiment using service
         experiment_id = ExperimentService.create_experiment(request)

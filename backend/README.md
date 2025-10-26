@@ -1,144 +1,457 @@
 # LLaMa-Herd Backend
 
-This is the FastAPI backend for the LLaMa-Herd application that handles Autogen group chat experiments.
+**Multi-Agent Conversation Platform - Backend API**
 
-## Setup
+FastAPI-based backend for the LLaMa-Herd multi-agent conversation platform. Provides RESTful APIs and WebSocket support for managing experiments, conversations, and agent interactions.
 
-1. **Install Python dependencies:**
+## Table of Contents
+
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Running the Application](#running-the-application)
+- [API Documentation](#api-documentation)
+- [Development](#development)
+- [Testing](#testing)
+- [Project Structure](#project-structure)
+- [Key Services](#key-services)
+- [Troubleshooting](#troubleshooting)
+
+## Overview
+
+The LLaMa-Herd backend is a FastAPI application that provides:
+
+- **Experiment Management**: Create and manage multi-agent AI experiments
+- **Real-time Updates**: WebSocket support for live experiment monitoring
+- **Model Management**: Integration with Ollama for local LLM operations
+- **Conversation Persistence**: Store and manage conversation history
+- **AutoGen Integration**: Multi-agent conversation orchestration
+
+### Key Features
+
+- RESTful API with automatic OpenAPI/Swagger documentation
+- WebSocket support for real-time experiment updates
+- Model pull management with progress tracking
+- Persistent storage for experiments and conversations
+- Comprehensive error handling and validation
+- Background task execution for long-running experiments
+- AutoGen integration for multi-agent conversations
+
+## Architecture
+
+### Technology Stack
+
+- **Framework**: FastAPI 0.104+
+- **Async Runtime**: Uvicorn with ASGI
+- **Data Validation**: Pydantic 2.10+
+- **AutoGen**: autogen-agentchat, autogen-core, autogen-ext
+- **Storage**: File-based JSON storage with aiosqlite support
+- **Testing**: pytest with async support
+
+### Architecture Layers
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                      FastAPI App                        │
+│  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │   Routes    │  │ WebSockets   │  │  Exception   │  │
+│  │  Handlers   │  │   Handlers   │  │  Handlers    │  │
+│  └──────┬──────┘  └──────┬───────┘  └──────┬───────┘  │
+└─────────┼─────────────────┼──────────────────┼──────────┘
+          │                 │                  │
+┌─────────┼─────────────────┼──────────────────┼──────────┐
+│         ▼                 ▼                  ▼          │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │              Service Layer                        │  │
+│  │  • ExperimentService                              │  │
+│  │  • ConversationService                            │  │
+│  │  • AgentService                                   │  │
+│  │  • AutogenService                                 │  │
+│  │  • ModelPullManager                               │  │
+│  └──────────────────────────────────────────────────┘  │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │              Storage Layer                        │  │
+│  │  • ExperimentStorage                              │  │
+│  │  • ConversationStorage                            │  │
+│  │  • UnifiedStorage                                 │  │
+│  └──────────────────────────────────────────────────┘  │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │         External Integrations                     │  │
+│  │  • Ollama API Client                              │  │
+│  │  • AutoGen Framework                              │  │
+│  └──────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────┘
+```
+
+## Installation
+
+### Prerequisites
+
+- **Python 3.10+**
+- **Ollama** installed and running (see [ollama.ai](https://ollama.ai))
+- **pip** package manager
+
+### Setup
+
+1. **Clone the repository** (if not already done):
+   ```bash
+   cd llama-herd/backend
+   ```
+
+2. **Create a virtual environment**:
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. **Install dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
 
-2. **Configure the application (optional):**
+4. **Configure environment** (optional):
    ```bash
-   cp .env.example .env
-   # Edit .env with your settings
-   ```
-   
-   See [CONFIGURATION.md](CONFIGURATION.md) for all available options.
-
-3. **Install Ollama:**
-   Make sure you have Ollama installed and running. You can download it from [ollama.ai](https://ollama.ai).
-
-4. **Pull required models:**
-   ```bash
-   ollama pull llama2
-   # Add other models as needed
+   cp .env.example .env  # Create .env file if needed
+   # Edit .env with your configuration
    ```
 
-## Running the Backend
-
-### Option 1: Using the startup script (Recommended)
-
-1. **Start both servers (proxy + backend):**
+5. **Verify Ollama is running**:
    ```bash
-   ./start_servers.sh
+   curl http://localhost:11434/api/version
    ```
-
-### Option 2: Manual startup
-
-1. **Start the Ollama proxy server:**
-   ```bash
-   python ollama_proxy.py
-   ```
-
-2. **Start the FastAPI server (in a new terminal):**
-   ```bash
-   python main.py
-   ```
-   
-   Or using uvicorn directly:
-   ```bash
-   uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-   ```
-
-3. **Access the API documentation:**
-   - Swagger UI: http://localhost:8000/docs
-   - ReDoc: http://localhost:8000/redoc
-
-## API Endpoints
-
-### Experiments
-
-- `POST /api/experiments/start` - Start a new Autogen group chat experiment
-- `GET /api/experiments/{experiment_id}` - Get experiment status and data
-- `GET /api/experiments` - List all experiments
-- `DELETE /api/experiments/{experiment_id}` - Delete an experiment
-
-### WebSocket
-
-- `WS /ws/experiments/{experiment_id}` - Real-time experiment updates
-
-## Features
-
-- **Autogen Integration**: Uses Microsoft's Autogen library for multi-agent conversations
-- **Real-time Updates**: WebSocket connection for live experiment monitoring
-- **Agent Management**: Supports custom agent prompts and models
-- **Conversation Logging**: All messages are logged and can be viewed in the frontend
-- **Error Handling**: Comprehensive error handling and status reporting
 
 ## Configuration
 
-The backend is configured to work with Ollama models. You can modify the model configurations in the `create_autogen_agents` function in `main.py`.
+The backend can be configured via environment variables or a `.env` file. All settings have sensible defaults.
 
-## Troubleshooting
+### API Configuration
 
-1. **Ollama not running**: Start with `ollama serve`
-2. **Model not found**: Pull the model with `ollama pull <model-name>`
-3. **Backend connection failed**: Ensure the backend is running on port 8000
-4. **Proxy connection failed**: Ensure the proxy is running on port 8080
-5. **CORS errors**: Backend is configured for `http://localhost:3000`
-6. **API key errors**: The proxy server handles the API key translation automatically
-7. **WebSocket connection issues**: Check that the frontend is connecting to the correct WebSocket URL
-
-## Thread Safety and Race Condition Handling
-
-### ModelPullManager Locking
-
-The `ModelPullManager` now uses a `threading.Lock` to protect all accesses to its shared dictionaries (`tasks` and `progress_callbacks`). This prevents race conditions and KeyErrors when running concurrent pull tasks and during cleanup. All methods that read or modify these dicts acquire the lock.
-
-**Trade-offs considered:**
-- Locking is simple and robust for the current threading model.
-- If full async behavior is needed, consider migrating to `asyncio` primitives and async tasks/queues.
-- Locking may reduce parallelism if tasks are very frequent, but ensures correctness.
-
-### Testing
-
-The backend includes a comprehensive testing infrastructure with unit, integration, and end-to-end tests.
-
-**Run all tests:**
 ```bash
-cd backend
-pytest
+# Server configuration
+API_HOST=0.0.0.0              # Host to bind server
+API_PORT=8000                 # Port to bind server
+API_TITLE="LLaMa-Herd Backend"  # API title
+API_VERSION="1.0.0"           # API version
 ```
 
-**Run specific test types:**
+### CORS Configuration
+
 ```bash
+CORS_ORIGINS="http://localhost:3000,http://localhost:3001"
+CORS_ALLOW_CREDENTIALS=true
+CORS_ALLOW_METHODS="*"
+CORS_ALLOW_HEADERS="*"
+```
+
+### Ollama Configuration
+
+```bash
+# Ollama API endpoints
+OLLAMA_BASE_URL=http://localhost:8080/v1    # Proxy endpoint
+OLLAMA_URL=http://localhost:11434           # Direct Ollama endpoint
+OLLAMA_API_KEY=ollama                        # API key if required
+OLLAMA_TIMEOUT=300                           # Request timeout (seconds)
+OLLAMA_MODELS_DIR=~/.ollama/models          # Model storage directory
+```
+
+### Storage Configuration
+
+```bash
+DATA_DIRECTORY=data                    # Root data directory
+EXPERIMENTS_DIRECTORY=experiments     # Experiments subdirectory
+CONVERSATIONS_DIRECTORY=conversations # Conversations subdirectory
+```
+
+### Experiment Configuration
+
+```bash
+DEFAULT_MAX_ROUNDS=8                    # Default conversation rounds
+DEFAULT_TEMPERATURE=0.7                 # Default LLM temperature
+EXPERIMENT_TIMEOUT_SECONDS=3600         # Max experiment runtime (1 hour)
+ITERATION_TIMEOUT_SECONDS=300           # Max iteration runtime (5 min)
+```
+
+### Model Pull Configuration
+
+```bash
+PULL_PROGRESS_THROTTLE_MS=500           # Progress update throttle
+PULL_PROGRESS_PERCENT_DELTA=2.0         # Minimum % change for updates
+```
+
+## Running the Application
+
+### Quick Start (Recommended)
+
+Use the provided startup script:
+
+```bash
+./start_with_proxy.sh
+```
+
+This script:
+- Starts the Ollama proxy on port 8080
+- Starts the FastAPI backend on port 8000
+- Handles cleanup on shutdown
+
+### Manual Startup
+
+**Option 1: With Ollama Proxy**
+
+```bash
+# Terminal 1 - Start Ollama Proxy
+python3 ollama_proxy.py
+
+# Terminal 2 - Start Backend
+python3 main.py
+```
+
+**Option 2: Development Mode**
+
+```bash
+# With auto-reload enabled
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### Access Endpoints
+
+- **API**: http://localhost:8000
+- **Interactive Docs (Swagger)**: http://localhost:8000/docs
+- **Alternative Docs (ReDoc)**: http://localhost:8000/redoc
+- **Health Check**: http://localhost:8000/health
+
+## API Documentation
+
+### Interactive Documentation
+
+FastAPI automatically generates interactive API documentation:
+
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+- **OpenAPI Schema**: http://localhost:8000/openapi.json
+
+### API Endpoints
+
+#### Experiments
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/experiments/start` | Start a new experiment |
+| GET | `/api/experiments` | List all experiments |
+| GET | `/api/experiments/{id}` | Get experiment details |
+| PUT | `/api/experiments/{id}` | Update experiment metadata |
+| PUT | `/api/experiments/{id}/status` | Update experiment status |
+| DELETE | `/api/experiments/{id}` | Delete an experiment |
+
+#### Conversations
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/conversations` | List all conversations |
+| GET | `/api/conversations/{id}` | Get conversation details |
+| POST | `/api/conversations` | Save a conversation |
+| PUT | `/api/conversations/{id}` | Update a conversation |
+| DELETE | `/api/conversations/{id}` | Delete a conversation |
+| GET | `/api/conversations/experiment/{experiment_id}` | Get experiment conversations |
+
+#### Models
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/models/list` | List installed models |
+| POST | `/api/models/pull` | Start pulling a model |
+| GET | `/api/models/pull` | List all pull tasks |
+| GET | `/api/models/pull/{task_id}` | Get pull task status |
+| GET | `/api/models/pull/{task_id}/health` | Get pull task health |
+| DELETE | `/api/models/pull/{task_id}` | Cancel a pull task |
+| DELETE | `/api/models/pull/{task_id}/dismiss` | Dismiss a completed task |
+| DELETE | `/api/models/delete/{model_name}` | Delete a model |
+| GET | `/api/models/version` | Get Ollama version |
+| GET | `/api/models/catalog` | Get model catalog |
+
+#### WebSockets
+
+| Endpoint | Description |
+|----------|-------------|
+| `WS /ws/experiments/{experiment_id}` | Real-time experiment updates |
+| `WS /api/models/ws/pull/{task_id}` | Real-time model pull progress |
+
+### Example Requests
+
+**Start an Experiment:**
+
+```bash
+curl -X POST http://localhost:8000/api/experiments/start \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task": {
+      "id": "task1",
+      "prompt": "Solve this math problem: 2+2"
+    },
+    "agents": [
+      {
+        "id": "agent1",
+        "name": "Solver",
+        "prompt": "You are a helpful assistant",
+        "color": "#3B82F6",
+        "model": "llama2"
+      }
+    ],
+    "iterations": 1
+  }'
+```
+
+**List Models:**
+
+```bash
+curl http://localhost:8000/api/models/list
+```
+
+**Pull a Model:**
+
+```bash
+curl -X POST http://localhost:8000/api/models/pull \
+  -H "Content-Type: application/json" \
+  -d '{"name": "llama2"}'
+```
+
+## Development
+
+### Project Structure
+
+```
+backend/
+├── app/
+│   ├── __init__.py              # FastAPI app factory
+│   ├── api/                     # API routes
+│   │   ├── routes/
+│   │   │   ├── experiments.py  # Experiment endpoints
+│   │   │   ├── conversations.py # Conversation endpoints
+│   │   │   ├── models.py        # Model endpoints
+│   │   │   └── ollama_proxy.py  # Ollama proxy
+│   │   └── ws.py                # WebSocket handlers
+│   ├── core/                    # Core functionality
+│   │   ├── config.py            # Configuration
+│   │   ├── config_validators.py # Config validators
+│   │   ├── exceptions.py        # Custom exceptions
+│   │   ├── state.py             # State management
+│   │   ├── experiment_state_manager.py
+│   │   └── message_queue_manager.py
+│   ├── schemas/                 # Pydantic models
+│   │   ├── agent.py
+│   │   ├── conversation.py
+│   │   ├── experiment.py
+│   │   ├── storage.py
+│   │   └── task.py
+│   ├── services/                # Business logic
+│   │   ├── agent_service.py
+│   │   ├── autogen_service.py
+│   │   ├── conversation_runner.py
+│   │   ├── conversation_service.py
+│   │   ├── experiment_service.py
+│   │   ├── iteration_manager.py
+│   │   ├── message_handler.py
+│   │   ├── message_logger.py
+│   │   ├── model_pull_manager.py
+│   │   ├── ollama_client.py
+│   │   └── ... (other services)
+│   ├── storage/                 # Data persistence
+│   │   ├── base.py
+│   │   ├── conversation_storage.py
+│   │   ├── experiment_storage.py
+│   │   └── unified_storage.py
+│   └── utils/                   # Utilities
+│       ├── case_converter.py
+│       ├── experiment_helpers.py
+│       ├── file_utilities.py
+│       └── logging.py
+├── data/                        # Application data
+│   └── experiments/
+├── tests/                       # Test suite
+│   ├── unit/
+│   ├── integration/
+│   └── e2e/
+├── main.py                      # Application entry point
+├── ollama_proxy.py              # Ollama proxy server
+├── start_with_proxy.sh          # Startup script
+├── requirements.txt             # Python dependencies
+├── pytest.ini                   # Pytest configuration
+└── mypy.ini                     # Type checking config
+```
+
+## Testing
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run specific test types
 pytest -m unit              # Unit tests only
 pytest -m integration       # Integration tests only
 pytest -m e2e              # End-to-end tests only
-```
 
-**Run specific test file:**
-```bash
+# Run specific test file
 pytest tests/unit/test_services/test_experiment_service.py
+
+# Run with verbose output
+pytest -v
+
+# Run with coverage
+pytest --cov=app --cov-report=html
 ```
 
-**Test Requirements:**
-- All external services (Ollama, Autogen) are mocked for fast, isolated testing
-- Tests run automatically in CI/CD pipeline on push and pull requests
+### Test Structure
 
-For detailed testing documentation, see [tests/README.md](tests/README.md).
+- **Unit Tests** (`tests/unit/`): Test individual components in isolation
+- **Integration Tests** (`tests/integration/`): Test API endpoints and component interactions
+- **E2E Tests** (`tests/e2e/`): Test complete workflows
 
-### Thread Safety Testing
+## Key Services
 
-Unit tests (`test_model_pull_manager_threading.py`) verify that starting many concurrent pull tasks and running cleanup does not cause KeyError or corrupted state.
+### ExperimentService
 
-**Example: Running Thread Safety Tests**
-```bash
-pytest backend/test_model_pull_manager_threading.py -v
-```
+Manages experiment lifecycle and state.
 
-### API Documentation
+**Key Methods:**
+- `create_experiment()`: Create new experiment
+- `update_experiment_status()`: Update experiment status
+- `delete_experiment()`: Remove experiment
 
-All endpoints are documented with FastAPI's OpenAPI/Swagger integration.
+### AutogenService
+
+Orchestrates multi-agent conversations using AutoGen.
+
+**Key Methods:**
+- `start_experiment_background()`: Start experiment in background thread
+- `run_experiment()`: Execute full experiment workflow
+
+### ConversationService
+
+Handles conversation data and formatting.
+
+**Key Methods:**
+- `get_live_conversation()`: Get active conversation
+- `save_conversation()`: Persist conversation
+
+### ModelPullManager
+
+Manages model pulling from Ollama with progress tracking.
+
+**Key Features:**
+- Background pull execution
+- Progress tracking and callbacks
+- Task persistence
+- Automatic cleanup
+
+### OllamaClient
+
+Client for interacting with Ollama API.
+
+**Key Methods:**
+- `get_tags()`: List installed models
+- `get_version()`: Get Ollama version
+- `pull_model()`: Pull model from Ollama

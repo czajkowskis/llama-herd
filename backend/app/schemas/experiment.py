@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
 from datetime import datetime
 
@@ -8,9 +8,11 @@ from .conversation import Conversation
 
 
 class ExperimentRequest(BaseModel):
-    task: TaskModel
-    agents: List[AgentModel]
-    iterations: int = 1
+    """Request model for creating a new experiment."""
+    
+    task: TaskModel = Field(..., description="Task configuration for the experiment")
+    agents: List[AgentModel] = Field(..., min_length=1, description="List of agents to participate in the experiment. Must include at least one agent.")
+    iterations: int = Field(1, ge=1, description="Number of iterations to run (default: 1)", example=1)
 
     @field_validator('agents')
     @classmethod

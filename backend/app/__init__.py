@@ -81,10 +81,64 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
+    """
+    Create and configure the FastAPI application.
+    
+    This function sets up the FastAPI application with middleware, exception handlers,
+    and route registration. The app includes comprehensive OpenAPI documentation.
+    """
     app = FastAPI(
         title=settings.api_title,
         version=settings.api_version,
-        lifespan=lifespan
+        lifespan=lifespan,
+        description="""
+        **LLaMa-Herd Backend API** - Multi-Agent Conversation Platform
+        
+        FastAPI-based backend for managing multi-agent AI experiments and conversations.
+        
+        ## Features
+        
+        * **Experiment Management**: Create, run, and monitor multi-agent AI experiments
+        * **Real-time Updates**: WebSocket support for live experiment monitoring
+        * **Model Management**: Integration with Ollama for local LLM operations
+        * **Conversation Persistence**: Store and manage conversation history
+        
+        ## Authentication
+        
+        Currently, the API does not require authentication. All endpoints are publicly accessible.
+        
+        ## Error Handling
+        
+        The API uses standard HTTP status codes and returns detailed error messages in JSON format.
+        """,
+        terms_of_service="https://github.com/yourusername/llama-herd",
+        contact={
+            "name": "LLaMa-Herd Team",
+            "url": "https://github.com/yourusername/llama-herd",
+            "email": "support@example.com",
+        },
+        license_info={
+            "name": "MIT License",
+            "url": "https://opensource.org/licenses/MIT",
+        },
+        tags_metadata=[
+            {
+                "name": "experiments",
+                "description": "Experiment management endpoints. Create, monitor, and manage multi-agent AI experiments.",
+            },
+            {
+                "name": "conversations",
+                "description": "Conversation management endpoints. Store and retrieve conversation history.",
+            },
+            {
+                "name": "models",
+                "description": "Model management endpoints. List, pull, and manage Ollama models.",
+            },
+            {
+                "name": "websockets",
+                "description": "WebSocket endpoints for real-time updates during experiments and model pulls.",
+            },
+        ]
     )
 
     app.add_middleware(
