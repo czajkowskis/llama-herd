@@ -217,9 +217,13 @@ export const HistoricalRunSelector: React.FC<HistoricalRunSelectorProps> = ({
                     return (
                       <div
                         key={conv.id}
-                        className={`relative flex items-center px-3 py-2 cursor-pointer transition-colors ${
-                          isSelected ? 'bg-purple-900 bg-opacity-30' : ''
-                        }`} style={{ borderBottomColor: 'var(--color-border)', borderBottom: '1px solid' }}
+                        className={`relative flex items-center px-3 py-2 cursor-pointer transition-colors`}
+                        style={{ 
+                          borderBottomColor: 'var(--color-border)', 
+                          borderBottom: '1px solid',
+                          backgroundColor: isSelected ? 'rgba(107, 70, 193, 0.1)' : 'transparent',
+                          color: 'var(--color-text-primary)'
+                        }}
                         onClick={() => {
                           onSelectConversation(conv);
                           setIsDropdownOpen(false);

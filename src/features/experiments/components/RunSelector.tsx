@@ -251,9 +251,11 @@ export const RunSelector: React.FC<RunSelectorProps> = ({
                     return (
                       <div
                         key={conv.id}
-                        className={`relative flex items-center px-3 py-2 hover:bg-gray-700 cursor-pointer transition-colors border-b border-gray-700 ${
-                          isSelected ? 'bg-purple-900 bg-opacity-30' : ''
-                        }`}
+                        className={`relative flex items-center px-3 py-2 hover:bg-gray-700 cursor-pointer transition-colors border-b border-gray-700`}
+                        style={{
+                          backgroundColor: isSelected ? 'rgba(107, 70, 193, 0.1)' : 'transparent',
+                          color: 'var(--color-text-primary)'
+                        }}
                         onClick={() => {
                           onSelectRun(conv, false);
                           setIsDropdownOpen(false);
