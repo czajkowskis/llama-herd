@@ -415,7 +415,7 @@ def _get_model_catalog_data():
     from pathlib import Path
     
     # Get the path to the catalog file
-    catalog_path = Path("/app/app/data/model_catalog.json")
+    catalog_path = Path("/app/data/model_catalog.json")
     
     try:
         with open(catalog_path, 'r', encoding='utf-8') as f:

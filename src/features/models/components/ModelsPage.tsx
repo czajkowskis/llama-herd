@@ -8,6 +8,7 @@ import { useOllamaConnection } from '../hooks/useOllamaConnection';
 import { useModelPulling } from '../hooks/useModelPulling';
 import { InstalledModels } from './InstalledModels';
 import { DiscoverModels } from './DiscoverModels';
+import { API_BASE_URL } from '../../../config';
 
 type TabKey = 'installed' | 'discover';
 
@@ -347,7 +348,7 @@ export const Models: React.FC = () => {
     const loadRemote = async () => {
       setCatalogLoading(true);
       try {
-        const res = await fetch('/api/models/catalog');
+        const res = await fetch(`${API_BASE_URL}/api/models/catalog`);
         if (!res.ok) throw new Error('catalog fetch failed');
         const data = await res.json();
         const models = data.models || defaultCatalog;
@@ -365,7 +366,10 @@ export const Models: React.FC = () => {
       }
     };
 
-    if (!tryLoadCached()) {
+    // In production, always fetch fresh data from API
+    if (process.env.NODE_ENV === 'production') {
+      loadRemote();
+    } else if (!tryLoadCached()) {
       loadRemote();
     }
 

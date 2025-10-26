@@ -85,8 +85,14 @@ docker-compose exec ollama ollama pull <model-name>
 # View logs
 docker-compose logs [service-name]
 
+# Follow logs in real-time
+docker-compose logs -f backend
+
 # Stop services
 docker-compose down
+
+# Stop and remove volumes (fresh start)
+docker-compose down -v
 
 # Rebuild containers
 docker-compose build --no-cache
@@ -97,6 +103,30 @@ docker-compose ps
 # Execute commands in containers
 docker-compose exec backend python --version
 docker-compose exec frontend-dev npm --version
+
+# Pull models in Ollama container
+docker-compose exec ollama ollama pull llama2
+docker-compose exec ollama ollama list
+
+# Restart a specific service
+docker-compose restart backend
+
+# Check container resource usage
+docker stats
+```
+
+**Quick Start for Testing:**
+```bash
+# 1. Start the application in development mode
+docker-compose --profile dev up
+
+# 2. Pull some models (in a new terminal)
+docker-compose exec ollama ollama pull llama2:7b
+
+# 3. Open browser to http://localhost:3000
+
+# 4. When done testing, stop services
+docker-compose down
 ```
 
 ### Option 2: Manual Installation
