@@ -96,7 +96,7 @@ The LLaMa-Herd backend is a FastAPI application that provides:
 
 ### Prerequisites
 
-- **Python 3.10+**
+- **Python 3.11+**
 - **Ollama** installed and running (see [ollama.ai](https://ollama.ai))
 - **pip** package manager
 
