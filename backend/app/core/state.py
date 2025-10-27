@@ -24,9 +24,9 @@ class StateManager:
         self._loop = loop
     
     # Experiment state management - delegate to ExperimentStateManager
-    def create_experiment(self, experiment_id: str, task: TaskModel, agents: List[AgentModel]) -> ExperimentState:
+    def create_experiment(self, experiment_id: str, task: TaskModel, agents: List[AgentModel], chat_rules=None) -> ExperimentState:
         """Create a new experiment state."""
-        return self.experiment_manager.create_experiment(experiment_id, task, agents)
+        return self.experiment_manager.create_experiment(experiment_id, task, agents, chat_rules)
     
     def get_experiment(self, experiment_id: str) -> Optional[ExperimentState]:
         """Get experiment state by ID."""

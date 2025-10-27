@@ -2,7 +2,7 @@
 
 export interface ChatRules {
   maxRounds: number;
-  teamType: 'round_robin' | 'selector' | 'magentic_one' | 'swarm' | 'base' | 'graph_flow';
+  teamType: 'round_robin' | 'selector';
   selectorPrompt: string;
 }
 

@@ -138,10 +138,12 @@ class IterationManager:
         # Create message handler and run conversation
         from ..services.message_handler import MessageHandler
         message_handler = MessageHandler(experiment_id)
+        # Get chat_rules from experiment state
+        chat_rules = experiment.chat_rules if experiment else None
         # Run conversation in a thread so we can enforce iteration-level timeout
         conv_thread = threading.Thread(
             target=self.conversation_runner.run_conversation,
-            args=(experiment_id, prompt, agents, message_handler),
+            args=(experiment_id, prompt, agents, message_handler, chat_rules),
             daemon=True
         )
         conv_thread.start()

@@ -139,12 +139,8 @@ export const AgentList: React.FC<AgentListProps> = ({
                 fontSize: '1rem'
               }}
             >
-              <option value="round_robin" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>Round Robin</option>
               <option value="selector" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>Selector</option>
-              <option value="magentic_one" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>Magentic One</option>
-              <option value="swarm" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>Swarm</option>
-              <option value="base" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>Base Group Chat</option>
-              <option value="graph_flow" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>Graph Flow</option>
+              <option value="round_robin" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>Round Robin</option>
             </select>
           </div>
         </div>
