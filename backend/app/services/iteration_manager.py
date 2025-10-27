@@ -7,7 +7,6 @@ from datetime import datetime
 
 from ..schemas.agent import AgentModel
 from ..schemas.task import TaskModel
-from ..core.config import settings
 from ..core.state import state_manager
 from ..services.conversation_runner import ConversationRunner
 from ..services.conversation_service import ConversationService
@@ -140,7 +139,7 @@ class IterationManager:
         message_handler = MessageHandler(experiment_id)
         # Get chat_rules from experiment state
         chat_rules = experiment.chat_rules if experiment else None
-        # Run conversation in a thread so we can enforce iteration-level timeout
+        # Run conversation in a thread
         conv_thread = threading.Thread(
             target=self.conversation_runner.run_conversation,
             args=(experiment_id, prompt, agents, message_handler, chat_rules),
@@ -148,20 +147,9 @@ class IterationManager:
         )
         conv_thread.start()
 
-        # Wait for iteration to complete with configured timeout
+        # Wait for iteration to complete (no timeout)
         try:
-            conv_thread.join(timeout=settings.iteration_timeout_seconds)
-            if conv_thread.is_alive():
-                # Iteration timed out
-                logger.error(f"Iteration {iteration} for {experiment_id} timed out after {settings.iteration_timeout_seconds}s")
-                # Mark error and emit final status for this experiment
-                state_manager.update_experiment_status(experiment_id, 'error', error='iteration_timeout')
-                self.storage.update_experiment(experiment_id, {
-                    'status': 'error',
-                    'error': 'iteration_timeout',
-                    'completed_at': datetime.now().isoformat()
-                })
-                self.notifier.notify_error(experiment_id, 'iteration_timeout')
+            conv_thread.join()
         except Exception as e:
             logger.error(f"Error while waiting for conversation thread: {str(e)}")
             raise

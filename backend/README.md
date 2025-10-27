@@ -186,7 +186,6 @@ CONVERSATIONS_DIRECTORY=conversations # Conversations subdirectory
 DEFAULT_MAX_ROUNDS=8                    # Default conversation rounds
 DEFAULT_TEMPERATURE=0.7                 # Default LLM temperature
 EXPERIMENT_TIMEOUT_SECONDS=3600         # Max experiment runtime (1 hour)
-ITERATION_TIMEOUT_SECONDS=300           # Max iteration runtime (5 min)
 ```
 
 ### Model Pull Configuration

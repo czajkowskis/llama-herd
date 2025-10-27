@@ -115,10 +115,6 @@ class Settings(BaseSettings):
         default=60 * 60,  # 1 hour default
         description="Maximum time in seconds an experiment may run before being marked errored"
     )
-    iteration_timeout_seconds: int = Field(
-        default=5 * 60,  # 5 minutes default
-        description="Maximum time in seconds an iteration/conversation may run before being marked errored"
-    )
     
     # Pull Configuration
     pull_progress_throttle_ms: int = Field(
@@ -147,7 +143,7 @@ class Settings(BaseSettings):
     def parse_comma_separated_list(cls, v: Union[str, List[str]]) -> List[str]:
         return validate_comma_separated_list(v)
     
-    @field_validator('ollama_timeout', 'experiment_timeout_seconds', 'iteration_timeout_seconds', mode='before')
+    @field_validator('ollama_timeout', 'experiment_timeout_seconds', mode='before')
     @classmethod
     def validate_timeouts(cls, v):
         return validate_timeout(v)
