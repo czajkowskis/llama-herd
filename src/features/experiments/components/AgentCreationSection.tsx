@@ -2,7 +2,7 @@ import React from 'react';
 import { Icon } from '../../../components/ui/Icon';
 import { AgentList } from './AgentList';
 import { AgentForm } from './AgentForm';
-import { Agent } from '../../../types/index.d';
+import { Agent, ChatRules } from '../../../types/index.d';
 
 interface AgentCreationSectionProps {
   agents: Agent[];
@@ -19,6 +19,8 @@ interface AgentCreationSectionProps {
   isColorUsed: (color: string, excludeAgentId?: string) => boolean;
   isNameUsed: (name: string, excludeAgentId?: string) => boolean;
   getAvailableColorsCount: (excludeAgentId?: string) => number;
+  chatRules: ChatRules;
+  onChatRulesChange: (rules: ChatRules) => void;
 }
 
 export const AgentCreationSection: React.FC<AgentCreationSectionProps> = ({
@@ -35,7 +37,9 @@ export const AgentCreationSection: React.FC<AgentCreationSectionProps> = ({
   onCancelEdit,
   isColorUsed,
   isNameUsed,
-  getAvailableColorsCount
+  getAvailableColorsCount,
+  chatRules,
+  onChatRulesChange
 }) => {
   return (
     <div className="p-6 rounded-2xl shadow-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
@@ -57,6 +61,8 @@ export const AgentCreationSection: React.FC<AgentCreationSectionProps> = ({
           onEditAgent={onEditAgent}
           onDeleteAgent={onDeleteAgent}
           onAddAgent={() => onAgentCreationStepChange('create')}
+          chatRules={chatRules}
+          onChatRulesChange={onChatRulesChange}
         />
       )}
 

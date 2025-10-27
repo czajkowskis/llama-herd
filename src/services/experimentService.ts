@@ -36,13 +36,23 @@ class ExperimentService {
   // Map of experimentId -> ReconnectingWebSocket instance
   private connections: Map<string, ReconnectingWebSocket> = new Map();
 
-  async startExperiment(task: Task, agents: Agent[], iterations: number = 1): Promise<ExperimentResponse> {
+  async startExperiment(task: Task, agents: Agent[], iterations: number = 1, chatRules?: any): Promise<ExperimentResponse> {
+    const requestBody: any = { task, agents, iterations };
+    if (chatRules) {
+      // Transform camelCase frontend fields to snake_case backend fields
+      requestBody.chat_rules = {
+        max_rounds: chatRules.maxRounds,
+        team_type: chatRules.teamType,
+        selector_prompt: chatRules.selectorPrompt
+      };
+    }
+    
     const response = await fetch(`${API_BASE_URL}/api/experiments/start`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ task, agents, iterations }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {

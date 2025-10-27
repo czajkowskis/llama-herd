@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Agent, Task } from '../../../types/index.d';
+import { Agent, Task, ChatRules } from '../../../types/index.d';
 import { ollamaService } from '../../../services/ollamaService';
 import { experimentService } from '../../../services/experimentService';
 import { backendStorageService } from '../../../services/backendStorageService';
@@ -30,6 +30,11 @@ export const NewExperiment: React.FC<NewExperimentProps> = ({ onExperimentStart 
   const [experimentName, setExperimentName] = useState<string>('');
   const [showDeleteAgentConfirmation, setShowDeleteAgentConfirmation] = useState<boolean>(false);
   const [agentToDelete, setAgentToDelete] = useState<Agent | null>(null);
+  const [chatRules, setChatRules] = useState<ChatRules>({ 
+    maxRounds: 8, 
+    teamType: 'round_robin',
+    selectorPrompt: "Available roles:\n{roles}\n\nCurrent conversation history:\n{history}\n\nPlease select the most appropriate agent for the next message."
+  });
 
   // Fetch Ollama models on component mount
   useEffect(() => {
@@ -89,7 +94,7 @@ export const NewExperiment: React.FC<NewExperimentProps> = ({ onExperimentStart 
       
       try {
         const iterations = currentTask.iterations || 1;
-        const response = await experimentService.startExperiment(currentTask, agents, iterations);
+        const response = await experimentService.startExperiment(currentTask, agents, iterations, chatRules);
         
         // Only update the title if user provided a custom experiment name
         // The backend already saves the experiment with a default title
@@ -220,6 +225,8 @@ export const NewExperiment: React.FC<NewExperimentProps> = ({ onExperimentStart 
         isColorUsed={isColorUsed}
         isNameUsed={isNameUsed}
         getAvailableColorsCount={getAvailableColorsCount}
+        chatRules={chatRules}
+        onChatRulesChange={setChatRules}
       />
       
       <ExperimentStatus

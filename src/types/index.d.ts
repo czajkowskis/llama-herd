@@ -1,5 +1,11 @@
 // Type definitions for the LLaMa-Herd application
 
+export interface ChatRules {
+  maxRounds: number;
+  teamType: 'round_robin' | 'selector' | 'magentic_one' | 'swarm' | 'base' | 'graph_flow';
+  selectorPrompt: string;
+}
+
 export interface Agent {
   id: string;
   name: string;

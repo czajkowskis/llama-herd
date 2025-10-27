@@ -3,9 +3,10 @@ Service for running AutoGen conversations.
 """
 import asyncio
 from typing import List
-from autogen_agentchat.teams import RoundRobinGroupChat
+from autogen_agentchat.teams import RoundRobinGroupChat, SelectorGroupChat
 
 from ..schemas.agent import AgentModel
+from ..schemas.chat_rules import ChatRulesModel
 from ..core.config import settings
 from ..services.agent_factory import AgentFactory
 from ..services.message_handler import MessageHandler
@@ -25,7 +26,8 @@ class ConversationRunner:
         experiment_id: str,
         prompt: str,
         agents: List[AgentModel],
-        message_handler: 'MessageHandler'
+        message_handler: 'MessageHandler',
+        chat_rules: ChatRulesModel = None
     ):
         """
         Run a single conversation with the given agents using the new AutoGen 0.7.5 API.
@@ -39,7 +41,7 @@ class ConversationRunner:
         try:
             # Run the async conversation
             loop.run_until_complete(self._run_conversation_async(
-                experiment_id, prompt, agents, message_handler
+                experiment_id, prompt, agents, message_handler, chat_rules
             ))
         finally:
             loop.close()
@@ -49,7 +51,8 @@ class ConversationRunner:
         experiment_id: str,
         prompt: str,
         agents: List[AgentModel],
-        message_handler: 'MessageHandler'
+        message_handler: 'MessageHandler',
+        chat_rules: ChatRulesModel = None
     ):
         """Run a single conversation asynchronously with the new AutoGen 0.7.5 API."""
         final_sent = False
@@ -92,14 +95,38 @@ class ConversationRunner:
                 logger.info(f"Single agent conversation completed with {message_count} messages")
             else:
                 # Multiple agents: use group chat
-                logger.info(f"Multiple agents detected ({len(agents)}), using RoundRobinGroupChat")
+                # Determine max_turns from chat_rules or fall back to default
+                if chat_rules:
+                    max_turns = max(chat_rules.max_rounds, len(agents) * 6)
+                    logger.info(f"Multiple agents detected ({len(agents)}), using {chat_rules.team_type} with max_turns={max_turns}")
+                else:
+                    max_turns = max(settings.default_max_rounds, len(agents) * 6)
+                    logger.info(f"Multiple agents detected ({len(agents)}), using RoundRobinGroupChat with max_turns={max_turns}")
                 
-                # Create RoundRobinGroupChat with max_turns
-                max_turns = max(settings.default_max_rounds, len(agents) * 6)
-                group_chat = RoundRobinGroupChat(
-                    participants=autogen_agents,
-                    max_turns=max_turns
-                )
+                # Select team type based on chat_rules
+                if chat_rules and chat_rules.team_type == "selector":
+                    # Use first agent's model client for selector (it needs a model to choose speakers)
+                    from ..services.agent_service import AgentService
+                    model_client = AgentService.create_agent_config(agents[0])
+                    
+                    # Build SelectorGroupChat parameters
+                    selector_params = {
+                        "participants": autogen_agents,
+                        "model_client": model_client,
+                        "max_turns": max_turns
+                    }
+                    
+                    # Add custom selector prompt if provided (ignore empty strings)
+                    if chat_rules.selector_prompt and chat_rules.selector_prompt.strip():
+                        selector_params["selector_prompt"] = chat_rules.selector_prompt
+                    
+                    group_chat = SelectorGroupChat(**selector_params)
+                else:
+                    # Default to RoundRobinGroupChat
+                    group_chat = RoundRobinGroupChat(
+                        participants=autogen_agents,
+                        max_turns=max_turns
+                    )
                 
                 # Run the conversation using new async API
                 result = await group_chat.run(task=prompt)
