@@ -129,16 +129,22 @@ docker-compose exec ollama ollama pull llama2:7b
 docker-compose down
 ```
 
-### Option 2: Manual Installation
+### Option 2: Local Development (Without Docker)
 
-#### 1. Clone the Repository
+#### 1. Prerequisites
+
+- **Python 3.10+** with pip
+- **Node.js 16+** with npm
+- **Ollama** installed and running locally ([Download from ollama.ai](https://ollama.ai))
+
+#### 2. Clone the Repository
 
 ```bash
 git clone <repository-url>
 cd llama-herd
 ```
 
-#### 2. Backend Setup
+#### 3. Backend Setup
 
 ```bash
 cd backend
@@ -149,28 +155,35 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Configure environment for local development
+cp .env.example .env
+# The .env.example is already configured for local Ollama on port 11434
+# No changes needed unless you have a custom setup
 ```
 
-### 3. Frontend Setup
+#### 4. Ollama Setup
+
+```bash
+# Start Ollama server (if not already running)
+ollama serve
+
+# In a new terminal, pull some models
+ollama pull llama2
+ollama pull codellama
+# Add other models as needed
+```
+
+#### 5. Frontend Setup
 
 ```bash
 # From project root
 npm install
-```
 
-### 4. Ollama Setup
-
-```bash
-# Install Ollama (if not already installed)
-# Visit https://ollama.ai for installation instructions
-
-# Start Ollama server
-ollama serve
-
-# Pull some models (in a new terminal)
-ollama pull llama2
-ollama pull codellama
-# Add other models as needed
+# Configure environment for local development
+cp .env.example .env
+# The .env.example is already configured for local backend and Ollama
+# No changes needed unless you have a custom setup
 ```
 
 ## Running the Application
@@ -195,7 +208,10 @@ In a separate terminal:
 npm start
 ```
 
-**Note**: Make sure Ollama is running on port 11434 before starting the backend.
+**Important Notes for Local Development:**
+- Make sure Ollama is running locally on port 11434 before starting the backend
+- The backend will connect to `http://localhost:11434` (not Docker's `http://ollama:11434`)
+- Make sure you've copied `.env.example` to `.env` in both backend and root directories
 
 ### Access the Application
 
@@ -203,6 +219,7 @@ npm start
 - **Backend API**: http://localhost:8000
 - **API Documentation**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
+- **Ollama API**: http://localhost:11434 (standard port for local installation)
 
 ## Project Structure
 
@@ -234,10 +251,16 @@ llama-herd/
 
 ## Configuration
 
+**Configuration Differences: Docker vs Local**
+- **Docker**: Ollama uses internal Docker hostname `http://ollama:11434` (configured in `docker-compose.yml`)
+- **Local**: Ollama uses `http://localhost:11434` (configured via `.env` files)
+- Use `backend/.env.example` and `.env.example` as templates for local development
+
 ### Backend Configuration
 
-The backend can be configured via environment variables or `.env` file:
+The backend can be configured via environment variables or `.env` file. See `backend/.env.example` for a template.
 
+**Key settings for local development:**
 ```bash
 # API Configuration
 API_HOST=0.0.0.0
@@ -248,13 +271,13 @@ API_VERSION="1.0.0"
 # CORS Configuration
 CORS_ORIGINS="http://localhost:3000,http://localhost:3001"
 
-# Ollama Configuration
+# Ollama Configuration (IMPORTANT: use localhost for local development)
 OLLAMA_BASE_URL=http://localhost:11434/v1
 OLLAMA_URL=http://localhost:11434
 OLLAMA_TIMEOUT=300
 
 # Storage Configuration
-DATA_DIRECTORY=data
+DATA_DIRECTORY=./data
 EXPERIMENTS_DIRECTORY=experiments
 
 # Experiment Configuration
@@ -266,7 +289,13 @@ ITERATION_TIMEOUT_SECONDS=300
 
 ### Frontend Configuration
 
-Frontend configuration is handled through:
+Frontend can be configured via `.env` file (see `.env.example`):
+```bash
+REACT_APP_API_BASE_URL=http://localhost:8000
+REACT_APP_OLLAMA_BASE_URL=http://localhost:11434
+```
+
+Configuration is also handled through:
 - `src/config/index.ts` - API endpoints and settings
 - Browser localStorage - UI preferences and Ollama connection
 - Settings page - User-configurable options

@@ -118,20 +118,29 @@ The LLaMa-Herd backend is a FastAPI application that provides:
    pip install -r requirements.txt
    ```
 
-4. **Configure environment** (optional):
+4. **Configure environment**:
    ```bash
-   cp .env.example .env  # Create .env file if needed
-   # Edit .env with your configuration
+   # Copy the example environment file
+   cp .env.example .env
+   
+   # Edit .env with your configuration (if needed)
+   # The defaults work for local development with Ollama on port 11434
    ```
 
-5. **Verify Ollama is running**:
+5. **Verify Ollama is running locally**:
    ```bash
+   # Check if Ollama is running on port 11434
    curl http://localhost:11434/api/version
+   
+   # If not running, start Ollama:
+   ollama serve
    ```
 
 ## Configuration
 
 The backend can be configured via environment variables or a `.env` file. All settings have sensible defaults.
+
+**Important**: When running locally (outside Docker), make sure your `OLLAMA_BASE_URL` and `OLLAMA_URL` point to `http://localhost:11434` instead of Docker's internal hostname `http://ollama:11434`.
 
 ### API Configuration
 
