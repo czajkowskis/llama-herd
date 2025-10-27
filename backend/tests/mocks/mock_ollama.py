@@ -2,8 +2,7 @@
 Mock implementation of Ollama client for testing.
 """
 import asyncio
-from typing import Dict, Any, List, Optional, AsyncGenerator
-from unittest.mock import AsyncMock, MagicMock
+from typing import Dict, Any, List, AsyncGenerator
 
 
 class MockOllamaClient:

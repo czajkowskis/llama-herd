@@ -74,10 +74,8 @@ describe('HistoryPage', () => {
   it('should load and display experiments', async () => {
     render(<History />);
     
-    await waitFor(() => {
-      expect(screen.getByText('Test Experiment 1')).toBeInTheDocument();
-      expect(screen.getByText('Test Experiment 2')).toBeInTheDocument();
-    });
+    expect(await screen.findByText('Test Experiment 1')).toBeInTheDocument();
+    expect(screen.getByText('Test Experiment 2')).toBeInTheDocument();
   });
 
   it('should switch between experiments and conversations tabs', async () => {
@@ -126,25 +124,24 @@ describe('HistoryPage', () => {
     
     // Click edit button (using title attribute)
     const editButtons = screen.getAllByTitle(/edit experiment name/i);
-    if (editButtons.length > 0) {
-      fireEvent.click(editButtons[0]);
-      
-      // Should show edit input
-      const editInput = screen.getByDisplayValue('Test Experiment 1');
-      expect(editInput).toBeInTheDocument();
-      
-      // Change the name
-      fireEvent.change(editInput, { target: { value: 'Updated Experiment Name' } });
-      
-      // Click save button
-      const saveButton = screen.getByTitle('Save name');
-      fireEvent.click(saveButton);
-      
-      // Should call the update service
-      await waitFor(() => {
-        expect(mockBackendStorageService.saveExperiment).toHaveBeenCalled();
-      });
-    }
+    expect(editButtons.length).toBeGreaterThan(0);
+    fireEvent.click(editButtons[0]);
+    
+    // Should show edit input
+    const editInput = screen.getByDisplayValue('Test Experiment 1');
+    expect(editInput).toBeInTheDocument();
+    
+    // Change the name
+    fireEvent.change(editInput, { target: { value: 'Updated Experiment Name' } });
+    
+    // Click save button
+    const saveButton = screen.getByTitle('Save name');
+    fireEvent.click(saveButton);
+    
+    // Should call the update service
+    await waitFor(() => {
+      expect(mockBackendStorageService.saveExperiment).toHaveBeenCalled();
+    });
   });
 
   it('should allow deleting experiments', async () => {
@@ -156,21 +153,18 @@ describe('HistoryPage', () => {
     
     // Click delete button (using title attribute)
     const deleteButtons = screen.getAllByTitle(/delete experiment/i);
-    if (deleteButtons.length > 0) {
-      fireEvent.click(deleteButtons[0]);
-      
-      // The component should handle the delete action
-      // (The actual implementation may show a confirmation dialog or call the service directly)
-      expect(deleteButtons[0]).toBeInTheDocument();
-    }
+    expect(deleteButtons.length).toBeGreaterThan(0);
+    fireEvent.click(deleteButtons[0]);
+    
+    // The component should handle the delete action
+    // (The actual implementation may show a confirmation dialog or call the service directly)
+    expect(deleteButtons[0]).toBeInTheDocument();
   });
 
   it('should allow bulk selection and deletion', async () => {
     render(<History />);
     
-    await waitFor(() => {
-      expect(screen.getByText('Test Experiment 1')).toBeInTheDocument();
-    });
+    expect(await screen.findByText('Test Experiment 1')).toBeInTheDocument();
     
     // Enable select mode
     fireEvent.click(screen.getByText('Select'));
@@ -183,10 +177,8 @@ describe('HistoryPage', () => {
   it('should show experiment status badges', async () => {
     render(<History />);
     
-    await waitFor(() => {
-      expect(screen.getByText('Test Experiment 1')).toBeInTheDocument();
-      expect(screen.getByText('Test Experiment 2')).toBeInTheDocument();
-    });
+    expect(await screen.findByText('Test Experiment 1')).toBeInTheDocument();
+    expect(screen.getByText('Test Experiment 2')).toBeInTheDocument();
     
     // Should show status badges
     expect(screen.getByText('completed')).toBeInTheDocument();

@@ -3,7 +3,7 @@ Integration tests for experiments API endpoints.
 """
 import pytest
 from httpx import AsyncClient
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch
 
 
 @pytest.mark.integration

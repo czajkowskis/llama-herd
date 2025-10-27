@@ -3,7 +3,6 @@ Unit tests for ExperimentStorage.
 """
 import pytest
 import json
-from pathlib import Path
 from unittest.mock import patch, MagicMock
 from app.storage.experiment_storage import ExperimentStorage
 from app.core.exceptions import StorageError

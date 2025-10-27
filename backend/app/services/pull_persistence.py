@@ -4,7 +4,7 @@ Persistence service for pull tasks.
 import json
 import os
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from pathlib import Path
 from filelock import FileLock
 

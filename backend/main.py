@@ -7,7 +7,7 @@ from app.core.config import settings
 
 def main():
     """Main function to start the FastAPI server."""
-    print(f"🚀 Starting LLaMa-Herd Backend...")
+    print("🚀 Starting LLaMa-Herd Backend...")
     print(f"   API Title: {settings.api_title}")
     print(f"   API Version: {settings.api_version}")
     print(f"   Server: http://{settings.api_host}:{settings.api_port}")

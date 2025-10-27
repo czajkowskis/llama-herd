@@ -65,7 +65,6 @@ async def get_tags(timeout: Optional[float] = None) -> List[Dict[str, Any]]:
     async def _call():
         try:
             # Respect caller timeout if provided
-            params = {'timeout': timeout} if timeout is not None else {}
             resp = await client.get('/api/tags')
             resp.raise_for_status()
             data = resp.json()

@@ -1,6 +1,8 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { HistoricalChatView } from './HistoricalChatView';
+import { StoredConversation } from '../../../services/backendStorageService';
 
 // Mock the UI preferences service BEFORE importing the component
 jest.mock('../../../services/uiPreferencesService', () => ({
@@ -17,10 +19,6 @@ jest.mock('../../../services/dateTimeService', () => ({
   formatDateLabel: jest.fn((timestamp: string) => new Date(timestamp).toLocaleDateString()),
   isSameLocalDate: jest.fn(() => false),
 }));
-
-// Now import the component after mocks are set up
-import { HistoricalChatView } from './HistoricalChatView';
-import { StoredConversation } from '../../../services/backendStorageService';
 
 describe('HistoricalChatView', () => {
   const mockConversation: StoredConversation = {

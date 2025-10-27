@@ -1,6 +1,5 @@
-from fastapi import APIRouter, HTTPException
-from typing import List, Optional
-from datetime import datetime
+from fastapi import APIRouter
+from typing import Optional
 
 from ...storage import get_storage
 from ...core.exceptions import NotFoundError, ConversationError, StorageError
@@ -30,7 +29,7 @@ async def save_conversation(conversation: Conversation):
             log_with_context(
                 logger,
                 'info',
-                f"Saved conversation",
+                "Saved conversation",
                 conversation_id=conversation_id
             )
             return {"message": "Conversation saved", "id": conversation_id}
@@ -67,13 +66,13 @@ async def update_conversation(conversation_id: str, conversation: dict):
             log_with_context(
                 logger,
                 'info',
-                f"Updated conversation",
+                "Updated conversation",
                 conversation_id=conversation_id
             )
             return {"message": "Conversation updated", "id": conversation_id}
         else:
             raise NotFoundError(
-                f"Conversation not found",
+                "Conversation not found",
                 resource_type="conversation",
                 resource_id=conversation_id
             )
@@ -88,7 +87,7 @@ async def update_conversation(conversation_id: str, conversation: dict):
             exception_type=type(e).__name__
         )
         raise ConversationError(
-            f"Error updating conversation",
+            "Error updating conversation",
             conversation_id=conversation_id
         )
 
@@ -103,7 +102,7 @@ async def list_conversations(source: Optional[str] = None):
         log_with_context(
             logger,
             'info',
-            f"Retrieved conversations",
+            "Retrieved conversations",
             count=len(conversations),
             source=source
         )
@@ -116,7 +115,7 @@ async def list_conversations(source: Optional[str] = None):
             exception_type=type(e).__name__
         )
         raise StorageError(
-            f"Error retrieving conversations",
+            "Error retrieving conversations",
             operation="read"
         )
 
@@ -131,7 +130,7 @@ async def get_experiment_conversations(experiment_id: str):
         log_with_context(
             logger,
             'info',
-            f"Retrieved experiment conversations",
+            "Retrieved experiment conversations",
             experiment_id=experiment_id,
             count=len(conversations)
         )
@@ -145,7 +144,7 @@ async def get_experiment_conversations(experiment_id: str):
             exception_type=type(e).__name__
         )
         raise ConversationError(
-            f"Error retrieving experiment conversations",
+            "Error retrieving experiment conversations",
             experiment_id=experiment_id
         )
 
@@ -161,13 +160,13 @@ async def get_conversation(conversation_id: str):
             log_with_context(
                 logger,
                 'info',
-                f"Retrieved conversation",
+                "Retrieved conversation",
                 conversation_id=conversation_id
             )
             return conversation
         else:
             raise NotFoundError(
-                f"Conversation not found",
+                "Conversation not found",
                 resource_type="conversation",
                 resource_id=conversation_id
             )
@@ -182,7 +181,7 @@ async def get_conversation(conversation_id: str):
             exception_type=type(e).__name__
         )
         raise ConversationError(
-            f"Error retrieving conversation",
+            "Error retrieving conversation",
             conversation_id=conversation_id
         )
 
@@ -196,13 +195,13 @@ async def delete_conversation(conversation_id: str):
             log_with_context(
                 logger,
                 'info',
-                f"Deleted conversation",
+                "Deleted conversation",
                 conversation_id=conversation_id
             )
             return {"message": "Conversation deleted"}
         else:
             raise NotFoundError(
-                f"Conversation not found",
+                "Conversation not found",
                 resource_type="conversation",
                 resource_id=conversation_id
             )
@@ -217,7 +216,7 @@ async def delete_conversation(conversation_id: str):
             exception_type=type(e).__name__
         )
         raise ConversationError(
-            f"Error deleting conversation",
+            "Error deleting conversation",
             conversation_id=conversation_id
         )
 

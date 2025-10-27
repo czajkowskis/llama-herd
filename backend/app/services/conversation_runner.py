@@ -3,12 +3,10 @@ Service for running AutoGen conversations.
 """
 import asyncio
 from typing import List
-from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.teams import RoundRobinGroupChat
 
 from ..schemas.agent import AgentModel
 from ..core.config import settings
-from ..services.agent_service import AgentService
 from ..services.agent_factory import AgentFactory
 from ..services.message_handler import MessageHandler
 from ..utils.logging import get_logger

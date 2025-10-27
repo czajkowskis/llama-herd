@@ -10,9 +10,8 @@ Example:
     export OLLAMA_BASE_URL=http://localhost:11434/v1
 """
 from pydantic_settings import BaseSettings
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, field_validator
 from typing import List, Union
-import os
 
 from .config_validators import (
     validate_port, validate_timeout, validate_temperature, validate_directory_path,

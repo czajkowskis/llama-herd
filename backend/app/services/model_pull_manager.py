@@ -1,13 +1,11 @@
 """
 Background task manager for model pulls to allow concurrent API access.
 """
-import asyncio
 import threading
 import uuid
 from typing import Dict, Optional, Callable, Any, List
 from dataclasses import dataclass
 from datetime import datetime
-import logging
 import time
 import shutil
 import os
@@ -343,7 +341,6 @@ class ModelPullManager:
         # Simple retry/backoff policy
         MAX_ATTEMPTS = 3
         attempt = 0
-        last_exception = None
         while attempt < MAX_ATTEMPTS:
             attempt += 1
             try:
@@ -363,7 +360,6 @@ class ModelPullManager:
                     status = getattr(response, 'status_code', 0)
                     if 500 <= status < 600 and attempt < MAX_ATTEMPTS:
                         logger.warning(f"Transient error starting pull (status {status}), retrying: {error_detail}")
-                        last_exception = Exception(error_detail)
                         # record retry info
                         with self._lock:
                             t = self.tasks.get(task_id)
@@ -402,7 +398,6 @@ class ModelPullManager:
 
             except requests.exceptions.RequestException as re:
                 logger.warning(f"Network error during pull attempt {attempt} for {model_name}: {re}")
-                last_exception = re
                 with self._lock:
                     t = self.tasks.get(task_id)
                     if t:
@@ -416,7 +411,6 @@ class ModelPullManager:
                 raise
             except Exception as e:
                 logger.error(f"Error during model pull for {model_name} on attempt {attempt}: {e}")
-                last_exception = e
                 # If this looks transient (contains connection/timeout), retry
                 msg = str(e).lower()
                 if any(k in msg for k in ('connection', 'timeout', 'temporarily')) and attempt < MAX_ATTEMPTS:

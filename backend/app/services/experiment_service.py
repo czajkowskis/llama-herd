@@ -2,11 +2,8 @@
 Service for managing experiments.
 """
 import uuid
-from datetime import datetime
 from typing import List
 from ..schemas.experiment import ExperimentRequest, ExperimentResponse, ExperimentListItem
-from ..schemas.task import TaskModel
-from ..schemas.agent import AgentModel
 from ..core.exceptions import ExperimentError, ValidationError, NotFoundError
 from ..core.state import state_manager
 from ..services.agent_service import AgentService
@@ -45,7 +42,7 @@ class ExperimentService:
             log_with_context(
                 logger,
                 'info',
-                f"Created experiment",
+                "Created experiment",
                 experiment_id=experiment_id,
                 agent_count=len(request.agents),
                 iterations=iterations
@@ -70,7 +67,7 @@ class ExperimentService:
         experiment = state_manager.get_experiment(experiment_id)
         if not experiment:
             raise NotFoundError(
-                f"Experiment not found",
+                "Experiment not found",
                 resource_type="experiment",
                 resource_id=experiment_id
             )

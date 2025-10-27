@@ -1,10 +1,9 @@
 """
 Message queue management for WebSocket communication.
 """
-import asyncio
 import threading
 from typing import Dict, Any, Optional
-from collections import defaultdict, deque
+from collections import defaultdict
 from queue import Queue, Empty
 
 from ..utils.logging import get_logger

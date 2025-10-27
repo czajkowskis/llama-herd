@@ -4,7 +4,6 @@ Configuration validation utilities.
 import os
 from pathlib import Path
 from typing import Union, List
-from pydantic import field_validator
 
 
 def validate_port(value: Union[int, str]) -> int:

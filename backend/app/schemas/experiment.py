@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
-from datetime import datetime
 
 from .agent import AgentModel
 from .task import TaskModel

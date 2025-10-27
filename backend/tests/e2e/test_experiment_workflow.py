@@ -4,7 +4,7 @@ End-to-end tests for complete experiment workflows.
 import pytest
 import asyncio
 from httpx import AsyncClient
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch
 
 
 @pytest.mark.e2e

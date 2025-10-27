@@ -2,12 +2,11 @@
 Shared test fixtures and configuration.
 """
 import asyncio
-import tempfile
 import shutil
 import os
 from pathlib import Path
 from typing import Dict, Any, List
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 import httpx
@@ -20,13 +19,13 @@ os.environ['OLLAMA_MODELS_DIR'] = '/tmp/test_models'
 
 from app import create_app
 from app.core.config import settings
-from app.storage import get_storage, UnifiedStorage
+from app.storage import UnifiedStorage
 from app.schemas.experiment import ExperimentRequest
 from app.schemas.agent import AgentModel
 from app.schemas.task import TaskModel
 from app.core.state import state_manager
-from tests.mocks.mock_ollama import MockOllamaClient, MockOllamaClientFactory
-from tests.mocks.mock_autogen import MockAutogenService, MockAutogenServiceFactory
+from tests.mocks.mock_ollama import MockOllamaClientFactory
+from tests.mocks.mock_autogen import MockAutogenServiceFactory
 
 
 # Initialize Faker for test data generation
@@ -44,10 +43,7 @@ def event_loop():
 @pytest.fixture(scope="session", autouse=True)
 def cleanup_test_data():
     """Clean up all test data after test session completes."""
-    import os
-    import time
     from pathlib import Path
-    from app.core.config import settings
     
     # Store original data directory
     original_data_dir = settings.data_directory
@@ -129,7 +125,6 @@ def temp_storage(temp_dir):
 
 def create_test_app(temp_dir: Path):
     """Create a test FastAPI app with temporary data directory."""
-    from app.core.config import settings
     
     # Store original settings
     original_data_dir = settings.data_directory
@@ -306,8 +301,6 @@ def reset_state_manager():
 @pytest.fixture(autouse=True)
 def ensure_test_isolation(temp_dir):
     """Ensure each test runs in complete isolation with temporary data directory."""
-    import os
-    from app.core.config import settings
     
     # Store original data directory
     original_data_dir = settings.data_directory
@@ -325,7 +318,6 @@ def ensure_test_isolation(temp_dir):
 def cleanup_after_each_test():
     """Clean up any test data created during individual tests."""
     from pathlib import Path
-    from app.core.config import settings
     
     # Get the real data directory
     real_data_path = Path(settings.data_directory).resolve()

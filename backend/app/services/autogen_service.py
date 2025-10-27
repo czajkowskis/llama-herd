@@ -95,7 +95,6 @@ class AutogenService:
 
 
 # Import MessageHandler from its own module
-from .message_handler import MessageHandler
 
 
 # Global service instance

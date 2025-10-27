@@ -5,7 +5,7 @@ These models validate the actual JSON structure stored in files,
 which may differ slightly from API models.
 """
 from pydantic import BaseModel, Field, field_validator, ConfigDict, RootModel
-from typing import List, Optional, Any, Dict
+from typing import List, Optional, Any
 from datetime import datetime
 
 

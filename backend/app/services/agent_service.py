@@ -8,7 +8,6 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 from ..schemas.agent import AgentModel
 from ..core.exceptions import AgentError
 from ..core.config import settings
-from ..utils.logging import logger
 
 
 class AgentService:

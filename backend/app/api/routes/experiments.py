@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from datetime import datetime
 
 from ...schemas.experiment import ExperimentRequest
@@ -10,7 +10,6 @@ from ...storage import get_storage
 from ...utils.logging import get_logger, log_with_context, set_experiment_context
 from ...utils.case_converter import normalize_dict_to_snake
 from ...utils.experiment_helpers import get_experiment_with_fallback, truncate_title, get_experiment_list_with_storage
-from ...core.state import state_manager
 
 storage = get_storage()
 logger = get_logger(__name__)
@@ -54,7 +53,7 @@ async def start_experiment(request: ExperimentRequest):
         log_with_context(
             logger, 
             'info',
-            f"Started experiment",
+            "Started experiment",
             experiment_id=experiment_id,
             agent_count=len(request.agents),
             iterations=request.iterations
@@ -73,7 +72,7 @@ async def start_experiment(request: ExperimentRequest):
             "websocket_url": f"/ws/experiments/{experiment_id}"
         }
         
-    except (ValidationError, ExperimentError) as e:
+    except (ValidationError, ExperimentError):
         # These will be handled by exception handlers
         raise
     except Exception as e:
@@ -97,7 +96,7 @@ async def get_experiment(experiment_id: str):
         experiment_data = get_experiment_with_fallback(experiment_id)
         if not experiment_data:
             raise NotFoundError(
-                f"Experiment not found",
+                "Experiment not found",
                 resource_type="experiment",
                 resource_id=experiment_id
             )
@@ -110,14 +109,14 @@ async def get_experiment(experiment_id: str):
         log_with_context(
             logger,
             'info',
-            f"Retrieved experiment",
+            "Retrieved experiment",
             experiment_id=experiment_id,
             conversation_count=len(experiment_data.get("conversations", []))
         )
         
         return experiment_data
         
-    except (NotFoundError, ValidationError, ExperimentError) as e:
+    except (NotFoundError, ValidationError, ExperimentError):
         # These will be handled by exception handlers
         raise
     except Exception as e:
@@ -129,7 +128,7 @@ async def get_experiment(experiment_id: str):
             exception_type=type(e).__name__
         )
         raise ExperimentError(
-            f"Failed to retrieve experiment",
+            "Failed to retrieve experiment",
             experiment_id=experiment_id
         )
 
@@ -163,7 +162,7 @@ async def delete_experiment(experiment_id: str):
         experiment_data = get_experiment_with_fallback(experiment_id)
         if not experiment_data:
             raise NotFoundError(
-                f"Experiment not found",
+                "Experiment not found",
                 resource_type="experiment",
                 resource_id=experiment_id
             )
@@ -184,14 +183,14 @@ async def delete_experiment(experiment_id: str):
         log_with_context(
             logger,
             'info',
-            f"Deleted experiment and associated data",
+            "Deleted experiment and associated data",
             experiment_id=experiment_id,
             deleted_conversations=len(conversations)
         )
         
         return {"message": "Experiment deleted"}
         
-    except NotFoundError as e:
+    except NotFoundError:
         raise
     except Exception as e:
         log_with_context(
@@ -202,7 +201,7 @@ async def delete_experiment(experiment_id: str):
             exception_type=type(e).__name__
         )
         raise ExperimentError(
-            f"Failed to delete experiment",
+            "Failed to delete experiment",
             experiment_id=experiment_id
         )
 
@@ -214,7 +213,7 @@ async def update_experiment_status(experiment_id: str, status: str):
         set_experiment_context(experiment_id)
         
         # Update in memory if active
-        success = ExperimentService.update_experiment_status(experiment_id, status)
+        ExperimentService.update_experiment_status(experiment_id, status)
         
         # Update in persistent storage
         updates = {'status': status}
@@ -224,7 +223,7 @@ async def update_experiment_status(experiment_id: str, status: str):
         storage_success = storage.update_experiment(experiment_id, updates)
         if not storage_success:
             raise NotFoundError(
-                f"Experiment not found in persistent storage",
+                "Experiment not found in persistent storage",
                 resource_type="experiment",
                 resource_id=experiment_id
             )
@@ -232,14 +231,14 @@ async def update_experiment_status(experiment_id: str, status: str):
         log_with_context(
             logger,
             'info',
-            f"Updated experiment status",
+            "Updated experiment status",
             experiment_id=experiment_id,
             new_status=status
         )
         
         return {"message": "Status updated", "status": status}
         
-    except NotFoundError as e:
+    except NotFoundError:
         raise
     except Exception as e:
         log_with_context(
@@ -250,7 +249,7 @@ async def update_experiment_status(experiment_id: str, status: str):
             exception_type=type(e).__name__
         )
         raise ExperimentError(
-            f"Failed to update experiment status",
+            "Failed to update experiment status",
             experiment_id=experiment_id
         )
 
@@ -272,7 +271,7 @@ async def update_experiment(experiment_id: str, experiment: dict):
         storage_success = storage.update_experiment(experiment_id, updates)
         if not storage_success:
             raise NotFoundError(
-                f"Experiment not found in persistent storage",
+                "Experiment not found in persistent storage",
                 resource_type="experiment",
                 resource_id=experiment_id
             )
@@ -280,14 +279,14 @@ async def update_experiment(experiment_id: str, experiment: dict):
         log_with_context(
             logger,
             'info',
-            f"Updated experiment metadata",
+            "Updated experiment metadata",
             experiment_id=experiment_id,
             updated_fields=list(updates.keys())
         )
         
         return {"message": "Experiment updated", "id": experiment_id}
         
-    except NotFoundError as e:
+    except NotFoundError:
         raise
     except Exception as e:
         log_with_context(
@@ -298,6 +297,6 @@ async def update_experiment(experiment_id: str, experiment: dict):
             exception_type=type(e).__name__
         )
         raise ExperimentError(
-            f"Failed to update experiment",
+            "Failed to update experiment",
             experiment_id=experiment_id
         )

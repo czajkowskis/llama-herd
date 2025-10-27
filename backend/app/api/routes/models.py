@@ -1,11 +1,9 @@
-from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, HTTPException
 from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional, Callable
 import requests
 import json
-import logging
 import asyncio
 import functools
 from datetime import datetime, UTC
@@ -96,7 +94,7 @@ def check_ollama_connection():
     try:
         response = requests.get(f"{OLLAMA_URL}/api/version", timeout=5)
         return response.status_code == 200
-    except:
+    except Exception:
         return False
 
 def _serialize_pull_task(task) -> PullTaskStatus:
@@ -411,7 +409,6 @@ async def get_model_catalog():
 
 def _get_model_catalog_data():
     """Get the model catalog data from JSON file."""
-    import os
     from pathlib import Path
     
     # Get the path to the catalog file

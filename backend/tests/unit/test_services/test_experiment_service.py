@@ -2,12 +2,12 @@
 Unit tests for ExperimentService.
 """
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from app.services.experiment_service import ExperimentService
 from app.schemas.experiment import ExperimentRequest
 from app.schemas.agent import AgentModel
 from app.schemas.task import TaskModel
-from app.core.exceptions import ValidationError, ExperimentError
+from app.core.exceptions import ExperimentError
 from app.core.state import state_manager
 
 
