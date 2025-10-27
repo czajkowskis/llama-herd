@@ -19,6 +19,8 @@ export const AgentList: React.FC<AgentListProps> = ({
   chatRules,
   onChatRulesChange
 }) => {
+  const [showAdvancedSettings, setShowAdvancedSettings] = React.useState(false);
+
   if (agents.length === 0) {
     return (
       <div className="py-8 text-center" style={{ color: 'var(--color-text-tertiary)' }}>
@@ -130,7 +132,16 @@ export const AgentList: React.FC<AgentListProps> = ({
             </label>
             <select
               value={chatRules.teamType}
-              onChange={(e) => onChatRulesChange({ ...chatRules, teamType: e.target.value as any })}
+              onChange={(e) => {
+                const newTeamType = e.target.value as 'round_robin' | 'selector';
+                // Auto-set allowRepeatSpeaker based on team type
+                const newAllowRepeat = newTeamType === 'selector' ? true : false;
+                onChatRulesChange({ 
+                  ...chatRules, 
+                  teamType: newTeamType,
+                  allowRepeatSpeaker: newAllowRepeat 
+                });
+              }}
               className="w-full p-4 rounded-xl border focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200"
               style={{
                 backgroundColor: 'var(--color-bg-tertiary)',
@@ -164,7 +175,7 @@ export const AgentList: React.FC<AgentListProps> = ({
             <textarea
               value={chatRules.selectorPrompt}
               onChange={(e) => onChatRulesChange({ ...chatRules, selectorPrompt: e.target.value })}
-              rows={12}
+              rows={8}
               className="w-full p-4 rounded-xl border focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200"
               style={{
                 backgroundColor: 'var(--color-bg-tertiary)',
@@ -176,6 +187,97 @@ export const AgentList: React.FC<AgentListProps> = ({
             />
           </div>
         )}
+        
+        {/* Advanced Chat Settings */}
+        <div className="mt-6">
+          <div className="rounded-xl border overflow-hidden" style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)' }}>
+            <button
+              onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+              className="flex items-center justify-between w-full p-4 transition-all duration-200 hover:bg-opacity-50"
+            >
+              <h4 className="text-lg font-medium" style={{ color: 'var(--color-text-secondary)' }}>Advanced Settings</h4>
+              <Icon className="transition-transform duration-200" style={{ transform: showAdvancedSettings ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 9l6 6 6-6"/>
+                </svg>
+              </Icon>
+            </button>
+
+            {showAdvancedSettings && (
+              <div className="px-4 pb-4 space-y-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
+              {/* Allow Consecutive Messages Checkbox */}
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              id="allow-repeat-speaker"
+              checked={chatRules.allowRepeatSpeaker || false}
+              onChange={(e) => onChatRulesChange({ ...chatRules, allowRepeatSpeaker: e.target.checked })}
+              className="w-5 h-5 rounded border-purple-600 text-purple-600 focus:ring-purple-500"
+            />
+            <label htmlFor="allow-repeat-speaker" className="text-base" style={{ color: 'var(--color-text-primary)' }}>
+              Allow Consecutive Messages
+            </label>
+            <span className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
+              Allow the same agent to respond multiple times in a row
+            </span>
+          </div>
+          
+          {/* Max Consecutive Replies - only show if allowRepeatSpeaker is enabled */}
+          {chatRules.allowRepeatSpeaker && (
+            <div className="ml-8">
+              <label className="block text-base font-medium mb-2" style={{ color: 'var(--color-text-tertiary)' }}>
+                Max Consecutive Replies
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="10"
+                value={chatRules.maxConsecutiveAutoReply || ''}
+                onChange={(e) => {
+                  const value = e.target.value ? parseInt(e.target.value) : undefined;
+                  onChatRulesChange({ ...chatRules, maxConsecutiveAutoReply: value });
+                }}
+                placeholder="Unlimited"
+                className="w-full p-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200"
+                style={{
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  color: 'var(--color-text-primary)',
+                  borderColor: 'var(--color-border)',
+                  fontSize: '1rem'
+                }}
+              />
+              <p className="text-sm mt-1" style={{ color: 'var(--color-text-tertiary)' }}>
+                Maximum consecutive replies from the same agent (leave empty for unlimited)
+              </p>
+            </div>
+          )}
+          
+          {/* Termination Condition */}
+          <div>
+            <label className="block text-base font-medium mb-2" style={{ color: 'var(--color-text-tertiary)' }}>
+              Termination Phrase
+            </label>
+            <input
+              type="text"
+              value={chatRules.terminationCondition || ''}
+              onChange={(e) => onChatRulesChange({ ...chatRules, terminationCondition: e.target.value })}
+              placeholder="e.g., TERMINATE, DONE, FINISHED"
+              className="w-full p-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200"
+              style={{
+                backgroundColor: 'var(--color-bg-tertiary)',
+                color: 'var(--color-text-primary)',
+                borderColor: 'var(--color-border)',
+                fontSize: '1rem'
+              }}
+            />
+            <p className="text-sm mt-1" style={{ color: 'var(--color-text-tertiary)' }}>
+              Stop the conversation when this phrase appears in a message (case-insensitive)
+            </p>
+          </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

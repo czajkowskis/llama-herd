@@ -4,6 +4,9 @@ export interface ChatRules {
   maxRounds: number;
   teamType: 'round_robin' | 'selector';
   selectorPrompt: string;
+  allowRepeatSpeaker?: boolean;
+  maxConsecutiveAutoReply?: number;
+  terminationCondition?: string;
 }
 
 export interface Agent {
