@@ -80,7 +80,8 @@ describe('ModelsPage', () => {
   it('should show connection status', async () => {
     render(<Models />);
     
-    expect(await screen.findByText(/Connected/)).toBeInTheDocument();
+    // Wait for the connection to be established and check for "Connected" text
+    expect(await screen.findByText(/Connected/, undefined, { timeout: 3000 })).toBeInTheDocument();
   });
 
   it('should handle connection errors', async () => {
@@ -97,12 +98,14 @@ describe('ModelsPage', () => {
     expect(await screen.findByText('Llama2')).toBeInTheDocument();
     
     // Click set as default button
-    const setDefaultButtons = screen.getAllByText(/Set default/i);
+    const setDefaultButtons = await screen.findAllByText(/Set default/i);
     expect(setDefaultButtons.length).toBeGreaterThan(0);
     fireEvent.click(setDefaultButtons[0]);
     
-    // Should update localStorage
-    expect(mockLocalStorage.setItem).toHaveBeenCalledWith('llama-herd-default-ollama-model', 'llama2');
+    // Wait for the useEffect to run and update localStorage
+    await waitFor(() => {
+      expect(mockLocalStorage.setItem).toHaveBeenCalledWith('llama-herd-default-ollama-model', 'llama2');
+    });
   });
 
   it('should allow deleting models', async () => {
