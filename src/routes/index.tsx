@@ -10,7 +10,6 @@ const History = React.lazy(() => import('../features/history/components/HistoryP
 const Models = React.lazy(() => import('../features/models/components/ModelsPage').then(module => ({ default: module.Models })));
 const Settings = React.lazy(() => import('../pages/Settings').then(module => ({ default: module.Settings })));
 const About = React.lazy(() => import('../pages/About').then(module => ({ default: module.About })));
-const ConversationViewer = React.lazy(() => import('../features/history/components/ConversationViewerPage').then(module => ({ default: module.ConversationViewer })));
 
 // Loading component
 const LoadingFallback: React.FC = () => (
@@ -61,9 +60,6 @@ export const AppRoutes: React.FC = () => {
           {/* About */}
           <Route path="/about" element={<About />} />
           
-          {/* Conversations */}
-          <Route path="/conversations" element={<ConversationViewer />} />
-          
           {/* Explore (placeholder) */}
           <Route 
             path="/explore" 
@@ -108,7 +104,6 @@ export const ROUTES = {
   MODELS: '/models',
   SETTINGS: '/settings',
   ABOUT: '/about',
-  CONVERSATIONS: '/conversations',
   EXPLORE: '/explore',
 } as const;
 

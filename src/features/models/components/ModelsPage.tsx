@@ -9,17 +9,13 @@ import { useModelPulling } from '../hooks/useModelPulling';
 import { InstalledModels } from './InstalledModels';
 import { DiscoverModels } from './DiscoverModels';
 import { API_BASE_URL } from '../../../config';
+import { ActiveDownloadsPanel } from '../../../components/models/ActiveDownloadsPanel';
+import { ModelTabs } from '../../../components/models/ModelTabs';
+import { CatalogItem, defaultCatalog, deriveModelName, groupModelsByBaseName } from '../../../data/modelCatalog';
+import { ModelsHeader } from './ModelsHeader';
+import { ModelDownloadProgress } from './ModelDownloadProgress';
 
 type TabKey = 'installed' | 'discover';
-
-type CatalogItem = {
-  name: string;
-  tag: string; // e.g., "llama3:8b-instruct-q4_0"
-  size?: number; // bytes
-  family?: string; // llama|mistral|codellama
-  quant?: string; // q4_0|q5_1|fp16
-  notes?: string;
-};
 
 const SIZE_CONFIRM_THRESHOLD = 2 * 1024 * 1024 * 1024; // 2GB
 
@@ -40,37 +36,6 @@ export const Models: React.FC = () => {
 
   // Use the connection hook
   const { connected, version, connectionError, isRetrying, manualRetry } = useOllamaConnection();
-
-  // Heuristic name derivation for tags not in the curated catalog
-  const deriveModelName = (tag: string): string => {
-    // Expected formats like: "llama3:8b-instruct-q4_0" or "mistral:7b-instruct" or "codellama:7b"
-    if (!tag) return tag;
-    const [rawFamily, rest] = tag.split(':');
-    const familyMap: Record<string, string> = {
-      llama3: 'Llama 3',
-      llama: 'Llama',
-      mistral: 'Mistral',
-      codellama: 'Code Llama',
-      qwen: 'Qwen',
-      gemma: 'Gemma',
-    };
-    const family = familyMap[rawFamily?.toLowerCase?.()] || (rawFamily ? rawFamily.charAt(0).toUpperCase() + rawFamily.slice(1) : '');
-    if (!rest) return family || tag;
-    const parts = rest.split(/[-_]/g).filter(Boolean);
-    const prettyParts = parts.map(p => {
-      const up = p.toUpperCase();
-      // keep quant strings uppercased
-      if (/^q\d_\d$/.test(p)) return up;
-      if (/^q\d$/.test(p)) return up;
-      if (/^fp\d{2}$/.test(p)) return up;
-      // 7b -> 7B
-      if (/^\d+b$/i.test(p)) return p.toUpperCase();
-      // instruct/coder/chat -> Capitalize
-      return p.charAt(0).toUpperCase() + p.slice(1);
-    });
-    const name = [family, ...prettyParts].join(' ').trim();
-    return name || tag;
-  };
 
   // Default in-memory catalog used as fallback if backend catalog is unavailable
   const defaultCatalog: CatalogItem[] = [
@@ -523,203 +488,36 @@ export const Models: React.FC = () => {
 
   // UI helpers
   const renderProgress = (tag: string, opts?: { showCancel?: boolean }) => {
-    const p = pulling[tag];
-    if (!p) return null;
-    const aria: any = p.progress !== undefined ? { 'aria-valuenow': p.progress, 'aria-valuemin': 0, 'aria-valuemax': 100 } : {};
-    const showCancel = opts?.showCancel ?? true;
-    const hasActiveController = !!p.controller;
-  const hasServerTask = Object.values(pullTasks).some((t: any) => t.model_name === tag && (t.status === 'running' || t.status === 'pending'));
-    
-    // Format speed and ETA
-    const formatSpeed = (speed?: number) => {
-      if (!speed || speed === 0) return '';
-      if (speed >= 1024 * 1024) return `${(speed / (1024 * 1024)).toFixed(1)} MB/s`;
-      if (speed >= 1024) return `${(speed / 1024).toFixed(1)} KB/s`;
-      return `${speed.toFixed(0)} B/s`;
-    };
-    
-    const formatETA = (remaining?: number) => {
-      if (!remaining || remaining === 0 || !isFinite(remaining)) return '';
-      if (remaining < 60) return `${Math.ceil(remaining)}s`;
-      if (remaining < 3600) return `${Math.ceil(remaining / 60)}m`;
-      return `${Math.ceil(remaining / 3600)}h`;
-    };
-    
-    const speed = p.speed ? formatSpeed(p.speed) : '';
-    const eta = p.total && p.completed && p.speed ? formatETA((p.total - p.completed) / p.speed) : '';
-    
     return (
-      <div className="mt-2">
-        <div role="progressbar" {...aria} className="w-full h-2 bg-gray-700 rounded-full overflow-hidden" aria-label={`Downloading ${tag}`}>
-          <div className="h-2 bg-purple-600 transition-all" style={{ width: `${p.progress ?? 0}%` }} />
-        </div>
-        <div className="flex justify-between items-center mt-1 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-          <span aria-live="polite">{p.progress !== undefined ? `${p.progress}%` : 'Downloading'}</span>
-        </div>
-        <span className="sr-only" aria-live="polite">{p.progress !== undefined ? `${p.progress}% complete` : 'Downloading'}</span>
-        {showCancel && (
-          <div className="flex items-center gap-2 mt-2">
-            {(hasActiveController || hasServerTask) && <Button variant="secondary" onClick={() => cancelPull(tag)} aria-label={`Cancel ${tag}`}>Cancel</Button>}
-            {p.error && (
-              <span className="text-red-500 text-sm" role="alert">
-                {p.error}{' '}
-                <button className="underline" onClick={() => startPull(tag)}>Retry</button>
-                {' '}
-                {/* Per-task dismiss: prefer server task id when available */}
-                <button
-                  className="underline ml-2"
-                  onClick={async () => {
-                    try {
-                      // Find a server task id for this model with an error
-                      const serverTask = Object.values(pullTasks).find((t: any) => t.model_name === tag && t.error) as any | undefined;
-                      if (serverTask && (serverTask.task_id || serverTask.id)) {
-                        // Call server to permanently remove the task
-                        try {
-                          await ollamaService.dismissPullTask(serverTask.task_id || serverTask.id);
-                        } catch (e) {
-                          console.warn('Server dismiss failed, falling back to local dismiss', e);
-                          // fallback to local dismiss so user still clears UI
-                          try { dismissTask(serverTask.task_id || serverTask.id); } catch (_) {}
-                        }
-                      } else {
-                        // Fallback: remove local-only entry
-                        dismissNotification(tag);
-                      }
-                    } catch (e) {
-                      // ignore errors
-                    }
-                  }}
-                >Dismiss</button>
-              </span>
-            )}
-          </div>
-        )}
-      </div>
+      <ModelDownloadProgress
+        tag={tag}
+        pulling={pulling}
+        startPull={startPull}
+        cancelPull={cancelPull}
+        dismissNotification={dismissNotification}
+        showCancel={opts?.showCancel}
+      />
     );
   };
-
-  const ActiveDownloads = () => {
-    const tags = Object.keys(pulling);
-    if (tags.length === 0) return null;
-    const hasErrors = Object.values(pulling).some(p => !!p.error);
-    return (
-      <div className="mb-4 p-3 rounded-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
-        <div className="flex items-center justify-between mb-2">
-          <div className="font-medium" style={{ color: 'var(--color-text-primary)' }}>Active downloads</div>
-          {hasErrors && (
-            <div>
-              <Button variant="secondary" onClick={dismissAllNotifications} className="text-xs">Clear errors</Button>
-            </div>
-          )}
-        </div>
-        <div className="space-y-3">
-          {tags.map(tag => (
-            <div key={tag}>
-              <div className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>{tag}</div>
-              {renderProgress(tag)}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  const Header = () => (
-    <div className="flex items-center justify-between mb-4">
-      <div>
-        <h2 className="text-2xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>Models</h2>
-        <div className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
-          <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-full ${connected ? 'bg-green-600/20 text-green-400' : 'bg-red-600/20 text-red-400'}`} aria-live="polite">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: connected ? '#22c55e' : '#ef4444' }} />
-            Ollama: {connected ? `Connected${version ? ` (${version})` : ''}` : 'Disconnected'}
-          </span>
-          {!connected && (
-            <div className="mt-2 text-xs">
-              {connectionError && <div className="text-red-400 mb-1">{connectionError}</div>}
-              {isRetrying ? (
-                <div className="text-yellow-400">Retrying connection...</div>
-              ) : (
-                <div className="space-y-1">
-                  <div>Troubleshooting:</div>
-                  <ul className="list-disc list-inside ml-2 space-y-1">
-                    <li>Ensure Ollama is installed and running</li>
-                    <li>Check that it's accessible at http://localhost:11434</li>
-                    <li>Try restarting Ollama service</li>
-                  </ul>
-                  <Button variant="secondary" onClick={manualRetry} className="mt-2">
-                    Retry Connection
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
-  const Tabs = () => {
-    const keys: TabKey[] = ['installed', 'discover'];
-    const onKeyDown: React.KeyboardEventHandler<HTMLDivElement> = (e) => {
-      const idx = keys.indexOf(active);
-      // Debug helper to log key navigation
-      console.debug('Tabs onKeyDown', e.key, 'activeIndex', idx);
-      if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        handleSetActive(keys[(idx + 1) % keys.length]);
-      } else if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        handleSetActive(keys[(idx - 1 + keys.length) % keys.length]);
-      } else if (e.key === 'Home') {
-        e.preventDefault();
-        handleSetActive(keys[0]);
-      } else if (e.key === 'End') {
-        e.preventDefault();
-        handleSetActive(keys[keys.length - 1]);
-      }
-    };
-
-    const handleSetActive = (key: TabKey) => {
-      try {
-        console.debug('Tabs handleSetActive', key);
-      } catch (e) {
-        // ignore
-      }
-      setActive(key);
-    };
-    return (
-      <div
-        className="flex items-center gap-2 border-b border-gray-700 mb-4"
-        role="tablist"
-        aria-label="Models sections"
-        onKeyDown={onKeyDown}
-      >
-        {keys.map(key => (
-          <button
-            key={key}
-            role="tab"
-            type="button"
-            id={`tab-${key}`}
-            aria-controls={`panel-${key}`}
-            aria-selected={active === key}
-            className={`px-4 py-2 ${active === key ? 'border-b-2 border-purple-600 text-purple-400' : ''}`}
-            onClick={() => handleSetActive(key)}
-            onMouseDown={() => handleSetActive(key)}
-          >
-            {key === 'installed' ? 'Installed' : 'Discover'}
-          </button>
-        ))}
-      </div>
-    );
-  };
-
-
 
   return (
     <div className="p-4 animate-fade-in">
-      <Header />
-      <Tabs />
-      <ActiveDownloads />
+      <ModelsHeader
+        connected={connected}
+        version={version}
+        connectionError={connectionError}
+        isRetrying={isRetrying}
+        manualRetry={manualRetry}
+      />
+      <ModelTabs
+        activeTab={active}
+        onTabChange={setActive}
+      />
+      <ActiveDownloadsPanel
+        pulling={pulling}
+        onCancelPull={cancelPull}
+        onDismissAllNotifications={dismissAllNotifications}
+      />
       <div
         role="tabpanel"
         id="panel-installed"
