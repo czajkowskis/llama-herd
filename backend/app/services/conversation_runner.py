@@ -123,10 +123,19 @@ class ConversationRunner:
                     group_chat = SelectorGroupChat(**selector_params)
                 else:
                     # Default to RoundRobinGroupChat
-                    group_chat = RoundRobinGroupChat(
-                        participants=autogen_agents,
-                        max_turns=max_turns
-                    )
+                    group_chat_params = {
+                        "participants": autogen_agents,
+                        "max_turns": max_turns
+                    }
+                    if chat_rules:
+                        if chat_rules.allow_repeat_speaker is not None:
+                            group_chat_params["allow_repeat_speaker"] = chat_rules.allow_repeat_speaker
+                        if chat_rules.max_consecutive_auto_reply is not None:
+                            group_chat_params["max_consecutive_auto_reply"] = chat_rules.max_consecutive_auto_reply
+                        if chat_rules.termination_condition:
+                            group_chat_params["termination_condition"] = chat_rules.termination_condition
+
+                    group_chat = RoundRobinGroupChat(**group_chat_params)
                 
                 # Run the conversation using new async API
                 result = await group_chat.run(task=prompt)

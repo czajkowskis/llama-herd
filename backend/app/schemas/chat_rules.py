@@ -22,6 +22,18 @@ class ChatRulesModel(BaseModel):
         description="Custom prompt for SelectorGroupChat to guide agent selection. Can use {roles}, {participants}, and {history} placeholders.",
         example="Available roles:\n{roles}\n\nCurrent conversation history:\n{history}\n\nPlease select the most appropriate agent for the next message."
     )
+    allow_repeat_speaker: Optional[bool] = Field(
+        default=None,
+        description="Allow the same speaker to be selected consecutively."
+    )
+    max_consecutive_auto_reply: Optional[int] = Field(
+        default=None,
+        description="Maximum number of consecutive auto-replies."
+    )
+    termination_condition: Optional[str] = Field(
+        default=None,
+        description="A string that, if found in a message, terminates the conversation."
+    )
     
     @field_validator('team_type')
     @classmethod

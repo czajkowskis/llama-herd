@@ -43,7 +43,10 @@ class ExperimentService {
       requestBody.chat_rules = {
         max_rounds: chatRules.maxRounds,
         team_type: chatRules.teamType,
-        selector_prompt: chatRules.selectorPrompt
+        selector_prompt: chatRules.selectorPrompt,
+        allow_repeat_speaker: chatRules.allowRepeatSpeaker,
+        max_consecutive_auto_reply: chatRules.maxConsecutiveAutoReply,
+        termination_condition: chatRules.terminationCondition,
       };
     }
     
