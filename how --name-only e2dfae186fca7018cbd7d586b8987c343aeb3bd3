@@ -1,0 +1,16 @@
+[33mcommit 34a44567b6fdad34f1eb4b6a6bcc2876c4fef4a1[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mtask_config[m[33m)[m
+Author: Szymon Czajkowski <100385248+czajkowskis@users.noreply.github.com>
+Date:   Tue Oct 28 17:42:04 2025 +0100
+
+    FIX: Conversation viewer and new export functionality
+
+package-lock.json
+package.json
+src/components/common/Sidebar.tsx
+src/features/history/components/ConversationViewer.tsx
+src/features/history/components/ExportPanel.tsx
+src/features/models/components/DiscoverModels.tsx
+src/features/models/components/InstalledModels.tsx
+src/routes/index.tsx
+src/services/exportService.test.ts
+src/services/exportService.ts
