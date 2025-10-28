@@ -91,12 +91,12 @@ class ModelPullManager:
     def _get_model_size_estimate(self, model_name: str) -> int:
         """Get estimated model size from catalog or Ollama API."""
         try:
-            # First try to get from local catalog
-            from ..api.routes.models import _get_model_catalog_data
-            catalog = _get_model_catalog_data()
+            # First try to get from the model catalog service
+            from .model_catalog_service import model_catalog_service
+            catalog = model_catalog_service.get_catalog()
             for model in catalog:
-                if model["tag"] == model_name:
-                    return model["size"]
+                if model.get("tag") == model_name:
+                    return model.get("size", 0)
             
             # If not in catalog, try Ollama API show endpoint
             import requests

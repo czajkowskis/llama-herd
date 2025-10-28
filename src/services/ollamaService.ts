@@ -79,6 +79,23 @@ export const listModels = async (baseUrl?: string): Promise<string[]> => {
 };
 
 /**
+ * Fetches the model catalog from the backend.
+ */
+export const getModelCatalog = async (): Promise<any[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/models/catalog`);
+    if (!response.ok) {
+      throw new Error(`API call failed with status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.models;
+  } catch (error) {
+    console.error('Error fetching model catalog:', error);
+    throw error;
+  }
+};
+
+/**
  * Returns Ollama server version (and implicitly connectivity).
  */
 export const getVersion = async (baseUrl?: string): Promise<string> => {
@@ -427,6 +444,7 @@ export const generateCompletion = async (
 // Export the service object for easy importing
 export const ollamaService = {
   listModels,
+  getModelCatalog,
   getVersion,
   getPullTasks,
   deleteModel,

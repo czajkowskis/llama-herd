@@ -11,6 +11,7 @@ from datetime import datetime, UTC
 from ...core.config import settings
 from ...utils.logging import get_logger
 from ...services.model_pull_manager import pull_manager
+from ...services.model_catalog_service import model_catalog_service
 
 logger = get_logger(__name__)
 
@@ -404,20 +405,5 @@ async def delete_model(model_name: str) -> ModelOperationResponse:
 async def get_model_catalog():
     """Get curated model catalog."""
     # This could be extended to fetch from external registries
-    catalog = _get_model_catalog_data()
+    catalog = model_catalog_service.get_catalog()
     return {"models": catalog}
-
-def _get_model_catalog_data():
-    """Get the model catalog data from JSON file."""
-    from pathlib import Path
-    
-    # Get the path to the catalog file
-    catalog_path = Path("/app/data/model_catalog.json")
-    
-    try:
-        with open(catalog_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError) as e:
-        logger.warning(f"Failed to load model catalog from {catalog_path}: {e}")
-        # Return empty list as fallback
-        return []
