@@ -6,6 +6,9 @@ import { backendStorageService, StoredExperiment, StoredConversation } from '../
 import { experimentService } from '../../../services/experimentService';
 import { ExperimentConversationViewer } from './ExperimentConversationViewer';
 import { HistoricalExperimentView } from '../../experiments/components/HistoricalExperimentView';
+import { HistoryToolbar } from '../../../components/lists/HistoryToolbar';
+import { ExperimentTile } from '../../../components/lists/ExperimentTile';
+import { ConversationTile } from '../../../components/lists/ConversationTile';
 
 export const History: React.FC = () => {
   const [experiments, setExperiments] = useState<StoredExperiment[]>([]);
@@ -423,89 +426,22 @@ export const History: React.FC = () => {
     <>
       <div className="p-8 animate-fade-in">
         <div className="p-6 rounded-2xl shadow-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text-primary)' }}>History</h1>
-            <div className="flex items-center space-x-4">
-              {selectMode && (
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                    {selectedItems.size} selected
-                  </span>
-                  <Button
-                    onClick={handleSelectAll}
-                    variant="secondary"
-                  >
-                    {selectedItems.size === (activeTab === 'experiments' ? experiments.length : conversations.length) ? 'Clear All' : 'Select All'}
-                  </Button>
-                  <Button
-                    onClick={handleBulkDelete}
-                    disabled={selectedItems.size === 0}
-                    className="bg-red-600 hover:bg-red-700 text-white"
-                  >
-                    Delete Selected ({selectedItems.size})
-                  </Button>
-                </div>
-              )}
-              <button
-                onClick={() => {
-                  setSelectMode(!selectMode);
-                  if (selectMode) {
-                    setSelectedItems(new Set());
-                  }
-                }}
-                className="px-3 py-2 rounded-lg font-medium transition-colors"
-                style={{
-                  backgroundColor: selectMode ? '#dc2626' : 'var(--color-bg-tertiary)',
-                  color: selectMode ? 'white' : 'var(--color-text-secondary)'
-                }}
-                title={selectMode ? 'Exit selection mode' : 'Enter selection mode'}
-              >
-                {selectMode ? 'Cancel' : 'Select'}
-              </button>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => setActiveTab('experiments')}
-                  className="px-4 py-2 rounded-lg font-medium transition-colors"
-                  style={{
-                    backgroundColor: activeTab === 'experiments' ? '#9333ea' : 'var(--color-bg-tertiary)',
-                    color: activeTab === 'experiments' ? 'white' : 'var(--color-text-secondary)'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (activeTab !== 'experiments') {
-                      e.currentTarget.style.backgroundColor = 'var(--color-border)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (activeTab !== 'experiments') {
-                      e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                    }
-                  }}
-                >
-                  Experiments ({experiments.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab('conversations')}
-                  className="px-4 py-2 rounded-lg font-medium transition-colors"
-                  style={{
-                    backgroundColor: activeTab === 'conversations' ? '#9333ea' : 'var(--color-bg-tertiary)',
-                    color: activeTab === 'conversations' ? 'white' : 'var(--color-text-secondary)'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (activeTab !== 'conversations') {
-                      e.currentTarget.style.backgroundColor = 'var(--color-border)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (activeTab !== 'conversations') {
-                      e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)';
-                    }
-                  }}
-                >
-                  Imported Conversations ({conversations.length})
-                </button>
-              </div>
-            </div>
-          </div>
+          <HistoryToolbar
+            activeTab={activeTab}
+            experimentsCount={experiments.length}
+            conversationsCount={conversations.length}
+            selectMode={selectMode}
+            selectedCount={selectedItems.size}
+            onTabChange={setActiveTab}
+            onToggleSelectMode={() => {
+              setSelectMode(!selectMode);
+              if (selectMode) {
+                setSelectedItems(new Set());
+              }
+            }}
+            onSelectAll={handleSelectAll}
+            onBulkDelete={handleBulkDelete}
+          />
 
           <div className="space-y-4">
             {activeTab === 'experiments' ? (
