@@ -153,34 +153,29 @@ export class CanvasRenderer {
     const contentWidth = 800; // Fixed width for consistency
     const maxContentWidth = contentWidth - (this.padding * 2);
     
-    let totalHeight = this.padding * 2; // Top and bottom padding
-    let currentY = this.padding;
+    let totalHeight = this.padding; // Top padding
 
     for (const message of this.options.messages) {
       const agent = this.options.getAgentById(message.agentId);
       if (!agent) continue;
 
-      // Set font for measurement
       this.ctx.font = `${this.fontSize}px ${this.fontFamily}`;
       
-      // Calculate header height
-      let headerHeight = this.lineHeight;
-      if (this.options.style.showAgentAvatars) {
-        headerHeight = Math.max(headerHeight, this.avatarSize);
-      }
-
-      // Calculate content height
-      const plainText = this.stripMarkdown(message.content);
-      const wrappedLines = this.wrapText(plainText, maxContentWidth - (this.options.style.showAgentAvatars ? this.avatarSize + 12 : 0));
-      const contentHeight = wrappedLines.length * this.lineHeight;
-
-      // Add message height
-      totalHeight += headerHeight + contentHeight + this.messageSpacing + (this.padding * 2);
+      const messageContentWidth = maxContentWidth - (this.options.style.showAgentAvatars ? this.avatarSize + 12 : 0);
+      const messageHeight = this.calculateMessageHeight(message, messageContentWidth);
+      
+      totalHeight += messageHeight + this.messageSpacing;
     }
+
+    if (this.options.messages.length > 0) {
+      totalHeight -= this.messageSpacing; // remove spacing after last message
+    }
+
+    totalHeight += this.padding; // bottom padding
 
     return {
       width: contentWidth,
-      height: totalHeight
+      height: Math.max(totalHeight, 1) // Ensure height is at least 1
     };
   }
 
@@ -220,60 +215,78 @@ export class CanvasRenderer {
     this.ctx.textBaseline = 'alphabetic';
   }
 
-  private drawMessage(message: Message, agent: ConversationAgent, x: number, y: number, width: number): number {
-    const contentWidth = width - (this.options.style.showAgentAvatars ? this.avatarSize + 12 : 0);
-    const contentX = this.options.style.showAgentAvatars ? x + this.avatarSize + 12 : x;
+  private getHeaderHeight(): number {
+    if (!this.options.style.showAgentAvatars) {
+        let height = this.lineHeight;
+        if (this.options.style.showTimestamps || this.options.style.showModels) {
+            height += this.lineHeight * 0.85;
+        }
+        return height;
+    }
+    return this.avatarSize;
+  }
 
-    // Draw message background
-    const messageHeight = this.calculateMessageHeight(message, contentWidth);
+  private drawMessage(message: Message, agent: ConversationAgent, x: number, y: number, width: number): number {
+    const messageContentWidth = width - (this.padding * 2) - (this.options.style.showAgentAvatars ? this.avatarSize + 12 : 0);
+    const contentX = x + this.padding + (this.options.style.showAgentAvatars ? this.avatarSize + 12 : 0);
+
+    const messageHeight = this.calculateMessageHeight(message, messageContentWidth);
     this.drawRoundedRect(x, y, width, messageHeight, this.borderRadius, this.options.style.messageBackgroundColor);
 
-    // Draw avatar if enabled
     if (this.options.style.showAgentAvatars) {
-      this.drawAvatar(x + this.padding, y + this.padding, agent);
+        this.drawAvatar(x + this.padding, y + this.padding, agent);
     }
 
-    // Draw header (name, timestamp, model)
-    this.ctx.font = `${this.fontSize}px ${this.fontFamily}`;
+    this.ctx.textBaseline = 'middle';
     this.ctx.fillStyle = this.options.style.textColor;
+
+    const headerCenterY = y + this.padding + (this.options.style.showAgentAvatars ? this.avatarSize / 2 : this.getHeaderHeight() / 2);
     
-    let headerY = y + this.padding;
-    if (this.options.style.showAgentAvatars) {
-      headerY += this.avatarSize / 2 - this.lineHeight / 2;
-    }
-
-    // Agent name
+    let currentX = contentX;
+    
     this.ctx.font = `bold ${this.fontSize}px ${this.fontFamily}`;
-    this.ctx.fillText(agent.name, contentX, headerY);
+    this.ctx.fillText(agent.name, currentX, headerCenterY);
+    currentX += this.ctx.measureText(agent.name).width + 8;
 
-    // Timestamp and model
-    if (this.options.style.showTimestamps || this.options.style.showModels) {
-      this.ctx.font = `${this.fontSize * 0.8}px ${this.fontFamily}`;
-      this.ctx.fillStyle = this.options.style.textColor + '80'; // 50% opacity
-      
-      let infoText = '';
-      if (this.options.style.showTimestamps) {
-        infoText += this.options.formatTimestamp(message.timestamp);
-      }
-      if (this.options.style.showModels) {
-        if (infoText) infoText += ' • ';
-        infoText += agent.model;
-      }
-      
-      this.ctx.fillText(infoText, contentX, headerY + this.lineHeight);
+    if (this.options.style.showTimestamps) {
+        this.ctx.font = `${this.fontSize * 0.8}px ${this.fontFamily}`;
+        this.ctx.fillStyle = this.options.style.textColor + '80'; // 50% opacity
+        const timestampText = this.options.formatTimestamp(message.timestamp);
+        this.ctx.fillText(timestampText, currentX, headerCenterY);
+        currentX += this.ctx.measureText(timestampText).width + 8;
     }
 
-    // Draw content
-    const contentY = headerY + (this.options.style.showTimestamps || this.options.style.showModels ? this.lineHeight * 1.5 : this.lineHeight);
+    if (this.options.style.showModels) {
+        const badgePadding = { x: 6, y: 2 };
+        const badgeFontSize = this.fontSize * 0.75;
+        this.ctx.font = `${badgeFontSize}px ${this.fontFamily}`;
+        
+        const modelMetrics = this.ctx.measureText(agent.model);
+        const badgeWidth = modelMetrics.width + badgePadding.x * 2;
+        const badgeHeight = badgeFontSize * 1.4;
+
+        this.drawRoundedRect(currentX, headerCenterY - badgeHeight / 2, badgeWidth, badgeHeight, 4, this.options.style.backgroundColor);
+        
+        this.ctx.fillStyle = this.options.style.textColor + '90';
+        this.ctx.fillText(agent.model, currentX + badgePadding.x, headerCenterY);
+    }
+
+    this.ctx.textBaseline = 'alphabetic';
+
+    const headerHeight = this.getHeaderHeight();
+    const contentY = y + this.padding + headerHeight + 8; // 8px spacing
+
     this.ctx.font = `${this.fontSize}px ${this.fontFamily}`;
     this.ctx.fillStyle = this.options.style.textColor;
 
     const plainText = this.stripMarkdown(message.content);
-    const wrappedLines = this.wrapText(plainText, contentWidth);
-    
+    const wrappedLines = this.wrapText(plainText, messageContentWidth);
+
     for (let i = 0; i < wrappedLines.length; i++) {
-      this.ctx.fillText(wrappedLines[i], contentX, contentY + (i * this.lineHeight));
+        this.ctx.fillText(wrappedLines[i], contentX, contentY + (i * this.lineHeight));
     }
+
+    this.ctx.textBaseline = 'alphabetic';
 
     return messageHeight + this.messageSpacing;
   }
@@ -285,23 +298,14 @@ export class CanvasRenderer {
     const wrappedLines = this.wrapText(plainText, contentWidth);
     
     let height = this.padding * 2; // Top and bottom padding
+    height += this.getHeaderHeight();
     
-    // Header height
-    let headerHeight = this.lineHeight;
-    if (this.options.style.showAgentAvatars) {
-      headerHeight = Math.max(headerHeight, this.avatarSize);
-    }
-    height += headerHeight;
-    
-    // Add space for timestamp/model if shown
-    if (this.options.style.showTimestamps || this.options.style.showModels) {
-      height += this.lineHeight * 0.5;
+    if (message.content && wrappedLines.length > 0) {
+        height += 8; // spacing
+        height += wrappedLines.length * this.lineHeight;
     }
     
-    // Content height
-    height += wrappedLines.length * this.lineHeight;
-    
-    return height;
+    return Math.max(height, (this.options.style.showAgentAvatars ? this.avatarSize : 0) + this.padding * 2);
   }
 
   async render(): Promise<HTMLCanvasElement> {
@@ -360,6 +364,176 @@ export class CanvasRenderer {
   }
 }
 
+export class SVGRenderer {
+  private options: CanvasRendererOptions;
+  private scale: number;
+  private padding: number;
+  private fontSize: number;
+  private fontFamily: string;
+  private lineHeight: number;
+  private messageSpacing: number;
+  private avatarSize: number;
+  private borderRadius: number;
+
+  constructor(options: CanvasRendererOptions) {
+    this.options = options;
+    this.scale = options.style.scale || 1;
+    this.padding = options.style.padding;
+    this.fontSize = options.style.fontSize;
+    this.fontFamily = options.style.fontFamily;
+    this.lineHeight = this.fontSize * 1.4;
+    this.messageSpacing = 16;
+    this.avatarSize = 32;
+    this.borderRadius = options.style.borderRadius;
+  }
+
+  private escapeHTML(str: string): string {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+  }
+
+  private stripMarkdown(text: string): string {
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/\*(.*?)\*/g, '$1')
+      .replace(/`(.*?)`/g, '$1')
+      .replace(/```[\s\S]*?```/g, '[Code Block]')
+      .replace(/#{1,6}\s+/g, '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/^\s*[-*+]\s+/gm, '• ')
+      .replace(/^\s*\d+\.\s+/gm, '');
+  }
+
+  private wrapText(text: string, maxWidth: number): string[] {
+    const lines: string[] = [];
+    const paragraphs = text.split('\n');
+    for (const paragraph of paragraphs) {
+        const words = paragraph.split(' ');
+        let currentLine = '';
+        for (const word of words) {
+            // This is a rough approximation. For accurate wrapping, we'd need a proper text measurement library.
+            if ((currentLine + word).length * (this.fontSize * 0.6) > maxWidth) {
+                lines.push(currentLine);
+                currentLine = word;
+            } else {
+                currentLine = currentLine ? `${currentLine} ${word}` : word;
+            }
+        }
+        lines.push(currentLine);
+    }
+    return lines;
+  }
+  
+  private getHeaderHeight(): number {
+    if (!this.options.style.showAgentAvatars) {
+        let height = this.lineHeight;
+        if (this.options.style.showTimestamps || this.options.style.showModels) {
+            height += this.lineHeight * 0.85;
+        }
+        return height;
+    }
+    return this.avatarSize;
+  }
+
+  private calculateMessageHeight(message: Message, contentWidth: number): number {
+    const plainText = this.stripMarkdown(message.content);
+    const wrappedLines = this.wrapText(plainText, contentWidth);
+    
+    let height = this.padding * 2;
+    height += this.getHeaderHeight();
+    
+    if (message.content && wrappedLines.length > 0) {
+        height += 8; // spacing
+        height += wrappedLines.length * this.lineHeight;
+    }
+    
+    return Math.max(height, (this.options.style.showAgentAvatars ? this.avatarSize : 0) + this.padding * 2);
+  }
+
+  public render(): string {
+    const width = 800;
+    let totalHeight = this.padding;
+
+    const messageWidth = width - (this.padding * 2);
+    const messageContentWidth = messageWidth - (this.padding * 2) - (this.options.style.showAgentAvatars ? this.avatarSize + 12 : 0);
+
+    for (const message of this.options.messages) {
+      totalHeight += this.calculateMessageHeight(message, messageContentWidth) + this.messageSpacing;
+    }
+    if (this.options.messages.length > 0) {
+      totalHeight -= this.messageSpacing;
+    }
+    totalHeight += this.padding;
+
+    let svgContent = '';
+    let currentY = this.padding;
+
+    for (const message of this.options.messages) {
+      const agent = this.options.getAgentById(message.agentId);
+      if (!agent) continue;
+
+      const messageHeight = this.calculateMessageHeight(message, messageContentWidth);
+      
+      svgContent += `<rect x="${this.padding}" y="${currentY}" width="${messageWidth}" height="${messageHeight}" rx="${this.borderRadius}" fill="${this.options.style.messageBackgroundColor}" />`;
+
+      const contentX = this.padding * 2 + (this.options.style.showAgentAvatars ? this.avatarSize + 12 : 0);
+      
+      if (this.options.style.showAgentAvatars) {
+        svgContent += `
+          <g transform="translate(${this.padding * 2}, ${currentY + this.padding})">
+            <circle cx="${this.avatarSize/2}" cy="${this.avatarSize/2}" r="${this.avatarSize/2}" fill="${agent.color}" />
+            <text x="${this.avatarSize/2}" y="${this.avatarSize/2}" dy="0.35em" text-anchor="middle" fill="#ffffff" font-size="${this.fontSize}" font-weight="bold">${this.escapeHTML(agent.name.charAt(0).toUpperCase())}</text>
+          </g>
+        `;
+      }
+      
+      const headerCenterY = currentY + this.padding + (this.options.style.showAgentAvatars ? this.avatarSize / 2 : this.getHeaderHeight() / 2);
+      let currentX = contentX;
+
+      svgContent += `<text x="${currentX}" y="${headerCenterY}" dominant-baseline="middle" font-weight="bold" font-size="${this.fontSize}" fill="${this.options.style.textColor}">${this.escapeHTML(agent.name)}</text>`;
+      currentX += (agent.name.length * this.fontSize * 0.7) + 8;
+      
+      if (this.options.style.showTimestamps) {
+        const timestampText = this.options.formatTimestamp(message.timestamp);
+        svgContent += `<text x="${currentX}" y="${headerCenterY}" dominant-baseline="middle" font-size="${this.fontSize * 0.8}" fill="${this.options.style.textColor}" opacity="0.8">${this.escapeHTML(timestampText)}</text>`;
+        currentX += (timestampText.length * this.fontSize * 0.45) + 8;
+      }
+      
+      if (this.options.style.showModels) {
+        const badgePadding = { x: 6, y: 2 };
+        const badgeFontSize = this.fontSize * 0.75;
+        const modelWidth = agent.model.length * badgeFontSize * 0.6;
+        const badgeWidth = modelWidth + badgePadding.x * 2;
+        const badgeHeight = badgeFontSize * 1.4;
+
+        svgContent += `<rect x="${currentX}" y="${headerCenterY - badgeHeight / 2}" width="${badgeWidth}" height="${badgeHeight}" rx="4" fill="${this.options.style.backgroundColor}" />`;
+        svgContent += `<text x="${currentX + badgePadding.x}" y="${headerCenterY}" dominant-baseline="middle" font-size="${badgeFontSize}" fill="${this.options.style.textColor}" opacity="0.9">${this.escapeHTML(agent.model)}</text>`;
+      }
+      
+      const headerHeight = this.getHeaderHeight();
+      const contentY = currentY + this.padding + headerHeight + 8;
+      
+      const plainText = this.stripMarkdown(message.content);
+      const wrappedLines = this.wrapText(plainText, messageContentWidth);
+
+      for (let i = 0; i < wrappedLines.length; i++) {
+        svgContent += `<text x="${contentX}" y="${contentY + (i * this.lineHeight)}" font-size="${this.fontSize}" fill="${this.options.style.textColor}">${this.escapeHTML(wrappedLines[i])}</text>`;
+      }
+      
+      currentY += messageHeight + this.messageSpacing;
+    }
+
+    return `
+      <svg width="${width}" height="${totalHeight}" xmlns="http://www.w3.org/2000/svg" font-family="${this.fontFamily}">
+        <style>
+          text { white-space: pre; }
+        </style>
+        <rect width="100%" height="100%" fill="${this.options.style.backgroundColor}" />
+        ${svgContent}
+      </svg>
+    `;
+  }
+}
+
 export class ExportService {
   static async exportAsPNG(
     messages: Message[],
@@ -411,7 +585,7 @@ export class ExportService {
     try {
       // For now, use CanvasRenderer to create PNG, then wrap in SVG
       // This maintains the existing behavior while removing html2canvas dependency
-      const renderer = new CanvasRenderer({
+      const renderer = new SVGRenderer({
         messages,
         agents,
         style,
@@ -421,12 +595,8 @@ export class ExportService {
         abortController
       });
 
-      const canvas = await renderer.render();
-      
-      // Create SVG wrapper around the PNG
-      const svg = this.canvasToSVG(canvas, style);
-      
-      const blob = new Blob([svg], { type: 'image/svg+xml' });
+      const svgString = renderer.render();
+      const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       
       const link = document.createElement('a');
