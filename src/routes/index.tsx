@@ -7,10 +7,10 @@ import { useNavigationCallbacks, ExperimentView } from '../App';
 const NewExperiment = React.lazy(() => import('../features/experiments/components/NewExperimentPage').then(module => ({ default: module.NewExperiment })));
 const LiveExperiments = React.lazy(() => import('../features/experiments/components/LiveExperimentsPage').then(module => ({ default: module.LiveExperiments })));
 const History = React.lazy(() => import('../features/history/components/HistoryPage').then(module => ({ default: module.History })));
+const ConversationImporter = React.lazy(() => import('../features/history/components/ConversationImporter').then(module => ({ default: module.ConversationImporter })));
 const Models = React.lazy(() => import('../features/models/components/ModelsPage').then(module => ({ default: module.Models })));
 const Settings = React.lazy(() => import('../pages/Settings').then(module => ({ default: module.Settings })));
 const About = React.lazy(() => import('../pages/About').then(module => ({ default: module.About })));
-const ConversationViewer = React.lazy(() => import('../features/history/components/ConversationViewerPage').then(module => ({ default: module.ConversationViewer })));
 
 // Loading component
 const LoadingFallback: React.FC = () => (
@@ -52,6 +52,9 @@ export const AppRoutes: React.FC = () => {
           {/* History */}
           <Route path="/history" element={<History />} />
           
+          {/* Conversation Importer */}
+          <Route path="/import-conversations" element={<ConversationImporter />} />
+          
           {/* Models */}
           <Route path="/models" element={<Models />} />
           
@@ -60,9 +63,6 @@ export const AppRoutes: React.FC = () => {
           
           {/* About */}
           <Route path="/about" element={<About />} />
-          
-          {/* Conversations */}
-          <Route path="/conversations" element={<ConversationViewer />} />
           
           {/* Explore (placeholder) */}
           <Route 
@@ -105,10 +105,10 @@ export const ROUTES = {
   NEW_EXPERIMENT: '/',
   LIVE_EXPERIMENTS: '/live-experiments',
   HISTORY: '/history',
+  CONVERSATION_VIEWER: '/import-conversations',
   MODELS: '/models',
   SETTINGS: '/settings',
   ABOUT: '/about',
-  CONVERSATIONS: '/conversations',
   EXPLORE: '/explore',
 } as const;
 

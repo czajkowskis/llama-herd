@@ -7,6 +7,7 @@ from datetime import datetime
 from ..schemas.conversation import ConversationAgent, Message, Conversation
 from ..schemas.task import TaskModel
 from ..schemas.agent import AgentModel
+from ..schemas.chat_rules import ChatRulesModel
 from ..utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -15,10 +16,11 @@ logger = get_logger(__name__)
 class ExperimentState:
     """Represents the state of a single experiment."""
     
-    def __init__(self, experiment_id: str, task: TaskModel, agents: List[AgentModel]):
+    def __init__(self, experiment_id: str, task: TaskModel, agents: List[AgentModel], chat_rules: Optional[ChatRulesModel] = None):
         self.experiment_id: str = experiment_id
         self.task: TaskModel = task
         self.agents: List[AgentModel] = agents
+        self.chat_rules: Optional[ChatRulesModel] = chat_rules
         self.conversation_agents: List[ConversationAgent] = []
         self.messages: List[Message] = []
         self.conversations: List[Conversation] = []
@@ -62,9 +64,9 @@ class ExperimentStateManager:
     def __init__(self):
         self._active_experiments: Dict[str, ExperimentState] = {}
     
-    def create_experiment(self, experiment_id: str, task: TaskModel, agents: List[AgentModel]) -> ExperimentState:
+    def create_experiment(self, experiment_id: str, task: TaskModel, agents: List[AgentModel], chat_rules: Optional[ChatRulesModel] = None) -> ExperimentState:
         """Create a new experiment state."""
-        experiment_state = ExperimentState(experiment_id, task, agents)
+        experiment_state = ExperimentState(experiment_id, task, agents, chat_rules)
         self._active_experiments[experiment_id] = experiment_state
         return experiment_state
     

@@ -3,6 +3,7 @@ from typing import List, Optional
 
 from .agent import AgentModel
 from .task import TaskModel
+from .chat_rules import ChatRulesModel
 from .conversation import Conversation
 
 
@@ -12,6 +13,7 @@ class ExperimentRequest(BaseModel):
     task: TaskModel = Field(..., description="Task configuration for the experiment")
     agents: List[AgentModel] = Field(..., min_length=1, description="List of agents to participate in the experiment. Must include at least one agent.")
     iterations: int = Field(1, ge=1, description="Number of iterations to run (default: 1)", example=1)
+    chat_rules: Optional[ChatRulesModel] = Field(None, description="Chat rules configuration for the experiment")
 
     @field_validator('agents')
     @classmethod

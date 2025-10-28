@@ -2,15 +2,7 @@ import React, { useMemo } from 'react';
 import { Button } from '../../../components/ui/Button';
 import { Icon } from '../../../components/ui/Icon';
 import { Input } from '../../../components/ui/Input';
-
-interface CatalogItem {
-  name: string;
-  tag: string;
-  size?: number;
-  family?: string;
-  quant?: string;
-  notes?: string;
-}
+import { CatalogItem } from '../../../data/modelCatalog';
 
 interface PullProgress {
   progress?: number;

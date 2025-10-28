@@ -1,5 +1,5 @@
 import { API_BASE_URL, buildWebSocketUrl } from '../config';
-import { Agent, Task, ExperimentStatusResponse } from '../types/index.d';
+import { Agent, Task, ExperimentStatusResponse, ChatRules } from '../types/index.d';
 import ReconnectingWebSocket from './ReconnectingWebSocket';
 import { WebSocketMessage } from '../types/api';
 
@@ -36,13 +36,26 @@ class ExperimentService {
   // Map of experimentId -> ReconnectingWebSocket instance
   private connections: Map<string, ReconnectingWebSocket> = new Map();
 
-  async startExperiment(task: Task, agents: Agent[], iterations: number = 1): Promise<ExperimentResponse> {
+  async startExperiment(task: Task, agents: Agent[], iterations: number = 1, chatRules?: any): Promise<ExperimentResponse> {
+    const requestBody: any = { task, agents, iterations };
+    if (chatRules) {
+      // Transform camelCase frontend fields to snake_case backend fields
+      requestBody.chat_rules = {
+        max_rounds: chatRules.maxRounds,
+        team_type: chatRules.teamType,
+        selector_prompt: chatRules.selectorPrompt,
+        allow_repeat_speaker: chatRules.allowRepeatSpeaker,
+        max_consecutive_auto_reply: chatRules.maxConsecutiveAutoReply,
+        termination_condition: chatRules.terminationCondition,
+      };
+    }
+    
     const response = await fetch(`${API_BASE_URL}/api/experiments/start`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ task, agents, iterations }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
@@ -129,4 +142,18 @@ class ExperimentService {
   }
 }
 
-export const experimentService = new ExperimentService(); 
+export const experimentService = new ExperimentService();
+
+export const getDefaultChatRules = async (): Promise<ChatRules> => {
+  const response = await fetch(`${API_BASE_URL}/api/experiments/default-chat-rules`);
+  if (!response.ok) {
+    // Fallback to sensible defaults on failure
+    console.error('Failed to fetch default chat rules. Using fallback.');
+    return { 
+      maxRounds: 8, 
+      teamType: 'round_robin',
+      selectorPrompt: "Available roles:\n{roles}\n\nCurrent conversation history:\n{history}\n\nPlease select the most appropriate agent for the next message."
+    };
+  }
+  return response.json();
+}; 

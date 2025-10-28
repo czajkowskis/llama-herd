@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { experimentService } from '../../../services/experimentService';
+import { useNavigate } from 'react-router-dom';
 
 interface LiveExperimentSummary {
   experiment_id: string;
@@ -20,6 +21,7 @@ export const LiveExperiments: React.FC<LiveExperimentsProps> = ({ onOpenExperime
   const [experiments, setExperiments] = useState<LiveExperimentSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     let mounted = true;
@@ -85,7 +87,7 @@ export const LiveExperiments: React.FC<LiveExperimentsProps> = ({ onOpenExperime
             <div className="mb-4">No live experiments are running right now.</div>
             <div>
               <button
-                onClick={() => { window.location.hash = ''; }}
+                onClick={() => navigate('/')}
                 className="px-4 py-2 rounded-lg bg-purple-600 text-white"
                 title="Create new experiment"
               >

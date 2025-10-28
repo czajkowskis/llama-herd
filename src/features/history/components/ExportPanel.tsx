@@ -48,6 +48,7 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
   const [showTemplateManager, setShowTemplateManager] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<string>('');
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
 
   // Select messages: preselected ones if provided, otherwise all messages
@@ -97,6 +98,15 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
     setSelectedMessages(new Set());
   };
 
+  const cancelExport = () => {
+    if (abortController) {
+      abortController.abort();
+      setAbortController(null);
+      setIsExporting(false);
+      setExportProgress(0);
+    }
+  };
+
   const handleThemeChange = (theme: 'dark' | 'light' | 'custom') => {
     const themeColors = exportThemes[theme];
     setExportStyle(prev => ({
@@ -118,33 +128,50 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
     setExportError(null);
     setExportProgress(0);
 
+    // Create abort controller for cancellation
+    const controller = new AbortController();
+    setAbortController(controller);
+
     try {
       const baseFilename = exportMetadata.customFilename || `conversation-export-${new Date().toISOString().split('T')[0]}`;
       const filteredMessages = messages.filter(m => selectedMessages.has(m.id));
       
       if (format === 'png') {
-        if (!previewRef.current) {
-          throw new Error('Preview element not found');
-        }
-        setExportProgress(25);
-        await ExportService.exportAsPNG(previewRef.current, exportStyle, baseFilename);
-        setExportProgress(100);
+        await ExportService.exportAsPNG(
+          filteredMessages,
+          agents,
+          exportStyle,
+          baseFilename,
+          getAgentById,
+          formatTimestamp,
+          (progress) => setExportProgress(progress),
+          controller
+        );
       } else if (format === 'svg') {
-        if (!previewRef.current) {
-          throw new Error('Preview element not found');
-        }
-        setExportProgress(25);
-        await ExportService.exportAsSVG(previewRef.current, exportStyle, baseFilename);
-        setExportProgress(100);
+        await ExportService.exportAsSVG(
+          filteredMessages,
+          agents,
+          exportStyle,
+          baseFilename,
+          getAgentById,
+          formatTimestamp,
+          (progress) => setExportProgress(progress),
+          controller
+        );
       } else if (format === 'json') {
         setExportProgress(50);
         ExportService.exportAsJSON(filteredMessages, agents, baseFilename);
         setExportProgress(100);
       }
     } catch (error: any) {
-      setExportError(error.message || 'Export failed');
+      if (error.message === 'Export cancelled') {
+        setExportError('Export cancelled');
+      } else {
+        setExportError(error.message || 'Export failed');
+      }
     } finally {
       setIsExporting(false);
+      setAbortController(null);
       setTimeout(() => setExportProgress(0), 1000);
     }
   };
@@ -195,231 +222,291 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-700">
-          <div className="flex items-center space-x-3">
-            <Icon className="text-purple-400 text-xl">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7,10 12,15 17,10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-            </Icon>
-            <h2 className="text-xl font-semibold text-white">Export Conversation</h2>
+    <>
+      <style>{`
+        .conversation-export .message {
+          background-color: ${exportStyle.messageBackgroundColor};
+          border-radius: ${Math.max(0, exportStyle.borderRadius - 4)}px;
+          margin-bottom: 16px;
+          padding: 16px;
+        }
+        .conversation-export .message-header {
+          display: flex;
+          align-items: center;
+          margin-bottom: 8px;
+        }
+        .conversation-export .agent-avatar {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          margin-right: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 600;
+          font-size: 14px;
+          flex-shrink: 0;
+        }
+        .conversation-export .agent-name {
+          font-weight: 600;
+        }
+        .conversation-export .timestamp {
+          font-size: 12px;
+          opacity: 0.7;
+        }
+        .conversation-export .model-badge {
+          font-size: 11px;
+          padding: 2px 6px;
+          border-radius: 4px;
+          font-weight: 500;
+        }
+        .conversation-export .message-content {
+          line-height: 1.6;
+          word-break: break-word;
+        }
+      `}</style>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-gray-800 rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-700">
+            <div className="flex items-center space-x-3">
+              <Icon className="text-purple-400 text-xl">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7,10 12,15 17,10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+              </Icon>
+              <h2 className="text-xl font-semibold text-white">Export Conversation</h2>
+            </div>
+            <Button onClick={onClose} className="bg-gray-600 hover:bg-gray-700">
+              Close
+            </Button>
           </div>
-          <Button onClick={onClose} className="bg-gray-600 hover:bg-gray-700">
-            Close
-          </Button>
-        </div>
 
-        <div className="flex h-[calc(90vh-120px)]">
-          {/* Left Panel - Message Selection and Styling */}
-          <div className="w-80 border-r border-gray-700 p-6 overflow-y-auto">
-            {/* Message Selection */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-medium text-white">Select Messages</h3>
-                <div className="flex space-x-2">
-                  <Button onClick={selectAllMessages} className="text-xs px-2 py-1 bg-gray-600 hover:bg-gray-700">
-                    All
-                  </Button>
-                  <Button onClick={deselectAllMessages} className="text-xs px-2 py-1 bg-gray-600 hover:bg-gray-700">
-                    None
-                  </Button>
+          <div className="flex h-[calc(90vh-120px)]">
+            {/* Left Panel - Message Selection and Styling */}
+            <div className="w-80 border-r border-gray-700 p-6 overflow-y-auto">
+              {/* Message Selection */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-medium text-white">Select Messages</h3>
+                  <div className="flex space-x-2">
+                    <Button onClick={selectAllMessages} className="text-xs px-2 py-1 bg-gray-600 hover:bg-gray-700">
+                      All
+                    </Button>
+                    <Button onClick={deselectAllMessages} className="text-xs px-2 py-1 bg-gray-600 hover:bg-gray-700">
+                      None
+                    </Button>
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {messages.map((message) => {
-                  const agent = getAgentById(message.agentId);
-                  return (
-                    <label key={message.id} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-700 p-2 rounded">
-                      <input
-                        type="checkbox"
-                        checked={selectedMessages.has(message.id)}
-                        onChange={() => toggleMessageSelection(message.id)}
-                        className="rounded border-gray-600 bg-gray-700 text-purple-400 focus:ring-purple-400"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2">
-                          <div
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: agent?.color || '#6b7280' }}
-                          />
-                          <span className="text-sm text-white truncate">{agent?.name || 'Unknown'}</span>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {messages.map((message) => {
+                    const agent = getAgentById(message.agentId);
+                    return (
+                      <label key={message.id} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-700 p-2 rounded">
+                        <input
+                          type="checkbox"
+                          checked={selectedMessages.has(message.id)}
+                          onChange={() => toggleMessageSelection(message.id)}
+                          className="rounded border-gray-600 bg-gray-700 text-purple-400 focus:ring-purple-400"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2">
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: agent?.color || '#6b7280' }}
+                            />
+                            <span className="text-sm text-white truncate">{agent?.name || 'Unknown'}</span>
+                          </div>
+                          <p className="text-xs text-gray-400 truncate">
+                            {message.content.substring(0, 50)}...
+                          </p>
                         </div>
-                        <p className="text-xs text-gray-400 truncate">
-                          {message.content.substring(0, 50)}...
-                        </p>
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Styling Options */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-medium text-white">Styling</h3>
-                <div className="flex space-x-1">
-                  <button
-                    onClick={() => setShowStylePanel(!showStylePanel)}
-                    className="text-gray-400 hover:text-white transition-colors p-1"
-                  >
-                    <Icon>
-                      {showStylePanel ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="m18 15-6-6-6 6"/>
-                        </svg>
-                      ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="m6 9 6 6 6-6"/>
-                        </svg>
-                      )}
-                    </Icon>
-                  </button>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
-              
-              {showStylePanel && (
-                <div className="space-y-4">
-                  {/* Theme Selection */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Theme</label>
-                    <select
-                      value={exportStyle.theme}
-                      onChange={(e) => handleThemeChange(e.target.value as 'dark' | 'light' | 'custom')}
-                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm"
-                    >
-                      <option value="dark">Dark</option>
-                      <option value="light">Light</option>
-                      <option value="custom">Custom</option>
-                    </select>
-                  </div>
 
-                  {/* Background Color */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Background Color</label>
-                    <SimpleColorPicker
-                      color={exportStyle.backgroundColor}
-                      onChange={(color) => setExportStyle(prev => ({ ...prev, backgroundColor: color }))}
-                      label="Background"
-                    />
-                  </div>
-
-                  {/* Message Background Color */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Message Background</label>
-                    <SimpleColorPicker
-                      color={exportStyle.messageBackgroundColor}
-                      onChange={(color) => setExportStyle(prev => ({ ...prev, messageBackgroundColor: color }))}
-                      label="Message Background"
-                    />
-                  </div>
-
-                  {/* Text Color */}
-                  <div>
-                    <label className="nowrap text-sm font-medium text-gray-300 mb-2">Text Color</label>
-                    <SimpleColorPicker
-                      color={exportStyle.textColor}
-                      onChange={(color) => setExportStyle(prev => ({ ...prev, textColor: color }))}
-                      label="Text"
-                    />
-                  </div>
-
-                  {/* Font Size */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Font Size: {exportStyle.fontSize}px
-                    </label>
-                    <input
-                      type="range"
-                      min="10"
-                      max="24"
-                      value={exportStyle.fontSize}
-                      onChange={(e) => setExportStyle(prev => ({ ...prev, fontSize: parseInt(e.target.value) }))}
-                      className="w-full"
-                    />
-                  </div>
-
-                  {/* Border Radius */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Border Radius: {exportStyle.borderRadius}px
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="24"
-                      value={exportStyle.borderRadius}
-                      onChange={(e) => setExportStyle(prev => ({ ...prev, borderRadius: parseInt(e.target.value) }))}
-                      className="w-full"
-                    />
-                  </div>
-
-                  {/* Padding */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Padding: {exportStyle.padding}px
-                    </label>
-                    <input
-                      type="range"
-                      min="8"
-                      max="48"
-                      value={exportStyle.padding}
-                      onChange={(e) => setExportStyle(prev => ({ ...prev, padding: parseInt(e.target.value) }))}
-                      className="w-full"
-                    />
-                  </div>
-
-                  {/* Toggle Options */}
-                  <div className="space-y-2">
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={exportStyle.showTimestamps}
-                        onChange={(e) => setExportStyle(prev => ({ ...prev, showTimestamps: e.target.checked }))}
-                        className="rounded border-gray-600 bg-gray-700 text-purple-400 focus:ring-purple-400"
-                      />
-                      <span className="text-sm text-gray-300">Show Timestamps</span>
-                    </label>
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={exportStyle.showModels}
-                        onChange={(e) => setExportStyle(prev => ({ ...prev, showModels: e.target.checked }))}
-                        className="rounded border-gray-600 bg-gray-700 text-purple-400 focus:ring-purple-400"
-                      />
-                      <span className="text-sm text-gray-300">Show Models</span>
-                    </label>
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={exportStyle.showAgentAvatars}
-                        onChange={(e) => setExportStyle(prev => ({ ...prev, showAgentAvatars: e.target.checked }))}
-                        className="rounded border-gray-600 bg-gray-700 text-purple-400 focus:ring-purple-400"
-                      />
-                      <span className="text-sm text-gray-300">Show Agent Avatars</span>
-                    </label>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Export Options */}
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-medium text-white">Export Options</h3>
+              {/* Styling Options */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-medium text-white">Styling</h3>
                   <div className="flex space-x-1">
                     <button
-                      onClick={() => setShowExportOptions(!showExportOptions)}
+                      onClick={() => setShowStylePanel(!showStylePanel)}
                       className="text-gray-400 hover:text-white transition-colors p-1"
                     >
                       <Icon>
-                        {showExportOptions ? (
+                        {showStylePanel ? (
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="m18 15-6-6-6 6"/>
+                          </svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="m6 9 6 6 6-6"/>
+                          </svg>
+                        )}
+                      </Icon>
+                    </button>
+                  </div>
+                </div>
+                
+                {showStylePanel && (
+                  <div className="space-y-4">
+                    {/* Theme Selection */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Theme</label>
+                      <select
+                        value={exportStyle.theme}
+                        onChange={(e) => handleThemeChange(e.target.value as 'dark' | 'light' | 'custom')}
+                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm"
+                      >
+                        <option value="dark">Dark</option>
+                        <option value="light">Light</option>
+                        <option value="custom">Custom</option>
+                      </select>
+                    </div>
+
+                    {/* Background Color */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Background Color</label>
+                      <SimpleColorPicker
+                        color={exportStyle.backgroundColor}
+                        onChange={(color) => setExportStyle(prev => ({ ...prev, backgroundColor: color }))}
+                        label="Background"
+                      />
+                    </div>
+
+                    {/* Message Background Color */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Message Background</label>
+                      <SimpleColorPicker
+                        color={exportStyle.messageBackgroundColor}
+                        onChange={(color) => setExportStyle(prev => ({ ...prev, messageBackgroundColor: color }))}
+                        label="Message Background"
+                      />
+                    </div>
+
+                    {/* Text Color */}
+                    <div>
+                      <label className="nowrap text-sm font-medium text-gray-300 mb-2">Text Color</label>
+                      <SimpleColorPicker
+                        color={exportStyle.textColor}
+                        onChange={(color) => setExportStyle(prev => ({ ...prev, textColor: color }))}
+                        label="Text"
+                      />
+                    </div>
+
+                    {/* Font Size */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Font Size: {exportStyle.fontSize}px
+                      </label>
+                      <input
+                        type="range"
+                        min="10"
+                        max="24"
+                        value={exportStyle.fontSize}
+                        onChange={(e) => setExportStyle(prev => ({ ...prev, fontSize: parseInt(e.target.value) }))}
+                        className="w-full"
+                      />
+                    </div>
+
+                    {/* Border Radius */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Border Radius: {exportStyle.borderRadius}px
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="24"
+                        value={exportStyle.borderRadius}
+                        onChange={(e) => setExportStyle(prev => ({ ...prev, borderRadius: parseInt(e.target.value) }))}
+                        className="w-full"
+                      />
+                    </div>
+
+                    {/* Padding */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Padding: {exportStyle.padding}px
+                      </label>
+                      <input
+                        type="range"
+                        min="8"
+                        max="48"
+                        value={exportStyle.padding}
+                        onChange={(e) => setExportStyle(prev => ({ ...prev, padding: parseInt(e.target.value) }))}
+                        className="w-full"
+                      />
+                    </div>
+
+                    {/* Scale/Quality */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Quality Scale: {exportStyle.scale || 2}x
+                      </label>
+                      <select
+                        value={exportStyle.scale || 2}
+                        onChange={(e) => setExportStyle(prev => ({ ...prev, scale: parseInt(e.target.value) }))}
+                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm"
+                      >
+                        <option value={1}>1x (Fast)</option>
+                        <option value={2}>2x (Balanced)</option>
+                        <option value={3}>3x (High Quality)</option>
+                        <option value={4}>4x (Maximum Quality)</option>
+                      </select>
+                    </div>
+
+                    {/* Toggle Options */}
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={exportStyle.showTimestamps}
+                          onChange={(e) => setExportStyle(prev => ({ ...prev, showTimestamps: e.target.checked }))}
+                          className="rounded border-gray-600 bg-gray-700 text-purple-400 focus:ring-purple-400"
+                        />
+                        <span className="text-sm text-gray-300">Show Timestamps</span>
+                      </label>
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={exportStyle.showModels}
+                          onChange={(e) => setExportStyle(prev => ({ ...prev, showModels: e.target.checked }))}
+                          className="rounded border-gray-600 bg-gray-700 text-purple-400 focus:ring-purple-400"
+                        />
+                        <span className="text-sm text-gray-300">Show Models</span>
+                      </label>
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={exportStyle.showAgentAvatars}
+                          onChange={(e) => setExportStyle(prev => ({ ...prev, showAgentAvatars: e.target.checked }))}
+                          className="rounded border-gray-600 bg-gray-700 text-purple-400 focus:ring-purple-400"
+                        />
+                        <span className="text-sm text-gray-300">Show Agent Avatars</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Export Options */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-medium text-white">Export Options</h3>
+                    <div className="flex space-x-1">
+                      <button
+                        onClick={() => setShowExportOptions(!showExportOptions)}
+                        className="text-gray-400 hover:text-white transition-colors p-1"
+                      >
+                        <Icon>
+                          {showExportOptions ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="m18 15-6-6-6 6"/>
                           </svg>
                         ) : (
@@ -630,6 +717,28 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
                 {isExporting ? 'Exporting...' : 'Export as JSON'}
               </Button>
 
+              {/* Progress Bar */}
+              {isExporting && exportProgress > 0 && (
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-300">Export Progress</span>
+                    <span className="text-sm text-gray-400">{Math.round(exportProgress)}%</span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-2">
+                    <div 
+                      className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${exportProgress}%` }}
+                    />
+                  </div>
+                  <Button
+                    onClick={cancelExport}
+                    className="w-full mt-2 bg-red-600 hover:bg-red-700"
+                  >
+                    Cancel Export
+                  </Button>
+                </div>
+              )}
+
               {exportError && (
                 <div className="mt-4 p-3 bg-red-900/20 border border-red-500/50 rounded-lg">
                   <p className="text-red-400 text-sm">{exportError}</p>
@@ -668,13 +777,24 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
                         </div>
                       )}
                       <div className="flex-1">
-                        <span className="agent-name">{agent.name}</span>
-                        {exportStyle.showTimestamps && (
-                          <span className="timestamp">{formatTimestamp(message.timestamp)}</span>
-                        )}
-                        {exportStyle.showModels && (
-                          <span className="model-info">• {agent.model}</span>
-                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span className="agent-name">{agent.name}</span>
+                          {exportStyle.showTimestamps && (
+                            <span className="timestamp">{formatTimestamp(message.timestamp)}</span>
+                          )}
+                          {exportStyle.showModels && (
+                            <span 
+                              className="model-badge"
+                              style={{
+                                backgroundColor: exportStyle.backgroundColor,
+                                color: exportStyle.textColor,
+                                opacity: 0.8,
+                              }}
+                            >
+                              {agent.model}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <button
                         onClick={() => removeMessageFromExport(message.id)}
@@ -761,5 +881,6 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
         type="danger"
       />
     </div>
+    </>
   );
 }; 

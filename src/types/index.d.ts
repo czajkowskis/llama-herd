@@ -1,5 +1,14 @@
 // Type definitions for the LLaMa-Herd application
 
+export interface ChatRules {
+  maxRounds: number;
+  teamType: 'round_robin' | 'selector';
+  selectorPrompt?: string;
+  allowRepeatSpeaker?: boolean;
+  maxConsecutiveAutoReply?: number;
+  terminationCondition?: string;
+}
+
 export interface Agent {
   id: string;
   name: string;

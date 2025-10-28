@@ -32,7 +32,8 @@ class ExperimentService:
             experiment_state = state_manager.create_experiment(
                 experiment_id=experiment_id,
                 task=request.task,
-                agents=request.agents
+                agents=request.agents,
+                chat_rules=getattr(request, 'chat_rules', None)
             )
             
             # Set iterations

@@ -1,0 +1,45 @@
+from pydantic import BaseModel, Field, field_validator
+from typing import Optional
+
+
+class ChatRulesModel(BaseModel):
+    """Chat rules configuration for experiments."""
+    
+    max_rounds: int = Field(
+        default=8, 
+        ge=1, 
+        le=100, 
+        description="Maximum number of conversation rounds",
+        example=8
+    )
+    team_type: str = Field(
+        default="round_robin",
+        description="Speaker selection strategy",
+        example="round_robin"
+    )
+    selector_prompt: Optional[str] = Field(
+        default="Available roles:\n{roles}\n\nCurrent conversation history:\n{history}\n\nPlease select the most appropriate agent for the next message.",
+        description="Custom prompt for SelectorGroupChat to guide agent selection. Can use {roles}, {participants}, and {history} placeholders.",
+        example="Available roles:\n{roles}\n\nCurrent conversation history:\n{history}\n\nPlease select the most appropriate agent for the next message."
+    )
+    allow_repeat_speaker: Optional[bool] = Field(
+        default=None,
+        description="Allow the same speaker to be selected consecutively."
+    )
+    max_consecutive_auto_reply: Optional[int] = Field(
+        default=None,
+        description="Maximum number of consecutive auto-replies."
+    )
+    termination_condition: Optional[str] = Field(
+        default=None,
+        description="A string that, if found in a message, terminates the conversation."
+    )
+    
+    @field_validator('team_type')
+    @classmethod
+    def validate_team_type(cls, v: str) -> str:
+        """Ensure team_type is valid."""
+        valid_types = ["round_robin", "selector"]
+        if v not in valid_types:
+            raise ValueError(f"team_type must be one of {valid_types}")
+        return v 

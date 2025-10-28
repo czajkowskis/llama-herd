@@ -63,8 +63,6 @@ export const ExperimentConversationViewer: React.FC<ExperimentConversationViewer
       }}
       onBackToList={onBackToList}
       getAgentById={(agentId) => conversation.agents.find(a => a.id === agentId)}
-      getContrastColor={(color) => '#ffffff'}
-      formatTimestamp={(timestamp) => new Date(timestamp).toLocaleTimeString()}
     />
   );
 };

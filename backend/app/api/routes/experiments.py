@@ -10,6 +10,10 @@ from ...storage import get_storage
 from ...utils.logging import get_logger, log_with_context, set_experiment_context
 from ...utils.case_converter import normalize_dict_to_snake
 from ...utils.experiment_helpers import get_experiment_with_fallback, truncate_title, get_experiment_list_with_storage
+from ...schemas.task import TaskModel
+from ...schemas.agent import AgentModel
+from ...schemas.chat_rules import ChatRulesModel
+from ...schemas.conversation import Conversation
 
 storage = get_storage()
 logger = get_logger(__name__)
@@ -300,3 +304,8 @@ async def update_experiment(experiment_id: str, experiment: dict):
             "Failed to update experiment",
             experiment_id=experiment_id
         )
+
+@router.get("/default-chat-rules", response_model=ChatRulesModel)
+async def get_default_chat_rules():
+    """Get the default chat rules for an experiment."""
+    return ChatRulesModel()

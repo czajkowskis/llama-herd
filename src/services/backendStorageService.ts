@@ -1,4 +1,5 @@
 import { Agent, Task, Conversation } from '../types/index.d';
+import { API_BASE_URL } from '../config';
 
 export interface StoredExperiment {
   id: string;
@@ -24,7 +25,7 @@ export interface StoredConversation {
 }
 
 class BackendStorageService {
-  private readonly BASE_URL = '/api';
+  private readonly BASE_URL = `${API_BASE_URL}/api`;
 
   // Experiment storage methods
   async saveExperiment(experiment: StoredExperiment): Promise<boolean> {

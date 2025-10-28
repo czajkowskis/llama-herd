@@ -1,69 +1,69 @@
 import React from 'react';
-import { Icon } from '../../../components/ui/Icon';
-import { Button } from '../../../components/ui/Button';
-import { ConversationTile } from './ConversationTile';
-import { Conversation } from '../../../types/index.d';
+import { StoredConversation } from '../../../services/backendStorageService';
+import { ConversationTile } from '../../../components/lists/ConversationTile';
 
 interface ConversationListProps {
-  conversations: Conversation[];
-  editingTitleIndex: number;
-  editingTitle: string;
-  onConversationSelect: (index: number) => void;
-  onStartEditTitle: (index: number) => void;
-  onSaveTitle: () => void;
-  onCancelEditTitle: () => void;
-  onDeleteConversation: (index: number) => void;
-  onTitleChange: (title: string) => void;
-  onTitleKeyPress: (e: React.KeyboardEvent) => void;
-  onShowUploadInterface: () => void;
-  formatTimestamp: (timestamp: string) => string;
+  conversations: StoredConversation[];
+  selectedItems: Set<string>;
+  editingConversationId: string | null;
+  editingConversationName: string;
+  selectMode: boolean;
+  editingExperimentId: string | null;
+  handleSelectItem: (id: string) => void;
+  handleViewConversation: (conversation: StoredConversation) => void;
+  handleStartEditConversationName: (conversation: StoredConversation) => void;
+  handleDeleteConversation: (conversation: StoredConversation) => void;
+  handleSaveConversationName: () => void;
+  handleCancelEditConversationName: () => void;
+  setEditingConversationName: (name: string) => void;
+  handleConversationNameKeyPress: (e: React.KeyboardEvent) => void;
 }
 
 export const ConversationList: React.FC<ConversationListProps> = ({
   conversations,
-  editingTitleIndex,
-  editingTitle,
-  onConversationSelect,
-  onStartEditTitle,
-  onSaveTitle,
-  onCancelEditTitle,
-  onDeleteConversation,
-  onTitleChange,
-  onTitleKeyPress,
-  onShowUploadInterface,
-  formatTimestamp
+  selectedItems,
+  editingConversationId,
+  editingConversationName,
+  selectMode,
+  editingExperimentId,
+  handleSelectItem,
+  handleViewConversation,
+  handleStartEditConversationName,
+  handleDeleteConversation,
+  handleSaveConversationName,
+  handleCancelEditConversationName,
+  setEditingConversationName,
+  handleConversationNameKeyPress,
 }) => {
+  if (conversations.length === 0) {
+    return (
+      <div className="text-center py-8" style={{ color: 'var(--color-text-tertiary)' }}>
+        No imported conversations found
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <div className="conversation-list-header flex items-center justify-between mb-6">
-        <h3 className="text-lg font-medium" style={{ color: 'var(--color-text-secondary)' }}>Your Conversations</h3>
-        <Button 
-          onClick={onShowUploadInterface}
-          className="bg-purple-600 hover:bg-purple-700"
-        >
-          Add More
-        </Button>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {conversations.map((conversation, index) => (
-          <ConversationTile
-            key={conversation.id}
-            conversation={conversation}
-            index={index}
-            editingTitleIndex={editingTitleIndex}
-            editingTitle={editingTitle}
-            onConversationSelect={onConversationSelect}
-            onStartEditTitle={onStartEditTitle}
-            onSaveTitle={onSaveTitle}
-            onCancelEditTitle={onCancelEditTitle}
-            onDeleteConversation={onDeleteConversation}
-            onTitleChange={onTitleChange}
-            onTitleKeyPress={onTitleKeyPress}
-            formatTimestamp={formatTimestamp}
-          />
-        ))}
-      </div>
+      {conversations.map((conversation) => (
+        <ConversationTile
+          key={conversation.id}
+          conversation={conversation}
+          isSelected={selectedItems.has(conversation.id)}
+          isEditing={editingConversationId === conversation.id}
+          editingName={editingConversationName}
+          selectMode={selectMode}
+          isEditDisabled={editingConversationId !== null || editingExperimentId !== null}
+          onSelect={handleSelectItem}
+          onView={() => handleViewConversation(conversation)}
+          onEdit={() => handleStartEditConversationName(conversation)}
+          onDelete={() => handleDeleteConversation(conversation)}
+          onSaveEdit={handleSaveConversationName}
+          onCancelEdit={handleCancelEditConversationName}
+          onNameChange={setEditingConversationName}
+          onKeyPress={handleConversationNameKeyPress}
+        />
+      ))}
     </div>
   );
 }; 
