@@ -8,6 +8,11 @@ import { HistoryToolbar } from '../../../components/lists/HistoryToolbar';
 import { useHistory } from '../hooks/useHistory';
 import { ExperimentList } from './ExperimentList';
 import { ConversationList } from './ConversationList';
+import { UploadInterface } from '../../../components/common/UploadInterface';
+import { useConversationUpload } from '../hooks/useConversationUpload';
+import { useAgentConfiguration } from '../hooks/useAgentConfiguration';
+import { AgentConfiguration } from '../../experiments/components/AgentConfiguration';
+import { backendStorageService } from '../../../services/backendStorageService';
 
 export const History: React.FC = () => {
   const {
@@ -57,7 +62,85 @@ export const History: React.FC = () => {
     cancelBulkDelete,
     setSelectMode,
     setSelectedItems,
+    loadConversations,
   } = useHistory();
+
+  const [showUpload, setShowUpload] = React.useState(false);
+  const upload = useConversationUpload();
+  const agentConfig = useAgentConfiguration();
+  const [isConfiguring, setIsConfiguring] = React.useState(false);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    await upload.handleFileUpload(event);
+    if (upload.pendingConversations.length > 0) {
+      agentConfig.setAgents(upload.pendingConversations[0].agents);
+      setIsConfiguring(true);
+      setShowUpload(false);
+    }
+  };
+
+  const handleConfirmConfiguration = async () => {
+    const { hasDuplicateColors, hasDuplicateNames } = agentConfig.validateAgents();
+    if (hasDuplicateColors || hasDuplicateNames) {
+      // Handle errors appropriately
+      return;
+    }
+    const currentPending = upload.pendingConversations[upload.pendingConversationIndex];
+    const updatedConversation = { ...currentPending, agents: agentConfig.agents };
+    
+    const success = await backendStorageService.saveConversation(updatedConversation);
+
+    if (!success) {
+      // Handle save error
+      console.error("Failed to save conversation");
+      return;
+    }
+    
+    if (upload.pendingConversationIndex < upload.pendingConversations.length - 1) {
+      const nextIndex = upload.pendingConversationIndex + 1;
+      upload.setPendingConversationIndex(nextIndex);
+      agentConfig.setAgents(upload.pendingConversations[nextIndex].agents);
+    } else {
+      setIsConfiguring(false);
+      upload.clearPendingConversations();
+      loadConversations();
+      setActiveTab('conversations');
+    }
+  };
+
+  if (isConfiguring) {
+    return (
+      <AgentConfiguration
+        agents={agentConfig.agents}
+        pendingConversations={upload.pendingConversations}
+        pendingConversationIndex={upload.pendingConversationIndex}
+        isEditingConversationTitle={false}
+        editingConversationTitle=""
+        colorError={agentConfig.colorError}
+        nameError={agentConfig.nameError}
+        showColorPicker={agentConfig.showColorPicker}
+        editingAgentId={agentConfig.editingAgentId}
+        onAgentUpdate={agentConfig.handleAgentUpdate}
+        onConfirmConfiguration={handleConfirmConfiguration}
+        onStartEditConversationTitle={() => {}}
+        onSaveConversationTitle={() => {}}
+        onCancelEditConversationTitle={() => {}}
+        onConversationTitleChange={() => {}}
+        onConversationTitleKeyPress={() => {}}
+        onColorPickerToggle={(agentId) => {
+          agentConfig.setShowColorPicker(!agentConfig.showColorPicker);
+          agentConfig.setEditingAgentId(agentId);
+        }}
+        onColorSelect={(color) => {
+          agentConfig.handleAgentUpdate(agentConfig.editingAgentId, { color });
+          agentConfig.setShowColorPicker(false);
+        }}
+        isColorUsed={agentConfig.isColorUsedFn}
+        getAvailableColorsCount={agentConfig.getAvailableColorsCountFn}
+        isNameUsed={agentConfig.isNameUsedFn}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -167,44 +250,54 @@ export const History: React.FC = () => {
             }}
             onSelectAll={handleSelectAll}
             onBulkDelete={handleBulkDelete}
+            onAddConversation={() => setShowUpload(true)}
           />
 
-          <div className="space-y-4">
-            {activeTab === 'experiments' ? (
-              <ExperimentList
-                experiments={experiments}
-                selectedItems={selectedItems}
-                editingExperimentId={editingExperimentId}
-                editingExperimentName={editingExperimentName}
-                selectMode={selectMode}
-                handleSelectItem={handleSelectItem}
-                handleViewExperiment={handleViewExperiment}
-                handleStartEditExperimentName={handleStartEditExperimentName}
-                handleDeleteExperiment={handleDeleteExperiment}
-                handleSaveExperimentName={handleSaveExperimentName}
-                handleCancelEditExperimentName={handleCancelEditExperimentName}
-                setEditingExperimentName={setEditingExperimentName}
-                handleExperimentNameKeyPress={handleExperimentNameKeyPress}
-              />
-            ) : (
-              <ConversationList
-                conversations={conversations}
-                selectedItems={selectedItems}
-                editingConversationId={editingConversationId}
-                editingConversationName={editingConversationName}
-                selectMode={selectMode}
-                editingExperimentId={editingExperimentId}
-                handleSelectItem={handleSelectItem}
-                handleViewConversation={handleViewConversation}
-                handleStartEditConversationName={handleStartEditConversationName}
-                handleDeleteConversation={handleDeleteConversation}
-                handleSaveConversationName={handleSaveConversationName}
-                handleCancelEditConversationName={handleCancelEditConversationName}
-                setEditingConversationName={setEditingConversationName}
-                handleConversationNameKeyPress={handleConversationNameKeyPress}
-              />
-            )}
-          </div>
+          {showUpload ? (
+            <UploadInterface
+              conversations={conversations}
+              isUploading={upload.isUploading}
+              uploadError={upload.uploadError}
+              onFileUpload={handleFileUpload}
+            />
+          ) : (
+            <div className="space-y-4">
+              {activeTab === 'experiments' ? (
+                <ExperimentList
+                  experiments={experiments}
+                  selectedItems={selectedItems}
+                  editingExperimentId={editingExperimentId}
+                  editingExperimentName={editingExperimentName}
+                  selectMode={selectMode}
+                  handleSelectItem={handleSelectItem}
+                  handleViewExperiment={handleViewExperiment}
+                  handleStartEditExperimentName={handleStartEditExperimentName}
+                  handleDeleteExperiment={handleDeleteExperiment}
+                  handleSaveExperimentName={handleSaveExperimentName}
+                  handleCancelEditExperimentName={handleCancelEditExperimentName}
+                  setEditingExperimentName={setEditingExperimentName}
+                  handleExperimentNameKeyPress={handleExperimentNameKeyPress}
+                />
+              ) : (
+                <ConversationList
+                  conversations={conversations}
+                  selectedItems={selectedItems}
+                  editingConversationId={editingConversationId}
+                  editingConversationName={editingConversationName}
+                  selectMode={selectMode}
+                  editingExperimentId={editingExperimentId}
+                  handleSelectItem={handleSelectItem}
+                  handleViewConversation={handleViewConversation}
+                  handleStartEditConversationName={handleStartEditConversationName}
+                  handleDeleteConversation={handleDeleteConversation}
+                  handleSaveConversationName={handleSaveConversationName}
+                  handleCancelEditConversationName={handleCancelEditConversationName}
+                  setEditingConversationName={setEditingConversationName}
+                  handleConversationNameKeyPress={handleConversationNameKeyPress}
+                />
+              )}
+            </div>
+          )}
         </div>
       </div>
 

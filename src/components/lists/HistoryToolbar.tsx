@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button } from '../ui/Button';
+import { Icon } from '../ui/Icon';
 
 interface HistoryToolbarProps {
   activeTab: 'experiments' | 'conversations';
@@ -11,6 +12,7 @@ interface HistoryToolbarProps {
   onToggleSelectMode: () => void;
   onSelectAll: () => void;
   onBulkDelete: () => void;
+  onAddConversation: () => void;
 }
 
 /**
@@ -25,10 +27,16 @@ export const HistoryToolbar: React.FC<HistoryToolbarProps> = ({
   onTabChange,
   onToggleSelectMode,
   onSelectAll,
-  onBulkDelete
+  onBulkDelete,
+  onAddConversation,
 }) => {
   const totalCount = activeTab === 'experiments' ? experimentsCount : conversationsCount;
   const isAllSelected = selectedCount === totalCount;
+
+  const tabs = [
+    { name: 'Experiments', count: experimentsCount, value: 'experiments' },
+    { name: 'Conversations', count: conversationsCount, value: 'conversations' },
+  ];
 
   return (
     <div className="flex items-center justify-between mb-6">
@@ -54,17 +62,26 @@ export const HistoryToolbar: React.FC<HistoryToolbarProps> = ({
             </Button>
           </div>
         )}
-        <button
-          onClick={onToggleSelectMode}
-          className="px-3 py-2 rounded-lg font-medium transition-colors"
-          style={{
-            backgroundColor: selectMode ? '#dc2626' : 'var(--color-bg-tertiary)',
-            color: selectMode ? 'white' : 'var(--color-text-secondary)'
-          }}
-          title={selectMode ? 'Exit selection mode' : 'Enter selection mode'}
-        >
+      </div>
+
+      <div className="flex items-center space-x-2">
+        {activeTab === 'conversations' && !selectMode && (
+          <Button
+            onClick={onAddConversation}
+            className="bg-purple-600 hover:bg-purple-700 text-sm px-3 py-1 flex items-center"
+          >
+            <Icon className="mr-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus">
+                <path d="M5 12h14"/>
+                <path d="M12 5v14"/>
+              </svg>
+            </Icon>
+            Add Conversation
+          </Button>
+        )}
+        <Button onClick={onToggleSelectMode} variant={selectMode ? "primary" : "secondary"}>
           {selectMode ? 'Cancel' : 'Select'}
-        </button>
+        </Button>
         <div className="flex space-x-2">
           <button
             onClick={() => onTabChange('experiments')}

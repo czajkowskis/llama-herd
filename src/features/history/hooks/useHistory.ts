@@ -262,6 +262,27 @@ export const useHistory = () => {
     setShowBulkDeleteConfirmation(false);
   };
 
+  const loadConversations = async () => {
+    try {
+      console.log('Loading conversations from backend...');
+      let backendConversations = await backendStorageService.getConversations('import');
+      console.log('Backend imported conversations:', backendConversations);
+      backendConversations = backendConversations.map((conv: any) => ({
+        ...conv,
+        importedAt: conv.importedAt || conv.createdAt,
+      }));
+      console.log('Backend conversations after conversion:', backendConversations);
+      const importedConversations = backendConversations.filter(c => c.source === 'import');
+      console.log('Final imported conversations:', importedConversations);
+      console.log('Final conversations count:', importedConversations.length);
+      setConversations(importedConversations);
+    } catch (error: any) {
+      console.error('Failed to load conversations from backend:', error);
+      setError('Failed to load conversations.');
+      setConversations([]);
+    }
+  };
+
   return {
     experiments,
     conversations,
@@ -284,6 +305,7 @@ export const useHistory = () => {
     setActiveTab,
     setEditingExperimentName,
     setEditingConversationName,
+    loadConversations,
     handleViewExperiment,
     handleViewConversation,
     handleBackToList,
