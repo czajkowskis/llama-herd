@@ -122,8 +122,6 @@ export const ConversationViewer: React.FC = () => {
               }}
               onBackToList={handleBackToList}
               getAgentById={(agentId) => selectedConversation.agents.find((a: any) => a.id === agentId)}
-              getContrastColor={() => '#ffffff'}
-              formatTimestamp={(timestamp) => new Date(timestamp).toLocaleTimeString()}
             />
           </div>
         </div>

@@ -125,8 +125,6 @@ export const History: React.FC = () => {
                 }}
                 onBackToList={handleBackToList}
                 getAgentById={(agentId) => foundConversation.agents.find(a => a.id === agentId)}
-                getContrastColor={() => '#ffffff'}
-                formatTimestamp={(timestamp) => new Date(timestamp).toLocaleTimeString()}
               />
             </div>
           </div>

@@ -7,21 +7,18 @@ import { RawJSONModal } from './RawJSONModal';
 import { getStarredMessages, toggleStarredMessage } from '../../../services/uiPreferencesService';
 import { MessageList } from '../../../components/messages/MessageList';
 import { ChatHeader } from './ChatHeader';
+import { getContrastColor, formatTimestamp } from '../utils/conversationParser';
 
 interface ChatViewProps {
   conversation: Conversation;
   onBackToList: () => void;
   getAgentById: (agentId: string) => ConversationAgent | undefined;
-  getContrastColor: (backgroundColor: string) => string;
-  formatTimestamp: (timestamp: string) => string;
 }
 
 export const ChatView: React.FC<ChatViewProps> = ({
   conversation,
   onBackToList,
-  getAgentById,
-  getContrastColor,
-  formatTimestamp
+  getAgentById
 }) => {
   const [showExportPanel, setShowExportPanel] = useState(false);
   const [showRawJSONModal, setShowRawJSONModal] = useState(false);
