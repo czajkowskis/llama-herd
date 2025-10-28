@@ -86,7 +86,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isExpanded, onMouseEnter, onMo
           title="Settings"
         >
           <Icon><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-settings-2"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg></Icon>
-          <span className="truncate">Settings</span>
+          <span className={`font-medium whitespace-nowrap transition-all duration-300 overflow-hidden text-left ${isExpanded ? 'w-40 opacity-100' : 'w-0 opacity-0'}`}>Settings</span>
         </NavLink>
         <NavLink 
           to={ROUTES.ABOUT} 
