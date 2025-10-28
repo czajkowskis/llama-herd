@@ -18,7 +18,7 @@ class ChatRulesModel(BaseModel):
         example="round_robin"
     )
     selector_prompt: Optional[str] = Field(
-        default=None,
+        default="Available roles:\n{roles}\n\nCurrent conversation history:\n{history}\n\nPlease select the most appropriate agent for the next message.",
         description="Custom prompt for SelectorGroupChat to guide agent selection. Can use {roles}, {participants}, and {history} placeholders.",
         example="Available roles:\n{roles}\n\nCurrent conversation history:\n{history}\n\nPlease select the most appropriate agent for the next message."
     )

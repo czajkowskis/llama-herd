@@ -1,5 +1,5 @@
 import { API_BASE_URL, buildWebSocketUrl } from '../config';
-import { Agent, Task, ExperimentStatusResponse } from '../types/index.d';
+import { Agent, Task, ExperimentStatusResponse, ChatRules } from '../types/index.d';
 import ReconnectingWebSocket from './ReconnectingWebSocket';
 import { WebSocketMessage } from '../types/api';
 
@@ -139,4 +139,18 @@ class ExperimentService {
   }
 }
 
-export const experimentService = new ExperimentService(); 
+export const experimentService = new ExperimentService();
+
+export const getDefaultChatRules = async (): Promise<ChatRules> => {
+  const response = await fetch(`${API_BASE_URL}/api/experiments/default-chat-rules`);
+  if (!response.ok) {
+    // Fallback to sensible defaults on failure
+    console.error('Failed to fetch default chat rules. Using fallback.');
+    return { 
+      maxRounds: 8, 
+      teamType: 'round_robin',
+      selectorPrompt: "Available roles:\n{roles}\n\nCurrent conversation history:\n{history}\n\nPlease select the most appropriate agent for the next message."
+    };
+  }
+  return response.json();
+}; 

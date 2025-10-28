@@ -2,8 +2,8 @@
 
 export interface ChatRules {
   maxRounds: number;
-  teamType: 'round_robin' | 'selector';
-  selectorPrompt: string;
+  teamType: 'round_robin' | 'selector' | 'magentic_one' | 'swarm' | 'graph_flow';
+  selectorPrompt?: string;
   allowRepeatSpeaker?: boolean;
   maxConsecutiveAutoReply?: number;
   terminationCondition?: string;

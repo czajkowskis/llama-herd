@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Agent, Task, ChatRules } from '../../../types/index.d';
 import { ollamaService } from '../../../services/ollamaService';
-import { experimentService } from '../../../services/experimentService';
+import { experimentService, getDefaultChatRules } from '../../../services/experimentService';
 import { backendStorageService } from '../../../services/backendStorageService';
 import { ConfirmationPopup } from '../../../components/ui/ConfirmationPopup';
 import { TaskCreationSection } from './TaskCreationSection';
@@ -33,24 +33,31 @@ export const NewExperiment: React.FC<NewExperimentProps> = ({ onExperimentStart 
   const [chatRules, setChatRules] = useState<ChatRules>({ 
     maxRounds: 8, 
     teamType: 'round_robin',
-    selectorPrompt: "Available roles:\n{roles}\n\nCurrent conversation history:\n{history}\n\nPlease select the most appropriate agent for the next message."
+    selectorPrompt: undefined,
   });
 
   // Fetch Ollama models on component mount
   useEffect(() => {
-    const fetchModels = async () => {
-      setIsLoadingOllamaModels(true);
-      setOllamaError(null);
-      try {
-        const models = await ollamaService.listModels();
-        setOllamaModels(models);
-      } catch (err: any) {
-        setOllamaError(err.message || 'Failed to fetch Ollama models.');
-      } finally {
-        setIsLoadingOllamaModels(false);
-      }
-    };
-    fetchModels();
+    setIsLoadingOllamaModels(true);
+    ollamaService.listModels()
+      .then(setOllamaModels)
+      .catch((err: Error) => {
+        setOllamaError(err.message || 'Failed to fetch Ollama models. Please check your connection in Settings.');
+        console.error(err);
+      })
+      .finally(() => setIsLoadingOllamaModels(false));
+  }, []);
+
+  // Fetch default chat rules on component mount
+  useEffect(() => {
+    getDefaultChatRules()
+      .then(rules => {
+        setChatRules(rules);
+      })
+      .catch(err => {
+        console.error("Failed to load default chat rules:", err);
+        // State already has sensible defaults, so we can ignore the error
+      });
   }, []);
 
   // Update experiment ready state when task or agents change

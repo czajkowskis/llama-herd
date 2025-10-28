@@ -133,13 +133,10 @@ export const AgentList: React.FC<AgentListProps> = ({
             <select
               value={chatRules.teamType}
               onChange={(e) => {
-                const newTeamType = e.target.value as 'round_robin' | 'selector';
-                // Auto-set allowRepeatSpeaker based on team type
-                const newAllowRepeat = newTeamType === 'selector' ? true : false;
+                const newTeamType = e.target.value;
                 onChatRulesChange({ 
                   ...chatRules, 
-                  teamType: newTeamType,
-                  allowRepeatSpeaker: newAllowRepeat 
+                  teamType: newTeamType as ChatRules['teamType'],
                 });
               }}
               className="w-full p-4 rounded-xl border focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200"
@@ -150,8 +147,11 @@ export const AgentList: React.FC<AgentListProps> = ({
                 fontSize: '1rem'
               }}
             >
-              <option value="selector" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>Selector</option>
               <option value="round_robin" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>Round Robin</option>
+              <option value="selector" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>Selector</option>
+              <option value="magentic_one" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>Magentic</option>
+              <option value="swarm" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>Swarm</option>
+              <option value="graph_flow" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>Graph Flow</option>
             </select>
           </div>
         </div>
@@ -173,7 +173,7 @@ export const AgentList: React.FC<AgentListProps> = ({
               </div>
             </div>
             <textarea
-              value={chatRules.selectorPrompt}
+              value={chatRules.selectorPrompt || ''}
               onChange={(e) => onChatRulesChange({ ...chatRules, selectorPrompt: e.target.value })}
               rows={8}
               className="w-full p-4 rounded-xl border focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200"
