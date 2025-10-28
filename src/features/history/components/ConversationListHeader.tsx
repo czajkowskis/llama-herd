@@ -2,15 +2,13 @@ import React from 'react';
 import { Icon } from '../../../components/ui/Icon';
 import { Button } from '../../../components/ui/Button';
 
-interface ConversationViewerHeaderProps {
+interface ConversationListHeaderProps {
   conversationsCount: number;
-  showUploadInterface: boolean;
   onToggleUploadInterface: () => void;
 }
 
-export const ConversationViewerHeader: React.FC<ConversationViewerHeaderProps> = ({
+export const ConversationListHeader: React.FC<ConversationListHeaderProps> = ({
   conversationsCount,
-  showUploadInterface,
   onToggleUploadInterface,
 }) => {
   return (
@@ -22,10 +20,10 @@ export const ConversationViewerHeader: React.FC<ConversationViewerHeaderProps> =
           </svg>
         </Icon>
         <h2 className="text-xl font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-          Conversation Viewer
+          Conversations
         </h2>
       </div>
-      {conversationsCount > 0 && !showUploadInterface && (
+      {conversationsCount > 0 && (
         <Button 
           onClick={onToggleUploadInterface}
           className="bg-purple-600 hover:bg-purple-700 text-sm px-3 py-1 flex items-center"
@@ -37,20 +35,6 @@ export const ConversationViewerHeader: React.FC<ConversationViewerHeaderProps> =
             </svg>
           </Icon>
           Add Conversation
-        </Button>
-      )}
-      {conversationsCount > 0 && showUploadInterface && (
-        <Button 
-          onClick={onToggleUploadInterface}
-          className="bg-gray-600 hover:bg-gray-700 text-sm px-3 py-1 flex items-center"
-        >
-          <Icon className="mr-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-message-circle">
-              <path d="m12 19-7-7 7-7"/>
-              <path d="M19 12H5"/>
-            </svg>
-          </Icon>
-          Back to Conversations
         </Button>
       )}
     </div>

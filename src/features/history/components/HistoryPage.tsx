@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ChatView } from './ChatView';
 import { Button } from '../../../components/ui/Button';
 import { ConfirmationPopup } from '../../../components/ui/ConfirmationPopup';
@@ -8,13 +9,11 @@ import { HistoryToolbar } from '../../../components/lists/HistoryToolbar';
 import { useHistory } from '../hooks/useHistory';
 import { ExperimentList } from './ExperimentList';
 import { ConversationList } from './ConversationList';
-import { UploadInterface } from '../../../components/common/UploadInterface';
-import { useConversationUpload } from '../hooks/useConversationUpload';
-import { useAgentConfiguration } from '../hooks/useAgentConfiguration';
-import { AgentConfiguration } from '../../experiments/components/AgentConfiguration';
-import { backendStorageService } from '../../../services/backendStorageService';
+import { ConversationListHeader } from './ConversationListHeader';
 
 export const History: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const {
     experiments,
     conversations,
@@ -62,85 +61,13 @@ export const History: React.FC = () => {
     cancelBulkDelete,
     setSelectMode,
     setSelectedItems,
-    loadConversations,
   } = useHistory();
 
-  const [showUpload, setShowUpload] = React.useState(false);
-  const upload = useConversationUpload();
-  const agentConfig = useAgentConfiguration();
-  const [isConfiguring, setIsConfiguring] = React.useState(false);
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    await upload.handleFileUpload(event);
-    if (upload.pendingConversations.length > 0) {
-      agentConfig.setAgents(upload.pendingConversations[0].agents);
-      setIsConfiguring(true);
-      setShowUpload(false);
+  React.useEffect(() => {
+    if (location.state?.activeTab) {
+      setActiveTab(location.state.activeTab);
     }
-  };
-
-  const handleConfirmConfiguration = async () => {
-    const { hasDuplicateColors, hasDuplicateNames } = agentConfig.validateAgents();
-    if (hasDuplicateColors || hasDuplicateNames) {
-      // Handle errors appropriately
-      return;
-    }
-    const currentPending = upload.pendingConversations[upload.pendingConversationIndex];
-    const updatedConversation = { ...currentPending, agents: agentConfig.agents };
-    
-    const success = await backendStorageService.saveConversation(updatedConversation);
-
-    if (!success) {
-      // Handle save error
-      console.error("Failed to save conversation");
-      return;
-    }
-    
-    if (upload.pendingConversationIndex < upload.pendingConversations.length - 1) {
-      const nextIndex = upload.pendingConversationIndex + 1;
-      upload.setPendingConversationIndex(nextIndex);
-      agentConfig.setAgents(upload.pendingConversations[nextIndex].agents);
-    } else {
-      setIsConfiguring(false);
-      upload.clearPendingConversations();
-      loadConversations();
-      setActiveTab('conversations');
-    }
-  };
-
-  if (isConfiguring) {
-    return (
-      <AgentConfiguration
-        agents={agentConfig.agents}
-        pendingConversations={upload.pendingConversations}
-        pendingConversationIndex={upload.pendingConversationIndex}
-        isEditingConversationTitle={false}
-        editingConversationTitle=""
-        colorError={agentConfig.colorError}
-        nameError={agentConfig.nameError}
-        showColorPicker={agentConfig.showColorPicker}
-        editingAgentId={agentConfig.editingAgentId}
-        onAgentUpdate={agentConfig.handleAgentUpdate}
-        onConfirmConfiguration={handleConfirmConfiguration}
-        onStartEditConversationTitle={() => {}}
-        onSaveConversationTitle={() => {}}
-        onCancelEditConversationTitle={() => {}}
-        onConversationTitleChange={() => {}}
-        onConversationTitleKeyPress={() => {}}
-        onColorPickerToggle={(agentId) => {
-          agentConfig.setShowColorPicker(!agentConfig.showColorPicker);
-          agentConfig.setEditingAgentId(agentId);
-        }}
-        onColorSelect={(color) => {
-          agentConfig.handleAgentUpdate(agentConfig.editingAgentId, { color });
-          agentConfig.setShowColorPicker(false);
-        }}
-        isColorUsed={agentConfig.isColorUsedFn}
-        getAvailableColorsCount={agentConfig.getAvailableColorsCountFn}
-        isNameUsed={agentConfig.isNameUsedFn}
-      />
-    );
-  }
+  }, [location.state, setActiveTab]);
 
   if (loading) {
     return (
@@ -250,35 +177,32 @@ export const History: React.FC = () => {
             }}
             onSelectAll={handleSelectAll}
             onBulkDelete={handleBulkDelete}
-            onAddConversation={() => setShowUpload(true)}
+            onAddConversation={() => navigate('/import-conversations')}
           />
 
-          {showUpload ? (
-            <UploadInterface
-              conversations={conversations}
-              isUploading={upload.isUploading}
-              uploadError={upload.uploadError}
-              onFileUpload={handleFileUpload}
-            />
-          ) : (
-            <div className="space-y-4">
-              {activeTab === 'experiments' ? (
-                <ExperimentList
-                  experiments={experiments}
-                  selectedItems={selectedItems}
-                  editingExperimentId={editingExperimentId}
-                  editingExperimentName={editingExperimentName}
-                  selectMode={selectMode}
-                  handleSelectItem={handleSelectItem}
-                  handleViewExperiment={handleViewExperiment}
-                  handleStartEditExperimentName={handleStartEditExperimentName}
-                  handleDeleteExperiment={handleDeleteExperiment}
-                  handleSaveExperimentName={handleSaveExperimentName}
-                  handleCancelEditExperimentName={handleCancelEditExperimentName}
-                  setEditingExperimentName={setEditingExperimentName}
-                  handleExperimentNameKeyPress={handleExperimentNameKeyPress}
+          <div className="space-y-4 mt-6">
+            {activeTab === 'experiments' ? (
+              <ExperimentList
+                experiments={experiments}
+                selectedItems={selectedItems}
+                editingExperimentId={editingExperimentId}
+                editingExperimentName={editingExperimentName}
+                selectMode={selectMode}
+                handleSelectItem={handleSelectItem}
+                handleViewExperiment={handleViewExperiment}
+                handleStartEditExperimentName={handleStartEditExperimentName}
+                handleDeleteExperiment={handleDeleteExperiment}
+                handleSaveExperimentName={handleSaveExperimentName}
+                handleCancelEditExperimentName={handleCancelEditExperimentName}
+                setEditingExperimentName={setEditingExperimentName}
+                handleExperimentNameKeyPress={handleExperimentNameKeyPress}
+              />
+            ) : (
+              <>
+                <ConversationListHeader
+                  conversationsCount={conversations.length}
+                  onToggleUploadInterface={() => navigate('/import-conversations')}
                 />
-              ) : (
                 <ConversationList
                   conversations={conversations}
                   selectedItems={selectedItems}
@@ -295,9 +219,9 @@ export const History: React.FC = () => {
                   setEditingConversationName={setEditingConversationName}
                   handleConversationNameKeyPress={handleConversationNameKeyPress}
                 />
-              )}
-            </div>
-          )}
+              </>
+            )}
+          </div>
         </div>
       </div>
 
