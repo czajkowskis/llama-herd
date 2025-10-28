@@ -6,6 +6,8 @@ interface MessageListProps {
   messages: Message[];
   agents: ConversationAgent[];
   isViewingLive: boolean;
+  isFollowing: boolean;
+  onFollowChange: (isFollowing: boolean) => void;
   newlyArrivedMessages: Set<string>;
   starredMessages: Set<string>;
   exportSelection: Set<string>;
@@ -22,6 +24,8 @@ export const MessageList: React.FC<MessageListProps> = ({
   messages,
   agents,
   isViewingLive,
+  isFollowing,
+  onFollowChange,
   newlyArrivedMessages,
   starredMessages,
   exportSelection,
@@ -31,13 +35,31 @@ export const MessageList: React.FC<MessageListProps> = ({
   onCreateExportSelection
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when messages change (only in live view)
   useEffect(() => {
-    if (isViewingLive) {
+    if (isViewingLive && isFollowing) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isViewingLive]);
+  }, [messages, isViewingLive, isFollowing]);
+
+  // Handle user scrolling to determine if they are following
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      // Allow a small tolerance
+      const isAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 5;
+      if (isFollowing !== isAtBottom) {
+        onFollowChange(isAtBottom);
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [onFollowChange, isFollowing]);
 
   // Filter out System messages from display
   const displayMessages = messages.filter((m) => {
@@ -53,7 +75,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   };
 
   return (
-    <div className={`message-list rounded-xl p-4 h-[600px] overflow-y-auto space-y-4 ${!isViewingLive ? 'historical-view-dimmed' : ''}`} style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>
+    <div ref={scrollContainerRef} className={`message-list rounded-xl p-4 h-[600px] overflow-y-auto space-y-4 ${!isViewingLive ? 'historical-view-dimmed' : ''}`} style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>
       {displayMessages.map((message, index) => {
         const agent = getAgentById(message.agentId);
         if (!agent) return null;

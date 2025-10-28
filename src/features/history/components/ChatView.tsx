@@ -75,6 +75,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
           messages={conversation.messages}
           agents={conversation.agents}
           isViewingLive={false}
+          isFollowing={false}
+          onFollowChange={() => {}}
           newlyArrivedMessages={new Set()}
           starredMessages={starredMessages}
           exportSelection={exportSelection}

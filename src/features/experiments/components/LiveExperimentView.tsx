@@ -40,6 +40,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
   const [debugMessages, setDebugMessages] = useState<DebugMessage[]>([]);
   // Removed agentInfos state as it's no longer used
   const [isViewingLive, setIsViewingLive] = useState<boolean>(true);
+  const [isFollowing, setIsFollowing] = useState<boolean>(true);
   const [showExportPanel, setShowExportPanel] = useState(false);
   const [showRawJSONModal, setShowRawJSONModal] = useState(false);
   const [selectedMessageForJSON, setSelectedMessageForJSON] = useState<Message | null>(null);
@@ -48,6 +49,16 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
   const [newlyArrivedMessages, setNewlyArrivedMessages] = useState<Set<string>>(new Set());
   const [totalIterations, setTotalIterations] = useState<number>(1);
   const [currentIteration, setCurrentIteration] = useState<number>(0);
+
+  // Refs for state values to avoid stale closures in WebSocket handler
+  const isFollowingRef = useRef(isFollowing);
+  useEffect(() => { isFollowingRef.current = isFollowing; }, [isFollowing]);
+
+  const isViewingLiveRef = useRef(isViewingLive);
+  useEffect(() => { isViewingLiveRef.current = isViewingLive; }, [isViewingLive]);
+
+  const liveConversationRef = useRef(liveConversation);
+  useEffect(() => { liveConversationRef.current = liveConversation; }, [liveConversation]);
 
   // Track active model pulls
   const { activePulls } = usePullTasks();
@@ -147,7 +158,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
           setLiveConversation(prev => {
             if (prev) {
               const updated = { ...prev, messages: [...prev.messages, message.data as Message] };
-              if (isViewingLive) {
+              if (isViewingLiveRef.current && isFollowingRef.current) {
                 setViewConversation(updated);
               }
               return updated;
@@ -169,12 +180,12 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
             }
             
             // If experiment completed, update local storage
-            if (message.data.status === 'completed' && liveConversation) {
+            if (message.data.status === 'completed' && liveConversationRef.current) {
               backendStorageService.saveExperiment({
                 id: experimentId,
-                title: `Experiment: ${liveConversation.title}`,
-                task: { id: '', prompt: liveConversation.title, datasetItems: [] },
-                agents: liveConversation.agents.map(agent => ({
+                title: `Experiment: ${liveConversationRef.current.title}`,
+                task: { id: '', prompt: liveConversationRef.current.title, datasetItems: [] },
+                agents: liveConversationRef.current.agents.map(agent => ({
                   id: agent.id,
                   name: agent.name,
                   prompt: '',
@@ -182,7 +193,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
                   model: agent.model
                 })),
                 status: 'completed',
-                createdAt: liveConversation.createdAt,
+                createdAt: liveConversationRef.current.createdAt,
                 completedAt: new Date().toISOString(),
                 iterations: totalIterations,
                 currentIteration: currentIteration
@@ -206,7 +217,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
             if (isStartSignal) {
               // Conversation start for a new run/iteration: switch context to this new live conversation
               setLiveConversation(incoming);
-              if (isViewingLive) {
+              if (isViewingLiveRef.current && isFollowingRef.current) {
                 setViewConversation(incoming);
               }
               // Clear any pending/buffered messages and reset counters to avoid cross-run mixing
@@ -219,7 +230,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
               setCompletedConversations(prev => {
                 const updated = [...prev, incoming];
                 // When first completed run arrives, switch the view chips on
-                if (prev.length === 0 && !isViewingLive && liveConversation) {
+                if (prev.length === 0 && !isViewingLiveRef.current && liveConversationRef.current && isFollowingRef.current) {
                   setViewConversation(updated[updated.length - 1]);
                 }
                 // Note: Experiment conversations are automatically saved by the backend
@@ -320,6 +331,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
       setViewConversation(liveConversation);
       // Reset message count to enable animations for any new messages
       previousMessageCountRef.current = liveConversation.messages.length;
+      setIsFollowing(true);
     }
   };
 
@@ -394,6 +406,7 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
           onSelectRun={(conversation, isLive) => {
             setIsViewingLive(isLive);
             setViewConversation(conversation);
+            setIsFollowing(isLive);
           }}
           totalIterations={totalIterations}
           currentIteration={currentIteration}
@@ -424,6 +437,8 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
           messages={viewConversation.messages}
           agents={viewConversation.agents}
           isViewingLive={isViewingLive}
+          isFollowing={isFollowing}
+          onFollowChange={setIsFollowing}
           newlyArrivedMessages={newlyArrivedMessages}
           starredMessages={starredMessages}
           exportSelection={exportSelection}
