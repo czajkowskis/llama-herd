@@ -27,7 +27,7 @@ class ChatRulesModel(BaseModel):
     @classmethod
     def validate_team_type(cls, v: str) -> str:
         """Ensure team_type is valid."""
-        valid_types = ["round_robin", "selector", "magentic_one", "swarm", "base", "graph_flow"]
+        valid_types = ["round_robin", "selector"]
         if v not in valid_types:
             raise ValueError(f"team_type must be one of {valid_types}")
         return v 
