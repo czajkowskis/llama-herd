@@ -48,6 +48,7 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
   const [showTemplateManager, setShowTemplateManager] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<string>('');
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
 
   // Select messages: preselected ones if provided, otherwise all messages
@@ -97,6 +98,15 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
     setSelectedMessages(new Set());
   };
 
+  const cancelExport = () => {
+    if (abortController) {
+      abortController.abort();
+      setAbortController(null);
+      setIsExporting(false);
+      setExportProgress(0);
+    }
+  };
+
   const handleThemeChange = (theme: 'dark' | 'light' | 'custom') => {
     const themeColors = exportThemes[theme];
     setExportStyle(prev => ({
@@ -118,33 +128,50 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
     setExportError(null);
     setExportProgress(0);
 
+    // Create abort controller for cancellation
+    const controller = new AbortController();
+    setAbortController(controller);
+
     try {
       const baseFilename = exportMetadata.customFilename || `conversation-export-${new Date().toISOString().split('T')[0]}`;
       const filteredMessages = messages.filter(m => selectedMessages.has(m.id));
       
       if (format === 'png') {
-        if (!previewRef.current) {
-          throw new Error('Preview element not found');
-        }
-        setExportProgress(25);
-        await ExportService.exportAsPNG(previewRef.current, exportStyle, baseFilename);
-        setExportProgress(100);
+        await ExportService.exportAsPNG(
+          filteredMessages,
+          agents,
+          exportStyle,
+          baseFilename,
+          getAgentById,
+          formatTimestamp,
+          (progress) => setExportProgress(progress),
+          controller
+        );
       } else if (format === 'svg') {
-        if (!previewRef.current) {
-          throw new Error('Preview element not found');
-        }
-        setExportProgress(25);
-        await ExportService.exportAsSVG(previewRef.current, exportStyle, baseFilename);
-        setExportProgress(100);
+        await ExportService.exportAsSVG(
+          filteredMessages,
+          agents,
+          exportStyle,
+          baseFilename,
+          getAgentById,
+          formatTimestamp,
+          (progress) => setExportProgress(progress),
+          controller
+        );
       } else if (format === 'json') {
         setExportProgress(50);
         ExportService.exportAsJSON(filteredMessages, agents, baseFilename);
         setExportProgress(100);
       }
     } catch (error: any) {
-      setExportError(error.message || 'Export failed');
+      if (error.message === 'Export cancelled') {
+        setExportError('Export cancelled');
+      } else {
+        setExportError(error.message || 'Export failed');
+      }
     } finally {
       setIsExporting(false);
+      setAbortController(null);
       setTimeout(() => setExportProgress(0), 1000);
     }
   };
@@ -372,6 +399,23 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
                       onChange={(e) => setExportStyle(prev => ({ ...prev, padding: parseInt(e.target.value) }))}
                       className="w-full"
                     />
+                  </div>
+
+                  {/* Scale/Quality */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Quality Scale: {exportStyle.scale || 2}x
+                    </label>
+                    <select
+                      value={exportStyle.scale || 2}
+                      onChange={(e) => setExportStyle(prev => ({ ...prev, scale: parseInt(e.target.value) }))}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm"
+                    >
+                      <option value={1}>1x (Fast)</option>
+                      <option value={2}>2x (Balanced)</option>
+                      <option value={3}>3x (High Quality)</option>
+                      <option value={4}>4x (Maximum Quality)</option>
+                    </select>
                   </div>
 
                   {/* Toggle Options */}
@@ -629,6 +673,28 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
               >
                 {isExporting ? 'Exporting...' : 'Export as JSON'}
               </Button>
+
+              {/* Progress Bar */}
+              {isExporting && exportProgress > 0 && (
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-300">Export Progress</span>
+                    <span className="text-sm text-gray-400">{Math.round(exportProgress)}%</span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-2">
+                    <div 
+                      className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${exportProgress}%` }}
+                    />
+                  </div>
+                  <Button
+                    onClick={cancelExport}
+                    className="w-full mt-2 bg-red-600 hover:bg-red-700"
+                  >
+                    Cancel Export
+                  </Button>
+                </div>
+              )}
 
               {exportError && (
                 <div className="mt-4 p-3 bg-red-900/20 border border-red-500/50 rounded-lg">

@@ -1,5 +1,3 @@
-import html2canvas from 'html2canvas';
-
 export interface ExportStyle {
   theme: 'dark' | 'light' | 'custom';
   backgroundColor: string;
@@ -13,6 +11,7 @@ export interface ExportStyle {
   showModels: boolean;
   showAgentAvatars: boolean;
   customCSS?: string;
+  scale?: number; // Quality multiplier (1x, 2x, 3x, 4x)
 }
 
 export interface Message {
@@ -42,6 +41,7 @@ export const defaultExportStyle: ExportStyle = {
   showTimestamps: true,
   showModels: true,
   showAgentAvatars: true,
+  scale: 2,
 };
 
 export const exportThemes = {
@@ -65,47 +65,365 @@ export const exportThemes = {
   },
 };
 
+export interface ProgressCallback {
+  (progress: number): void;
+}
+
+export interface CanvasRendererOptions {
+  messages: Message[];
+  agents: ConversationAgent[];
+  style: ExportStyle;
+  getAgentById: (agentId: string) => ConversationAgent | undefined;
+  formatTimestamp: (timestamp: string) => string;
+  onProgress?: ProgressCallback;
+  abortController?: AbortController;
+}
+
+export class CanvasRenderer {
+  private canvas: HTMLCanvasElement;
+  private ctx: CanvasRenderingContext2D;
+  private options: CanvasRendererOptions;
+  private scale: number;
+  private padding: number;
+  private fontSize: number;
+  private fontFamily: string;
+  private lineHeight: number;
+  private messageSpacing: number;
+  private avatarSize: number;
+  private borderRadius: number;
+
+  constructor(options: CanvasRendererOptions) {
+    this.options = options;
+    this.scale = options.style.scale || 2;
+    this.padding = options.style.padding;
+    this.fontSize = options.style.fontSize;
+    this.fontFamily = options.style.fontFamily;
+    this.lineHeight = this.fontSize * 1.4;
+    this.messageSpacing = 16;
+    this.avatarSize = 32;
+    this.borderRadius = options.style.borderRadius;
+
+    this.canvas = document.createElement('canvas');
+    this.ctx = this.canvas.getContext('2d')!;
+    
+    if (!this.ctx) {
+      throw new Error('Could not get canvas 2D context');
+    }
+  }
+
+  private stripMarkdown(text: string): string {
+    // Convert markdown to plain text with basic formatting indicators
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '$1') // Bold
+      .replace(/\*(.*?)\*/g, '$1') // Italic
+      .replace(/`(.*?)`/g, '$1') // Inline code
+      .replace(/```[\s\S]*?```/g, '[Code Block]') // Code blocks
+      .replace(/#{1,6}\s+/g, '') // Headers
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Links
+      .replace(/^\s*[-*+]\s+/gm, '• ') // Lists
+      .replace(/^\s*\d+\.\s+/gm, '') // Numbered lists
+      .trim();
+  }
+
+  private wrapText(text: string, maxWidth: number): string[] {
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+
+    for (const word of words) {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      const metrics = this.ctx.measureText(testLine);
+      
+      if (metrics.width > maxWidth && currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+    
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+    
+    return lines;
+  }
+
+  private calculateDimensions(): { width: number; height: number } {
+    const contentWidth = 800; // Fixed width for consistency
+    const maxContentWidth = contentWidth - (this.padding * 2);
+    
+    let totalHeight = this.padding * 2; // Top and bottom padding
+    let currentY = this.padding;
+
+    for (const message of this.options.messages) {
+      const agent = this.options.getAgentById(message.agentId);
+      if (!agent) continue;
+
+      // Set font for measurement
+      this.ctx.font = `${this.fontSize}px ${this.fontFamily}`;
+      
+      // Calculate header height
+      let headerHeight = this.lineHeight;
+      if (this.options.style.showAgentAvatars) {
+        headerHeight = Math.max(headerHeight, this.avatarSize);
+      }
+
+      // Calculate content height
+      const plainText = this.stripMarkdown(message.content);
+      const wrappedLines = this.wrapText(plainText, maxContentWidth - (this.options.style.showAgentAvatars ? this.avatarSize + 12 : 0));
+      const contentHeight = wrappedLines.length * this.lineHeight;
+
+      // Add message height
+      totalHeight += headerHeight + contentHeight + this.messageSpacing + (this.padding * 2);
+    }
+
+    return {
+      width: contentWidth,
+      height: totalHeight
+    };
+  }
+
+  private async loadFonts(): Promise<void> {
+    try {
+      await document.fonts.load(`${this.fontSize}px ${this.fontFamily}`);
+    } catch (error) {
+      console.warn('Failed to load custom font, using fallback');
+    }
+  }
+
+  private drawRoundedRect(x: number, y: number, width: number, height: number, radius: number, fillColor: string): void {
+    this.ctx.fillStyle = fillColor;
+    this.ctx.beginPath();
+    this.ctx.roundRect(x, y, width, height, radius);
+    this.ctx.fill();
+  }
+
+  private drawAvatar(x: number, y: number, agent: ConversationAgent): void {
+    // Draw circular background
+    this.ctx.fillStyle = agent.color;
+    this.ctx.beginPath();
+    this.ctx.arc(x + this.avatarSize / 2, y + this.avatarSize / 2, this.avatarSize / 2, 0, 2 * Math.PI);
+    this.ctx.fill();
+
+    // Draw initial
+    this.ctx.fillStyle = '#ffffff';
+    this.ctx.font = `bold ${this.fontSize}px ${this.fontFamily}`;
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+    this.ctx.fillText(
+      agent.name.charAt(0).toUpperCase(),
+      x + this.avatarSize / 2,
+      y + this.avatarSize / 2
+    );
+    this.ctx.textAlign = 'left';
+    this.ctx.textBaseline = 'alphabetic';
+  }
+
+  private drawMessage(message: Message, agent: ConversationAgent, x: number, y: number, width: number): number {
+    const contentWidth = width - (this.options.style.showAgentAvatars ? this.avatarSize + 12 : 0);
+    const contentX = this.options.style.showAgentAvatars ? x + this.avatarSize + 12 : x;
+
+    // Draw message background
+    const messageHeight = this.calculateMessageHeight(message, contentWidth);
+    this.drawRoundedRect(x, y, width, messageHeight, this.borderRadius, this.options.style.messageBackgroundColor);
+
+    // Draw avatar if enabled
+    if (this.options.style.showAgentAvatars) {
+      this.drawAvatar(x + this.padding, y + this.padding, agent);
+    }
+
+    // Draw header (name, timestamp, model)
+    this.ctx.font = `${this.fontSize}px ${this.fontFamily}`;
+    this.ctx.fillStyle = this.options.style.textColor;
+    
+    let headerY = y + this.padding;
+    if (this.options.style.showAgentAvatars) {
+      headerY += this.avatarSize / 2 - this.lineHeight / 2;
+    }
+
+    // Agent name
+    this.ctx.font = `bold ${this.fontSize}px ${this.fontFamily}`;
+    this.ctx.fillText(agent.name, contentX, headerY);
+
+    // Timestamp and model
+    if (this.options.style.showTimestamps || this.options.style.showModels) {
+      this.ctx.font = `${this.fontSize * 0.8}px ${this.fontFamily}`;
+      this.ctx.fillStyle = this.options.style.textColor + '80'; // 50% opacity
+      
+      let infoText = '';
+      if (this.options.style.showTimestamps) {
+        infoText += this.options.formatTimestamp(message.timestamp);
+      }
+      if (this.options.style.showModels) {
+        if (infoText) infoText += ' • ';
+        infoText += agent.model;
+      }
+      
+      this.ctx.fillText(infoText, contentX, headerY + this.lineHeight);
+    }
+
+    // Draw content
+    const contentY = headerY + (this.options.style.showTimestamps || this.options.style.showModels ? this.lineHeight * 1.5 : this.lineHeight);
+    this.ctx.font = `${this.fontSize}px ${this.fontFamily}`;
+    this.ctx.fillStyle = this.options.style.textColor;
+
+    const plainText = this.stripMarkdown(message.content);
+    const wrappedLines = this.wrapText(plainText, contentWidth);
+    
+    for (let i = 0; i < wrappedLines.length; i++) {
+      this.ctx.fillText(wrappedLines[i], contentX, contentY + (i * this.lineHeight));
+    }
+
+    return messageHeight + this.messageSpacing;
+  }
+
+  private calculateMessageHeight(message: Message, contentWidth: number): number {
+    this.ctx.font = `${this.fontSize}px ${this.fontFamily}`;
+    
+    const plainText = this.stripMarkdown(message.content);
+    const wrappedLines = this.wrapText(plainText, contentWidth);
+    
+    let height = this.padding * 2; // Top and bottom padding
+    
+    // Header height
+    let headerHeight = this.lineHeight;
+    if (this.options.style.showAgentAvatars) {
+      headerHeight = Math.max(headerHeight, this.avatarSize);
+    }
+    height += headerHeight;
+    
+    // Add space for timestamp/model if shown
+    if (this.options.style.showTimestamps || this.options.style.showModels) {
+      height += this.lineHeight * 0.5;
+    }
+    
+    // Content height
+    height += wrappedLines.length * this.lineHeight;
+    
+    return height;
+  }
+
+  async render(): Promise<HTMLCanvasElement> {
+    // Check for cancellation
+    if (this.options.abortController?.signal.aborted) {
+      throw new Error('Export cancelled');
+    }
+
+    // Load fonts
+    await this.loadFonts();
+
+    // Calculate dimensions
+    const dimensions = this.calculateDimensions();
+    
+    // Set canvas size
+    this.canvas.width = dimensions.width * this.scale;
+    this.canvas.height = dimensions.height * this.scale;
+    
+    // Scale context
+    this.ctx.scale(this.scale, this.scale);
+    
+    // Draw background
+    this.ctx.fillStyle = this.options.style.backgroundColor;
+    this.ctx.fillRect(0, 0, dimensions.width, dimensions.height);
+
+    // Draw messages
+    let currentY = this.padding;
+    const messageWidth = dimensions.width - (this.padding * 2);
+
+    for (let i = 0; i < this.options.messages.length; i++) {
+      // Check for cancellation
+      if (this.options.abortController?.signal.aborted) {
+        throw new Error('Export cancelled');
+      }
+
+      const message = this.options.messages[i];
+      const agent = this.options.getAgentById(message.agentId);
+      if (!agent) continue;
+
+      const messageHeight = this.drawMessage(message, agent, this.padding, currentY, messageWidth);
+      currentY += messageHeight;
+
+      // Report progress
+      if (this.options.onProgress) {
+        const progress = ((i + 1) / this.options.messages.length) * 100;
+        this.options.onProgress(progress);
+      }
+    }
+
+    // Ensure progress reaches 100% even if no messages
+    if (this.options.messages.length === 0 && this.options.onProgress) {
+      this.options.onProgress(100);
+    }
+
+    return this.canvas;
+  }
+}
+
 export class ExportService {
   static async exportAsPNG(
-    element: HTMLElement,
+    messages: Message[],
+    agents: ConversationAgent[],
     style: ExportStyle,
-    filename: string = 'conversation'
+    filename: string = 'conversation',
+    getAgentById: (agentId: string) => ConversationAgent | undefined,
+    formatTimestamp: (timestamp: string) => string,
+    onProgress?: ProgressCallback,
+    abortController?: AbortController
   ): Promise<void> {
     try {
-      const canvas = await html2canvas(element, {
-        backgroundColor: style.backgroundColor,
-        scale: 2, // Higher quality
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
+      const renderer = new CanvasRenderer({
+        messages,
+        agents,
+        style,
+        getAgentById,
+        formatTimestamp,
+        onProgress,
+        abortController
       });
 
+      const canvas = await renderer.render();
+      
+      // Create download link
       const link = document.createElement('a');
       link.download = `${filename}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message === 'Export cancelled') {
+        throw error; // Re-throw cancellation errors
+      }
       console.error('Error exporting as PNG:', error);
-      throw new Error('Failed to export as PNG');
+      throw new Error(`Failed to export as PNG: ${error.message}`);
     }
   }
 
   static async exportAsSVG(
-    element: HTMLElement,
+    messages: Message[],
+    agents: ConversationAgent[],
     style: ExportStyle,
-    filename: string = 'conversation'
+    filename: string = 'conversation',
+    getAgentById: (agentId: string) => ConversationAgent | undefined,
+    formatTimestamp: (timestamp: string) => string,
+    onProgress?: ProgressCallback,
+    abortController?: AbortController
   ): Promise<void> {
     try {
-      // Convert HTML to SVG using html2canvas first, then convert to SVG
-      const canvas = await html2canvas(element, {
-        backgroundColor: style.backgroundColor,
-        scale: 1,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
+      // For now, use CanvasRenderer to create PNG, then wrap in SVG
+      // This maintains the existing behavior while removing html2canvas dependency
+      const renderer = new CanvasRenderer({
+        messages,
+        agents,
+        style,
+        getAgentById,
+        formatTimestamp,
+        onProgress,
+        abortController
       });
 
-      // Create SVG wrapper
+      const canvas = await renderer.render();
+      
+      // Create SVG wrapper around the PNG
       const svg = this.canvasToSVG(canvas, style);
       
       const blob = new Blob([svg], { type: 'image/svg+xml' });
@@ -117,9 +435,12 @@ export class ExportService {
       link.click();
       
       URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message === 'Export cancelled') {
+        throw error; // Re-throw cancellation errors
+      }
       console.error('Error exporting as SVG:', error);
-      throw new Error('Failed to export as SVG');
+      throw new Error(`Failed to export as SVG: ${error.message}`);
     }
   }
 
