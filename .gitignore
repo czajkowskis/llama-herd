@@ -71,8 +71,13 @@ MANIFEST
 logs/
 
 # Data directories
-backend/data/
+backend/data/*
+# Exception: Only track .gitkeep files to preserve directory structure (no data files)
+!backend/data/.gitkeep
+!backend/data/models/.gitkeep
 data/
+# Exception: Include frontend model catalog (source code, not runtime data)
+!src/data/modelCatalog.ts
 
 # IDE
 .vscode/

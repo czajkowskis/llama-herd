@@ -40,15 +40,17 @@ cd llama-herd
 
 #### 2. Configure Environment (Optional)
 
-```bash
-# Copy the example environment file
-cp env.example .env
+**Note:** Environment configuration is optional for Docker setup as environment variables are set in `docker-compose.yml`. For local development without Docker, create `.env` files based on the configuration sections below.
 
-# Edit .env with your preferred settings (optional)
-# The defaults work well for most use cases
+#### 3. Ensure Data Directory Exists
+
+```bash
+# The backend/data directory structure is tracked in git via .gitkeep files
+# However, ensure it exists before starting:
+mkdir -p backend/data/models
 ```
 
-#### 3. Start with Docker Compose
+#### 4. Start with Docker Compose
 
 **Development Mode (with hot-reload):**
 ```bash
@@ -71,7 +73,7 @@ docker-compose exec ollama ollama pull codellama
 docker-compose exec ollama ollama pull <model-name>
 ```
 
-#### 5. Access the Application
+#### 6. Access the Application
 
 - **Development**: http://localhost:3000
 - **Production**: http://localhost:80
@@ -79,7 +81,7 @@ docker-compose exec ollama ollama pull <model-name>
 - **API Documentation**: http://localhost:8000/docs
 - **Ollama API**: http://localhost:11435
 
-#### 6. Useful Docker Commands
+#### 7. Useful Docker Commands
 
 ```bash
 # View logs
@@ -343,11 +345,25 @@ pkill ollama
 ```
 
 **2. Permission Issues**
+
+**Data Directory Permissions:**
 ```bash
-# Fix Docker permissions (Linux)
+# If backend/data directory has permission issues, fix ownership
+sudo chown -R $USER:$USER backend/data
+
+# Or ensure the directory exists before starting containers
+mkdir -p backend/data/models backend/data/experiments backend/data/imported_conversations
+chmod 755 backend/data backend/data/models backend/data/experiments backend/data/imported_conversations
+```
+
+**Docker Permissions (Linux):**
+```bash
+# Fix Docker permissions
 sudo usermod -aG docker $USER
 # Log out and back in, then try again
 ```
+
+**Note:** The `backend/data/` directory structure is tracked in git via `.gitkeep` files. However, if Docker creates the directory as root (especially on Linux), you may need to fix ownership manually.
 
 **3. Container Won't Start**
 ```bash
@@ -389,7 +405,14 @@ docker volume ls | grep llama-herd
 
 # Inspect volume contents
 docker run --rm -v llama-herd-experiment-data:/data alpine ls -la /data
+
+# Ensure backend/data directory exists and has correct permissions
+mkdir -p backend/data/models backend/data/experiments backend/data/imported_conversations
+# On Linux/Mac, set permissions:
+chmod 755 backend/data backend/data/models backend/data/experiments backend/data/imported_conversations
 ```
+
+**Note:** The `backend/data/` directory structure is created automatically with `.gitkeep` files to ensure it exists in the repository. However, if you encounter permission issues, you may need to adjust ownership manually, especially on Linux systems where Docker may create the directory as root.
 
 **7. Clean Slate Reset**
 ```bash
