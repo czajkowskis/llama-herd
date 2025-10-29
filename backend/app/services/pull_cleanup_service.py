@@ -17,6 +17,13 @@ class PullCleanupService:
         self._running = True
         self._stop_event = threading.Event()
         self.cleanup_thread: threading.Thread = None
+        
+        # Load cleanup thresholds from settings
+        from ..core.config import settings
+        self.stale_threshold = getattr(settings, 'pull_stale_seconds', 300)
+        self.completed_age = getattr(settings, 'pull_cleanup_completed_seconds', 3600)
+        self.failed_age = getattr(settings, 'pull_cleanup_failed_seconds', 300)
+        self.cancelled_age = getattr(settings, 'pull_cleanup_cancelled_seconds', 60)
     
     def start_cleanup(self):
         """Start the background cleanup thread."""
@@ -39,7 +46,7 @@ class PullCleanupService:
         if self.cleanup_thread:
             self.cleanup_thread.join(timeout=5)
     
-    def cleanup_stale_tasks(self, tasks: Dict[str, Any], stale_threshold_seconds: int = 300):
+    def cleanup_stale_tasks(self, tasks: Dict[str, Any]):
         """Clean up tasks that haven't had progress updates for a while (likely interrupted)."""
         current_time = datetime.now()
         to_remove = []
@@ -47,7 +54,7 @@ class PullCleanupService:
         for task_id, task in tasks.items():
             if task.status == 'running' and task.last_progress_update:
                 time_since_update = (current_time - task.last_progress_update).total_seconds()
-                if time_since_update > stale_threshold_seconds:
+                if time_since_update > self.stale_threshold:
                     # Mark as error and schedule cleanup
                     task.status = 'error'
                     task.error = 'Download interrupted - no progress updates received'
@@ -59,13 +66,7 @@ class PullCleanupService:
         for task_id in to_remove:
             threading.Timer(5.0, self.task_manager._cleanup_failed_task, args=(task_id,)).start()
     
-    def cleanup_completed_tasks(
-        self, 
-        tasks: Dict[str, Any], 
-        max_age_seconds: int = 3600, 
-        failed_age_seconds: int = 300, 
-        cancelled_age_seconds: int = 60
-    ):
+    def cleanup_completed_tasks(self, tasks: Dict[str, Any]):
         """Clean up old completed tasks and failed tasks."""
         current_time = datetime.now()
         to_remove = []
@@ -74,17 +75,17 @@ class PullCleanupService:
             if task.status == 'completed':
                 # Clean up old completed tasks
                 age = (current_time - task.completed_at).total_seconds() if task.completed_at else 0
-                if age > max_age_seconds:
+                if age > self.completed_age:
                     to_remove.append(task_id)
             elif task.status == 'cancelled':
                 # Clean up cancelled tasks after a short delay
                 age = (current_time - task.completed_at).total_seconds() if task.completed_at else 0
-                if age > cancelled_age_seconds:  # 1 minute for cancelled tasks
+                if age > self.cancelled_age:
                     to_remove.append(task_id)
             elif task.status == 'error':
                 # Clean up failed tasks after a short delay
                 age = (current_time - task.completed_at).total_seconds() if task.completed_at else 0
-                if age > failed_age_seconds:  # 5 minutes for failed tasks
+                if age > self.failed_age:
                     to_remove.append(task_id)
         
         for task_id in to_remove:

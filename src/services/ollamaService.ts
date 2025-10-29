@@ -32,6 +32,25 @@ export interface PullTask {
   completed_at?: string;
 }
 
+export interface PullTaskHealth {
+  task_id: string;
+  model_name: string;
+  status: string;
+  thread_alive: boolean;
+  last_progress_age_seconds: number | null;
+  retry_count: number;
+  last_retry_at: string | null;
+  queue_position: number | null;
+  available_concurrency_slots: number;
+  max_concurrency: number;
+}
+
+export interface PullModelResponse {
+  task_id?: string;
+  message: string;
+  existing_task_id?: string;
+}
+
 export interface VersionResponse {
   version: string;
 }
@@ -128,6 +147,38 @@ export const getPullTasks = async (baseUrl?: string): Promise<Record<string, Pul
 };
 
 /**
+ * Gets the most recent pull task for a specific model.
+ */
+export const getPullByModel = async (modelName: string, baseUrl?: string): Promise<PullTask | null> => {
+  const urlBase = baseUrl || API_BASE_URL;
+  try {
+    const res = await fetch(`${urlBase}/api/models/pull/by-model/${encodeURIComponent(modelName)}`);
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`API call failed with status: ${res.status}`);
+    return await res.json();
+  } catch (error) {
+    console.warn(`Failed to get pull task for model ${modelName}:`, error);
+    return null;
+  }
+};
+
+/**
+ * Gets health information for a pull task.
+ */
+export const getPullHealth = async (taskId: string, baseUrl?: string): Promise<PullTaskHealth | null> => {
+  const urlBase = baseUrl || API_BASE_URL;
+  try {
+    const res = await fetch(`${urlBase}/api/models/pull/${taskId}/health`);
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`API call failed with status: ${res.status}`);
+    return await res.json();
+  } catch (error) {
+    console.warn(`Failed to get health for task ${taskId}:`, error);
+    return null;
+  }
+};
+
+/**
  * Deletes a local model by name/tag.
  */
 export const deleteModel = async (name: string, baseUrl?: string): Promise<void> => {
@@ -165,8 +216,17 @@ export const pullModel = async (
     throw new Error(`Pull failed with status: ${startResponse.status}`);
   }
 
-  const startData = await startResponse.json();
-  const taskId = startData.task_id;
+  const startData: PullModelResponse = await startResponse.json();
+  
+  // Handle existing task ID (duplicate pull detected)
+  const taskId = startData.existing_task_id || startData.task_id;
+  if (!taskId) {
+    throw new Error('No task ID returned from server');
+  }
+  
+  if (startData.existing_task_id) {
+    console.log(`Model is already being pulled with task ${taskId}, reconnecting...`);
+  }
 
   // Connect to WebSocket for progress updates
   const wsUrl = urlBase.replace(/^http/, 'ws') + `/api/models/ws/pull/${taskId}`;

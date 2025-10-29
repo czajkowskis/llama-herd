@@ -3,6 +3,9 @@ Simplified pull task manager using extracted services.
 """
 import threading
 import uuid
+import shutil
+import os
+import time
 from typing import Dict, Optional, Callable, Any, List
 from dataclasses import dataclass
 from datetime import datetime
@@ -10,6 +13,7 @@ from datetime import datetime
 from ..services.progress_throttler import ProgressThrottler
 from ..services.pull_persistence import PullPersistence
 from ..services.pull_cleanup_service import PullCleanupService
+from ..services.ollama_pull_executor import OllamaPullExecutor
 from ..utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -55,6 +59,16 @@ class PullTaskManager:
         self.progress_throttler = ProgressThrottler()
         self.persistence = PullPersistence()
         self.cleanup_service = PullCleanupService(self)
+        self.pull_executor = OllamaPullExecutor()
+        
+        # Concurrency control
+        from ..core.config import settings
+        self.max_concurrency = getattr(settings, 'pull_max_concurrency', 2)
+        self._concurrency_semaphore = threading.Semaphore(self.max_concurrency)
+        self._concurrency_slots = self.max_concurrency
+        
+        # Model deduplication
+        self._active_models: Dict[str, str] = {}  # model_name -> task_id
         
         # Load persisted tasks if any
         try:
@@ -86,6 +100,16 @@ class PullTaskManager:
             task = self.tasks[task_id]
             if task.status != 'pending':
                 return False
+            
+            # Check for duplicate active pull for same model
+            if task.model_name in self._active_models:
+                existing_task_id = self._active_models[task.model_name]
+                logger.warning(f"Model {task.model_name} already being pulled in task {existing_task_id}")
+                return False
+            
+            # Mark model as active
+            self._active_models[task.model_name] = task_id
+            
             task.status = 'running'
             task.started_at = datetime.now()
             task.last_progress_update = datetime.now()
@@ -103,6 +127,9 @@ class PullTaskManager:
 
     def _run_pull_task(self, task_id: str, pull_function: Callable):
         """Run the pull task in a background thread and handle completion/errors."""
+        # Acquire concurrency slot
+        self._concurrency_semaphore.acquire()
+        
         try:
             # Call the pull function. If the function accepts a stop_event argument, pass it.
             task = None
@@ -127,6 +154,8 @@ class PullTaskManager:
                         task.status = 'completed'
                         task.completed_at = datetime.now()
                         logger.info(f"Pull task {task_id} completed successfully")
+                    # Release active model slot
+                    self._active_models.pop(task.model_name, None)
         except Exception as e:
             # Task failed - mark as error and clean up immediately
             with self._lock:
@@ -142,6 +171,11 @@ class PullTaskManager:
                         # Clean up failed task immediately
                         # schedule cleanup to run outside the lock
                         threading.Timer(0.1, self._cleanup_failed_task, args=(task_id,)).start()
+                    # Release active model slot
+                    self._active_models.pop(task.model_name, None)
+        finally:
+            # Always release concurrency slot
+            self._concurrency_semaphore.release()
 
     def get_pull_task(self, task_id: str) -> Optional[PullTask]:
         """Get a pull task by ID."""
@@ -335,6 +369,17 @@ class PullTaskManager:
             last_update_age = None
             if t.last_progress_update:
                 last_update_age = (datetime.now() - t.last_progress_update).total_seconds()
+            
+            # Calculate available concurrency slots
+            available_slots = self._concurrency_semaphore._value
+            
+            # For pending tasks, estimate queue position
+            queue_position = None
+            if t.status == 'pending':
+                pending_tasks = [tid for tid, task in self.tasks.items() 
+                                if task.status == 'pending' and task.created_at <= t.created_at]
+                queue_position = len(pending_tasks)
+            
             return {
                 'task_id': t.task_id,
                 'model_name': t.model_name,
@@ -343,6 +388,9 @@ class PullTaskManager:
                 'last_progress_age_seconds': last_update_age,
                 'retry_count': t.retry_count,
                 'last_retry_at': t.last_retry_at.isoformat() if t.last_retry_at else None,
+                'queue_position': queue_position,
+                'available_concurrency_slots': available_slots,
+                'max_concurrency': self.max_concurrency,
             }
 
     def start(self):
@@ -387,9 +435,90 @@ class PullTaskManager:
         self.cleanup_service.stop_cleanup()
 
     def _perform_pull_model(self, task_id: str, model_name: str, stop_event: Optional[threading.Event] = None):
-        """Internal method to perform the model pull using Ollama API."""
-        # This method would contain the actual pull logic from the original manager
-        # For now, we'll import it from the original file to maintain functionality
-        from ..services.model_pull_manager import ModelPullManager
-        original_manager = ModelPullManager(start_cleanup=False)
-        original_manager._perform_pull_model(task_id, model_name, stop_event)
+        """Internal method to perform the model pull using Ollama API with retry logic."""
+        from ..core.config import settings
+        max_retries = getattr(settings, 'pull_retry_attempts', 2)
+        retry_backoff = getattr(settings, 'pull_retry_backoff_seconds', 5)
+        
+        def progress_callback(data: Dict[str, Any]):
+            """Handle progress updates from Ollama."""
+            # Update progress via manager
+            self.update_progress(task_id, data)
+        
+        def _should_retry_error(e: Exception) -> bool:
+            """Determine if an error should be retried."""
+            error_str = str(e).lower()
+            # Retry on network errors, timeouts, and 5xx errors
+            if "network" in error_str or "timeout" in error_str or "connection" in error_str:
+                return True
+            if "500" in error_str or "502" in error_str or "503" in error_str or "504" in error_str:
+                return True
+            return False
+        
+        attempt = 0
+        while attempt <= max_retries:
+            try:
+                # Execute the pull
+                self.pull_executor.pull_model(
+                    model_name=model_name,
+                    progress_callback=progress_callback,
+                    stop_event=stop_event
+                )
+                # Success - exit retry loop
+                return
+            except InterruptedError:
+                # Cancellation is expected, re-raise immediately
+                raise
+            except Exception as e:
+                # Check if we should retry
+                if attempt < max_retries and _should_retry_error(e):
+                    attempt += 1
+                    backoff_seconds = retry_backoff * (2 ** (attempt - 1))
+                    
+                    # Update task retry info
+                    with self._lock:
+                        task = self.tasks.get(task_id)
+                        if task:
+                            task.retry_count = attempt
+                            task.last_retry_at = datetime.now()
+                    
+                    logger.warning(f"Pull attempt {attempt} failed for {model_name}: {e}. Retrying in {backoff_seconds}s")
+                    time.sleep(backoff_seconds)
+                else:
+                    # No more retries or non-retryable error
+                    raise
+    
+    def _get_model_size_estimate(self, model_name: str) -> int:
+        """
+        Estimate the size of a model to be pulled.
+        
+        Returns:
+            Estimated size in bytes (default 4GB if unknown)
+        """
+        # TODO: Could fetch from model catalog or Ollama API
+        # For now, default to 4GB as a reasonable estimate
+        return 4 * 1024 * 1024 * 1024  # 4GB
+    
+    def _check_disk_space(self, required_bytes: int) -> bool:
+        """
+        Check if there's enough disk space available.
+        
+        Args:
+            required_bytes: Bytes needed
+            
+        Returns:
+            True if enough space available
+        """
+        try:
+            from ..core.config import settings
+            models_dir = os.path.expanduser(settings.ollama_models_dir)
+            stat = shutil.disk_usage(models_dir)
+            
+            # Require at least required_bytes + 1GB safety margin
+            required_with_margin = required_bytes + (1024 * 1024 * 1024)
+            
+            return stat.free >= required_with_margin
+        except Exception as e:
+            logger.warning(f"Failed to check disk space: {e}")
+            # On error, assume there's space (fail later during pull)
+            return True
