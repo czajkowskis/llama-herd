@@ -125,6 +125,34 @@ class Settings(BaseSettings):
         default=2.0,
         description="Minimum percentage change to trigger progress update"
     )
+    pull_max_concurrency: int = Field(
+        default=2,
+        description="Maximum number of concurrent model pulls"
+    )
+    pull_retry_attempts: int = Field(
+        default=2,
+        description="Maximum number of retry attempts for failed pulls"
+    )
+    pull_retry_backoff_seconds: int = Field(
+        default=5,
+        description="Initial backoff delay in seconds for retries"
+    )
+    pull_stale_seconds: int = Field(
+        default=300,
+        description="Time in seconds before a pull task is considered stale"
+    )
+    pull_cleanup_completed_seconds: int = Field(
+        default=3600,
+        description="Time in seconds before completed pulls are cleaned up"
+    )
+    pull_cleanup_failed_seconds: int = Field(
+        default=300,
+        description="Time in seconds before failed pulls are cleaned up"
+    )
+    pull_cleanup_cancelled_seconds: int = Field(
+        default=60,
+        description="Time in seconds before cancelled pulls are cleaned up"
+    )
     
     model_config = {
         "env_file": ".env",

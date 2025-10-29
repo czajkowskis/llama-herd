@@ -10,7 +10,7 @@ from datetime import datetime, UTC
 
 from ...core.config import settings
 from ...utils.logging import get_logger
-from ...services.model_pull_manager import pull_manager
+from ...services.pull_manager import pull_manager
 from ...services.model_catalog_service import model_catalog_service
 
 logger = get_logger(__name__)
@@ -64,8 +64,9 @@ class PullModelRequest(BaseModel):
 class PullModelResponse(BaseModel):
     """Response after initiating a model pull."""
     
-    task_id: str = Field(..., description="Unique task ID for tracking pull progress", example="task_abc123")
+    task_id: Optional[str] = Field(None, description="Unique task ID for tracking pull progress", example="task_abc123")
     message: str = Field(..., description="Status message", example="Started pulling model llama2")
+    existing_task_id: Optional[str] = Field(None, description="Task ID if model is already being pulled", example="existing_task_xyz789")
 
 class PullTaskStatus(BaseModel):
     """Status information for a model pull task."""
@@ -185,8 +186,12 @@ async def pull_model(request: PullModelRequest) -> PullModelResponse:
                 logger.info(f"Existing pull task {task.task_id} for {request.name} marked stale to allow retry")
                 continue
 
-            # Otherwise, it's actively running - block the new pull
-            raise HTTPException(status_code=409, detail=f"Model {request.name} is already being pulled")
+            # Otherwise, it's actively running - return existing task ID in response
+            return PullModelResponse(
+                task_id=None,
+                message=f"Model {request.name} is already being pulled",
+                existing_task_id=task.task_id
+            )
 
         # Estimate model size and check disk space
         estimated_size = pull_manager._get_model_size_estimate(request.name)
@@ -228,6 +233,24 @@ async def get_pull_status(task_id: str) -> PullTaskStatus:
         raise HTTPException(status_code=404, detail="Pull task not found")
 
     return _serialize_pull_task(task)
+
+@router.get("/pull/by-model/{model_name}")
+async def get_pull_by_model(model_name: str) -> Optional[PullTaskStatus]:
+    """Get the most recent pull task for a specific model."""
+    all_tasks = pull_manager.get_all_pull_tasks()
+    
+    # Find the most recent task for this model
+    matching_tasks = [
+        task for task in all_tasks.values()
+        if task.model_name == model_name
+    ]
+    
+    if not matching_tasks:
+        raise HTTPException(status_code=404, detail=f"No pull task found for model {model_name}")
+    
+    # Return the most recently created task
+    latest_task = max(matching_tasks, key=lambda t: t.created_at)
+    return _serialize_pull_task(latest_task)
 
 
 @router.get("/pull/{task_id}/health")

@@ -198,6 +198,12 @@ export const DiscoverModels: React.FC<DiscoverModelsProps> = ({
                       {variants.map(item => {
                         const isInstalled = installed.includes(item.tag);
                         const isPulling = !!pulling[item.tag];
+                        const pullState = pulling[item.tag];
+                        const buttonText = isInstalled 
+                          ? '✓' 
+                          : isPulling 
+                            ? (pullState?.error ? 'Pull' : 'Pulling…')
+                            : 'Pull';
                         
                         return (
                           <div key={item.tag} className="p-3 rounded-lg border" style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-border)' }}>
@@ -220,11 +226,11 @@ export const DiscoverModels: React.FC<DiscoverModelsProps> = ({
                               <Button
                                 className="px-3 py-1 text-sm"
                                 onClick={() => onStartPull(item.tag, item.size)}
-                                disabled={isInstalled || isPulling || !connected}
-                                title={!connected ? 'Ollama is not connected.' : (isInstalled ? 'Installed' : 'Pull model')}
+                                disabled={isInstalled || (isPulling && !pullState?.error) || !connected}
+                                title={!connected ? 'Ollama is not connected.' : (isInstalled ? 'Installed' : (isPulling ? 'Already pulling' : 'Pull model'))}
                                 aria-label={isInstalled ? `Installed ${item.tag}` : `Pull ${item.tag}`}
                               >
-                                {isInstalled ? '✓' : isPulling ? 'Pulling…' : 'Pull'}
+                                {buttonText}
                               </Button>
                             </div>
                             

@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { ollamaService } from '../../../services/ollamaService';
+import { usePullTasks } from '../../../hooks/usePullTasks';
 
 interface PullProgress {
   progress?: number;
@@ -20,6 +21,7 @@ interface ModelPullingState {
 
 export const useModelPulling = (): ModelPullingState => {
   const [pulling, setPulling] = useState<Record<string, PullProgress>>({});
+  const { pullTasks } = usePullTasks();
 
   const startPull = useCallback((tag: string, sizeHint?: number) => {
     // Don't start if already pulling
@@ -84,18 +86,33 @@ export const useModelPulling = (): ModelPullingState => {
     });
   }, [pulling]);
 
-  const cancelPull = useCallback((tag: string) => {
+  const cancelPull = useCallback(async (tag: string) => {
     const pullState = pulling[tag];
+    
+    // Find the corresponding server task
+    const serverTask = Object.values(pullTasks).find((t: any) => t.model_name === tag && (t.status === 'running' || t.status === 'pending'));
+    
+    // Cancel the backend task if it exists
+    if (serverTask && serverTask.task_id) {
+      try {
+        await ollamaService.cancelModelPull(serverTask.task_id);
+      } catch (error) {
+        console.error(`Failed to cancel pull task ${serverTask.task_id}:`, error);
+      }
+    }
+    
+    // Abort the local controller to close the WebSocket
     if (pullState?.controller) {
       pullState.controller.abort();
     }
     
+    // Remove from local state
     setPulling(prev => {
       const newPulling = { ...prev };
       delete newPulling[tag];
       return newPulling;
     });
-  }, [pulling]);
+  }, [pulling, pullTasks]);
 
   const dismissNotification = useCallback((tag: string) => {
     setPulling(prev => {

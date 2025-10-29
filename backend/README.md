@@ -191,8 +191,20 @@ EXPERIMENT_TIMEOUT_SECONDS=3600         # Max experiment runtime (1 hour)
 ### Model Pull Configuration
 
 ```bash
-PULL_PROGRESS_THROTTLE_MS=500           # Progress update throttle
+# Progress tracking
+PULL_PROGRESS_THROTTLE_MS=500           # Progress update throttle (ms)
 PULL_PROGRESS_PERCENT_DELTA=2.0         # Minimum % change for updates
+
+# Concurrency and reliability
+PULL_MAX_CONCURRENCY=2                  # Max concurrent pulls
+PULL_RETRY_ATTEMPTS=2                   # Max retry attempts
+PULL_RETRY_BACKOFF_SECONDS=5            # Initial backoff for retries
+
+# Cleanup thresholds
+PULL_STALE_SECONDS=300                  # Time before task marked stale
+PULL_CLEANUP_COMPLETED_SECONDS=3600     # Time before completed tasks removed
+PULL_CLEANUP_FAILED_SECONDS=300         # Time before failed tasks removed
+PULL_CLEANUP_CANCELLED_SECONDS=60       # Time before cancelled tasks removed
 ```
 
 ## Running the Application
@@ -265,6 +277,7 @@ FastAPI automatically generates interactive API documentation:
 | POST | `/api/models/pull` | Start pulling a model |
 | GET | `/api/models/pull` | List all pull tasks |
 | GET | `/api/models/pull/{task_id}` | Get pull task status |
+| GET | `/api/models/pull/by-model/{model_name}` | Get latest pull task for model |
 | GET | `/api/models/pull/{task_id}/health` | Get pull task health |
 | DELETE | `/api/models/pull/{task_id}` | Cancel a pull task |
 | DELETE | `/api/models/pull/{task_id}/dismiss` | Dismiss a completed task |
@@ -409,6 +422,59 @@ pytest --cov=app --cov-report=html
 - **Integration Tests** (`tests/integration/`): Test API endpoints and component interactions
 - **E2E Tests** (`tests/e2e/`): Test complete workflows
 
+## Pull Task Lifecycle
+
+### Overview
+
+The pull task system manages background model downloads from Ollama with the following features:
+
+- **Concurrency Control**: Limits concurrent pulls (default: 2)
+- **Deduplication**: Prevents duplicate pulls of the same model
+- **Retry Logic**: Automatic retries for transient failures with exponential backoff
+- **Progress Tracking**: Throttled progress updates via WebSocket
+- **Automatic Cleanup**: Removes old completed/failed tasks
+- **Persistence**: Task state survives server restarts
+
+### Task States
+
+1. **pending**: Created but not yet started (waiting for concurrency slot)
+2. **running**: Actively downloading from Ollama
+3. **completed**: Successfully downloaded
+4. **error**: Failed (with error message)
+5. **cancelled**: Cancelled by user
+
+### Lifecycle Flow
+
+```
+Create Task → Check Deduplication → Wait for Concurrency Slot
+    ↓
+Acquire Slot → Start Thread → Pull from Ollama
+    ↓
+Progress Updates → Complete/Fail/Cancel
+    ↓
+Release Slot → Auto Cleanup (after threshold)
+```
+
+### Retry Behavior
+
+- **Retries**: Up to 2 attempts (configurable)
+- **Backoff**: Exponential (5s, 10s, 20s...)
+- **Retryable errors**: Network issues, timeouts, 5xx errors
+- **Non-retryable**: 4xx client errors, cancellations
+
+### Concurrency & Deduplication
+
+- Multiple pulls of different models can run concurrently (up to `PULL_MAX_CONCURRENCY`)
+- Same model cannot be pulled twice simultaneously (returns existing task ID)
+- Pending tasks queue automatically when at capacity
+
+### Cleanup Behavior
+
+- **Completed**: Cleaned up after 1 hour
+- **Failed**: Cleaned up after 5 minutes  
+- **Cancelled**: Cleaned up after 1 minute
+- **Stale**: Marked as failed if no progress for 5 minutes
+
 ## Key Services
 
 ### ExperimentService
@@ -436,15 +502,24 @@ Handles conversation data and formatting.
 - `get_live_conversation()`: Get active conversation
 - `save_conversation()`: Persist conversation
 
-### ModelPullManager
+### PullTaskManager
 
-Manages model pulling from Ollama with progress tracking.
+Manages model pulling from Ollama with comprehensive task management.
 
 **Key Features:**
-- Background pull execution
+- Background pull execution with threading
+- Concurrency control and queueing
+- Model deduplication
+- Automatic retries with exponential backoff
 - Progress tracking and callbacks
-- Task persistence
-- Automatic cleanup
+- Task persistence across restarts
+- Automatic cleanup of old tasks
+
+**Supporting Services:**
+- `OllamaPullExecutor`: Handles Ollama API interaction
+- `PullCleanupService`: Background cleanup worker
+- `PullPersistence`: Task state persistence
+- `ProgressThrottler`: Progress update throttling
 
 ### OllamaClient
 

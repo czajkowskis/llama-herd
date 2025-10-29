@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
     state_manager.set_event_loop(loop)
     # Start background services
     try:
-        from .services.model_pull_manager import pull_manager
+        from .services.pull_manager import pull_manager
         # Start the cleanup worker for the global pull manager
         pull_manager.start()
         logger.info("Model pull manager cleanup worker started")
@@ -66,7 +66,7 @@ async def lifespan(app: FastAPI):
     # Shutdown
     # Stop background services cleanly
     try:
-        from .services.model_pull_manager import pull_manager
+        from .services.pull_manager import pull_manager
         pull_manager.shutdown()
         logger.info("Model pull manager cleanup worker stopped")
     except Exception:
