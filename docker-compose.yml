@@ -30,6 +30,7 @@ services:
       - "8000:8000"
     volumes:
       - ./backend/data:/app/data
+    user: "1000:1000"  # Ensure consistent permissions (appuser UID/GID)
     networks:
       - llama-herd-network
     environment:
