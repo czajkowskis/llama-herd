@@ -50,10 +50,20 @@ def validate_directory_path(value: str) -> str:
     expanded_path = os.path.expanduser(value)
     path = Path(expanded_path)
     
+    # If directory exists, just verify it's a directory and return
+    if path.exists():
+        if not path.is_dir():
+            raise ValueError(f"Path {expanded_path} exists but is not a directory")
+        return expanded_path
+    
     # Create directory if it doesn't exist
     try:
         path.mkdir(parents=True, exist_ok=True)
     except OSError as e:
+        # If directory was created by another process between check and create,
+        # that's fine - just verify it exists now
+        if path.exists() and path.is_dir():
+            return expanded_path
         raise ValueError(f"Cannot create directory {expanded_path}: {e}")
     
     return expanded_path
