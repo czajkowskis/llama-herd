@@ -42,35 +42,34 @@ cd llama-herd
 
 **Note:** Environment configuration is optional for Docker setup as environment variables are set in `docker-compose.yml`. For local development without Docker, create `.env` files based on the configuration sections below.
 
-#### 3. Ensure Data Directory Exists
 
+#### 3. Start with Docker Compose
+
+**Build the containers**
 ```bash
-# The backend/data directory structure is tracked in git via .gitkeep files
-# However, ensure it exists before starting:
-mkdir -p backend/data/models
+docker compose build
 ```
-
-#### 4. Start with Docker Compose
 
 **Development Mode (with hot-reload):**
 ```bash
-docker-compose --profile dev up
+
+docker compose --profile dev up
 ```
 
 **Production Mode:**
 ```bash
-docker-compose --profile prod up -d
+docker compose --profile prod up -d
 ```
 
 #### 4. Pull AI Models
 
 ```bash
 # Pull some common models
-docker-compose exec ollama ollama pull llama2
-docker-compose exec ollama ollama pull codellama
+docker compose exec ollama ollama pull gemma3:4b
+docker compose exec ollama ollama pull qwen3:4b
 
 # Or pull any other model you need
-docker-compose exec ollama ollama pull <model-name>
+docker compose exec ollama ollama pull <model-name>
 ```
 
 #### 6. Access the Application
@@ -85,52 +84,37 @@ docker-compose exec ollama ollama pull <model-name>
 
 ```bash
 # View logs
-docker-compose logs [service-name]
+docker compose logs [service-name]
 
 # Follow logs in real-time
-docker-compose logs -f backend
+docker compose logs -f backend
 
 # Stop services
-docker-compose down
+docker compose down
 
 # Stop and remove volumes (fresh start)
-docker-compose down -v
+docker compose down -v
 
 # Rebuild containers
-docker-compose build --no-cache
+docker compose build --no-cache
 
 # Check service health
-docker-compose ps
+docker compose ps
 
 # Execute commands in containers
-docker-compose exec backend python --version
-docker-compose exec frontend-dev npm --version
+docker compose exec backend python --version
+docker compose exec frontend-dev npm --version
 
 # Pull models in Ollama container
-docker-compose exec ollama ollama pull llama2
-docker-compose exec ollama ollama list
+docker compose exec ollama ollama pull llama2
+docker compose exec ollama ollama list
 
 # Restart a specific service
-docker-compose restart backend
+docker compose restart backend
 
 # Check container resource usage
 docker stats
 ```
-
-**Quick Start for Testing:**
-```bash
-# 1. Start the application in development mode
-docker-compose --profile dev up
-
-# 2. Pull some models (in a new terminal)
-docker-compose exec ollama ollama pull llama2:7b
-
-# 3. Open browser to http://localhost:3000
-
-# 4. When done testing, stop services
-docker-compose down
-```
-
 ### Option 2: Local Development (Without Docker)
 
 #### 1. Prerequisites
@@ -171,8 +155,8 @@ cp .env.example .env
 ollama serve
 
 # In a new terminal, pull some models
-ollama pull llama2
-ollama pull codellama
+ollama pull gemma3:4b
+ollama pull qwen3:4b
 # Add other models as needed
 ```
 
@@ -368,25 +352,25 @@ sudo usermod -aG docker $USER
 **3. Container Won't Start**
 ```bash
 # Check container logs
-docker-compose logs [service-name]
+docker compose logs [service-name]
 
 # Check container health
-docker-compose ps
+docker compose ps
 
 # Rebuild containers
-docker-compose build --no-cache
+docker compose build --no-cache
 ```
 
 **4. Ollama Models Not Loading**
 ```bash
 # Check Ollama container logs
-docker-compose logs ollama
+docker compose logs ollama
 
 # Pull models manually
-docker-compose exec ollama ollama pull llama2
+docker compose exec ollama ollama pull llama2
 
 # Check available models
-docker-compose exec ollama ollama list
+docker compose exec ollama ollama list
 ```
 
 **5. Frontend Not Connecting to Backend**
@@ -417,13 +401,13 @@ chmod 755 backend/data backend/data/models backend/data/experiments backend/data
 **7. Clean Slate Reset**
 ```bash
 # Stop and remove all containers, networks, and volumes
-docker-compose down -v
+docker compose down -v
 
 # Remove all images (WARNING: This removes ALL Docker images)
 docker system prune -a
 
 # Start fresh
-docker-compose --profile dev up
+docker compose --profile dev up
 ```
 
 ### Performance Tips
@@ -432,7 +416,7 @@ docker-compose --profile dev up
 ```bash
 # Use BuildKit for faster builds
 export DOCKER_BUILDKIT=1
-docker-compose build
+docker compose build
 ```
 
 **2. Resource Limits**
