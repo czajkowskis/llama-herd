@@ -59,29 +59,56 @@ export const parseConversationFile = async (file: File): Promise<StoredConversat
   // Validate the JSON structure
   validateConversationStructure(data, file.name);
 
-  // Extract unique agents from messages with their models
-  const uniqueAgents = extractAgentsFromMessages(data.messages);
+  let conversationAgents: ConversationAgent[];
+  let messages: Message[];
 
-  // Create conversation agents with unique colors
-  const conversationAgents = createConversationAgents(uniqueAgents);
+  // Check if agents array exists in the JSON (new format)
+  if (data.agents && Array.isArray(data.agents) && data.agents.length > 0) {
+    // Use agents from the JSON directly
+    conversationAgents = data.agents.map((agent: any) => ({
+      id: agent.id,
+      name: agent.name,
+      color: agent.color,
+      originalName: agent.originalName || agent.name,
+      model: agent.model
+    }));
 
-  // Create agent mapping for messages
-  const agentMap = new Map<string, string>();
-  conversationAgents.forEach(agent => {
-    agentMap.set(agent.originalName!, agent.id);
-  });
+    // Create agent ID mapping for messages
+    const agentIdMap = new Map<string, string>();
+    conversationAgents.forEach(agent => {
+      agentIdMap.set(agent.id, agent.id); // Map existing IDs to themselves
+    });
 
-  // Convert messages to our format
-  const messages = createConversationMessages(data.messages, agentMap);
+    // Convert messages using agentId references
+    messages = data.messages.map((msg: any, index: number) => ({
+      id: msg.id || `msg-${index}`,
+      agentId: msg.agentId,
+      content: msg.content || msg.message || '',
+      timestamp: msg.timestamp || new Date().toISOString(),
+      model: msg.model
+    }));
+  } else {
+    // Legacy format: Extract agents from messages (backward compatibility)
+    const uniqueAgents = extractAgentsFromMessages(data.messages);
+    conversationAgents = createConversationAgents(uniqueAgents);
+
+    // Create agent mapping for messages (legacy format uses agent.name)
+    const agentMap = new Map<string, string>();
+    conversationAgents.forEach(agent => {
+      agentMap.set(agent.originalName!, agent.id);
+    });
+
+    messages = createConversationMessages(data.messages, agentMap);
+  }
 
   return {
-    id: `conv-${Date.now()}-${Math.random()}`,
+    id: data.id || `conv-${Date.now()}-${Math.random()}`,
     title: data.title || file.name.replace('.json', ''),
     agents: conversationAgents,
     messages: messages,
-    createdAt: new Date().toISOString(),
-    importedAt: new Date().toISOString(),
-    source: 'import'
+    createdAt: data.createdAt || new Date().toISOString(),
+    importedAt: data.importedAt || new Date().toISOString(),
+    source: data.source || 'import'
   };
 };
 
