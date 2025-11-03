@@ -73,20 +73,24 @@ export const parseConversationFile = async (file: File): Promise<StoredConversat
       model: agent.model
     }));
 
-    // Create agent ID mapping for messages
-    const agentIdMap = new Map<string, string>();
-    conversationAgents.forEach(agent => {
-      agentIdMap.set(agent.id, agent.id); // Map existing IDs to themselves
-    });
+    // Create agent ID set for validation
+    const agentIds = new Set(conversationAgents.map(a => a.id));
 
     // Convert messages using agentId references
-    messages = data.messages.map((msg: any, index: number) => ({
-      id: msg.id || `msg-${index}`,
-      agentId: msg.agentId,
-      content: msg.content || msg.message || '',
-      timestamp: msg.timestamp || new Date().toISOString(),
-      model: msg.model
-    }));
+    messages = data.messages.map((msg: any, index: number) => {
+      // Validate that agentId exists in agents array
+      if (msg.agentId && !agentIds.has(msg.agentId)) {
+        console.warn(`Message ${msg.id || index} references unknown agent ID: ${msg.agentId}. Available agents: ${Array.from(agentIds).join(', ')}`);
+      }
+      
+      return {
+        id: msg.id || `msg-${index}`,
+        agentId: msg.agentId || 'unknown',
+        content: msg.content || msg.message || '',
+        timestamp: msg.timestamp || new Date().toISOString(),
+        model: msg.model
+      };
+    });
   } else {
     // Legacy format: Extract agents from messages (backward compatibility)
     const uniqueAgents = extractAgentsFromMessages(data.messages);
