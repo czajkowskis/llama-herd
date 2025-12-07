@@ -6,7 +6,8 @@ export interface CatalogItem {
   quant?: string;
   description?: string;
   notes?: string;
-  pullCount?: number;
+  pullCount?: number; // camelCase for TypeScript
+  pull_count?: number; // snake_case from backend
   lastUpdated?: string;
 }
 

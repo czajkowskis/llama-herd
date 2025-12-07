@@ -1,6 +1,7 @@
 """
 One-time migration script to move data from the old directory structure to the new one.
 """
+
 import json
 import os
 import re
@@ -11,18 +12,20 @@ from pathlib import Path
 # Define paths based on your project structure
 # Assuming this script is run from the 'backend' directory
 # Adjust the base_path if you run it from somewhere else
-base_path = Path(__file__).parent.parent 
+base_path = Path(__file__).parent.parent
 data_dir = base_path / "data"
 experiments_dir = data_dir / "experiments"
+
 
 def _read_json_file(file_path: Path):
     """Reads a JSON file and returns its content."""
     try:
         if file_path.exists():
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 return json.load(f)
     except (json.JSONDecodeError, IOError):
         return None
+
 
 def migrate_data():
     """
@@ -51,7 +54,7 @@ def migrate_data():
                 if not conv_data:
                     continue
 
-                experiment_id = conv_data.get('experiment_id')
+                experiment_id = conv_data.get("experiment_id")
                 if not experiment_id:
                     continue
 
@@ -60,15 +63,14 @@ def migrate_data():
                     experiments_data[experiment_id] = {
                         "id": experiment_id,
                         "title": f"Migrated - {subdir.name}",
-                        "created_at": conv_data.get('created_at'),
-                        "conversations": []
+                        "created_at": conv_data.get("created_at"),
+                        "conversations": [],
                     }
 
                 # Add conversation to the experiment's list
-                experiments_data[experiment_id]["conversations"].append({
-                    "iteration": conv_data.get('iteration'),
-                    "file_path": conv_file
-                })
+                experiments_data[experiment_id]["conversations"].append(
+                    {"iteration": conv_data.get("iteration"), "file_path": conv_file}
+                )
 
     # --- Step 2: Create new structure and move files ---
     for exp_id, exp_info in experiments_data.items():
@@ -88,21 +90,23 @@ def migrate_data():
             "title": exp_info["title"],
             "created_at": exp_info["created_at"],
             "status": "completed",  # Or some other default
-            "iterations": len(exp_info["conversations"])
+            "iterations": len(exp_info["conversations"]),
         }
-        with open(new_experiment_file, 'w', encoding='utf-8') as f:
+        with open(new_experiment_file, "w", encoding="utf-8") as f:
             json.dump(experiment_metadata, f, indent=2)
 
         # Move and rename conversation files
         for conv_info in exp_info["conversations"]:
             iteration = conv_info.get("iteration")
             if iteration is None:
-                print(f"  - Skipping conversation with missing iteration in experiment {exp_id}")
+                print(
+                    f"  - Skipping conversation with missing iteration in experiment {exp_id}"
+                )
                 continue
 
             old_path = conv_info["file_path"]
             new_path = new_conversations_dir / f"{iteration}.json"
-            
+
             print(f"  - Moving {old_path.name} to {new_path}")
             shutil.copy(old_path, new_path)
 
@@ -122,6 +126,7 @@ def migrate_data():
         shutil.rmtree(temp_migration_dir)
 
     print("Migration complete!")
+
 
 if __name__ == "__main__":
     migrate_data()

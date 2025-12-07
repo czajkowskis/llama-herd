@@ -1,0 +1,29 @@
+[tool.ruff]
+# Enable Ruff's auto-fix for all fixable issues
+fixable = ["ALL"]
+# Select the rules to enforce
+select = [
+    "E",   # Pycodestyle errors (includes indentation)
+    "F",   # Pyflakes errors
+    "W",   # Pycodestyle warnings
+    "I",   # isort (import sorting)
+    "UP",  # pyupgrade (modernize code)
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "T10", # flake8-debugger
+    "T20", # flake8-print
+    "Q",   # flake8-quotes
+    "RUF", # Ruff-specific rules
+]
+# Ignore specific rules if needed
+ignore = []
+# Line length (default: 88)
+line-length = 88
+# Exclude files/directories
+exclude = [
+    ".git",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".venv",
+    "build",
+    "dist",

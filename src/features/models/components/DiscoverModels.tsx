@@ -4,6 +4,28 @@ import { Icon } from '../../../components/ui/Icon';
 import { Input } from '../../../components/ui/Input';
 import { CatalogItem } from '../../../data/modelCatalog';
 
+/**
+ * Formats a pull count number into a human-readable string
+ * @param count - The pull count number
+ * @returns Formatted string like "5M", "665.1K", "1.2M", or "1,234"
+ */
+function formatPullCount(count: number | undefined | null): string | null {
+  if (count === undefined || count === null || count === 0) return null;
+  
+  if (count >= 1_000_000_000) {
+    const value = count / 1_000_000_000;
+    return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)}B`;
+  } else if (count >= 1_000_000) {
+    const value = count / 1_000_000;
+    return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)}M`;
+  } else if (count >= 1_000) {
+    const value = count / 1_000;
+    return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)}K`;
+  } else {
+    return count.toLocaleString();
+  }
+}
+
 interface PullProgress {
   progress?: number;
   completed?: number;
@@ -31,6 +53,8 @@ interface DiscoverModelsProps {
   setQuant: (quant: string) => void;
   resetCounter: number;
   setResetCounter: (counter: number) => void;
+  onUpdateCatalog: () => Promise<void>;
+  catalogUpdating: boolean;
 }
 
 export const DiscoverModels: React.FC<DiscoverModelsProps> = ({
@@ -51,6 +75,8 @@ export const DiscoverModels: React.FC<DiscoverModelsProps> = ({
   setQuant,
   resetCounter,
   setResetCounter,
+  onUpdateCatalog,
+  catalogUpdating,
 }) => {
   // Filter models based on search criteria
   const filteredCatalog = useMemo(() => {
@@ -152,6 +178,14 @@ export const DiscoverModels: React.FC<DiscoverModelsProps> = ({
           {hasActiveFilters && (
             <Button variant="secondary" onClick={clearFilters} aria-label="Clear filters">Clear</Button>
           )}
+          <Button
+            variant="secondary"
+            onClick={onUpdateCatalog}
+            disabled={catalogUpdating}
+            aria-label="Update catalog"
+          >
+            {catalogUpdating ? 'Updating...' : 'Update Catalog'}
+          </Button>
         </div>
       </div>
 
@@ -162,6 +196,12 @@ export const DiscoverModels: React.FC<DiscoverModelsProps> = ({
           const somePulling = variants.some(item => !!pulling[item.tag]);
           const familyName = variants[0].family;
           const isExpanded = expandedGroups.has(baseName);
+          
+          // Get the highest pull count from variants (most popular variant)
+          const maxPullCount = Math.max(
+            ...variants.map(v => v.pull_count || v.pullCount || 0)
+          );
+          const formattedGroupPullCount = formatPullCount(maxPullCount);
           
           return (
             <div key={baseName} className="p-4 rounded-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
@@ -191,6 +231,9 @@ export const DiscoverModels: React.FC<DiscoverModelsProps> = ({
                   <div className="text-sm mb-3" style={{ color: 'var(--color-text-tertiary)' }}>
                     {familyName && <span className="capitalize">{familyName} family • </span>}
                     {variants.length} variant{variants.length !== 1 ? 's' : ''} available
+                    {formattedGroupPullCount && (
+                      <span> • {formattedGroupPullCount} pulls</span>
+                    )}
                   </div>
                   
                   {isExpanded && (
@@ -211,7 +254,7 @@ export const DiscoverModels: React.FC<DiscoverModelsProps> = ({
                               <div className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
                                 {item.name}
                               </div>
-                              <div className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                              <div className="text-xs text-right" style={{ color: 'var(--color-text-tertiary)' }}>
                                 {item.size && `${(item.size/(1024**3)).toFixed(1)} GB`}
                               </div>
                             </div>

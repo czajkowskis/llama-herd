@@ -36,23 +36,44 @@ export const Models: React.FC = () => {
 
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogUpdating, setCatalogUpdating] = useState(false);
+
+  const loadCatalog = async () => {
+    setCatalogLoading(true);
+    try {
+      const models = await ollamaService.getModelCatalog();
+      setCatalog(models);
+    } catch (error) {
+      console.error("Failed to load model catalog", error);
+      setCatalog([]); // Fallback to empty list on error
+    } finally {
+      setCatalogLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadCatalog = async () => {
-      setCatalogLoading(true);
-      try {
-        const models = await ollamaService.getModelCatalog();
-        setCatalog(models);
-      } catch (error) {
-        console.error("Failed to load model catalog", error);
-        setCatalog([]); // Fallback to empty list on error
-      } finally {
-        setCatalogLoading(false);
-      }
-    };
-
     loadCatalog();
   }, []);
+
+  const handleUpdateCatalog = async () => {
+    setCatalogUpdating(true);
+    try {
+      const result = await ollamaService.updateModelCatalog();
+      if (result.success) {
+        // Reload catalog after successful update
+        await loadCatalog();
+        // Show success message (you could add a toast notification here)
+        console.log(result.message);
+      } else {
+        console.error("Catalog update failed:", result.message);
+        // Show error message (you could add a toast notification here)
+      }
+    } catch (error) {
+      console.error("Error updating catalog:", error);
+    } finally {
+      setCatalogUpdating(false);
+    }
+  };
 
 
 
@@ -115,8 +136,12 @@ export const Models: React.FC = () => {
     if (installed.includes(tag) || (catalog.find(c => c.tag === tag) as any)?.installed) return; // prevent duplicate pull
     if (!connected) return;
     
+    // Get size from catalog if sizeHint not provided
+    const catalogItem = catalog.find(c => c.tag === tag);
+    const modelSize = sizeHint ?? catalogItem?.size;
+    
     // Show confirmation popup with storage requirements
-    setPendingPull({ tag, sizeHint });
+    setPendingPull({ tag, sizeHint: modelSize });
     setShowConfirmPopup(true);
   };
 
@@ -250,6 +275,8 @@ export const Models: React.FC = () => {
           setQuant={setQuant}
           resetCounter={resetCounter}
           setResetCounter={setResetCounter}
+          onUpdateCatalog={handleUpdateCatalog}
+          catalogUpdating={catalogUpdating}
         />
       </div>
       

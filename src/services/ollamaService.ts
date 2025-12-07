@@ -115,6 +115,26 @@ export const getModelCatalog = async (): Promise<any[]> => {
 };
 
 /**
+ * Updates the model catalog by scraping ollama.com/library.
+ */
+export const updateModelCatalog = async (): Promise<{ success: boolean; message: string; model_count: number }> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/models/catalog/update`, {
+      method: 'POST',
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ detail: 'Failed to update catalog' }));
+      throw new Error(errorData.detail || `API call failed with status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error updating model catalog:', error);
+    throw error;
+  }
+};
+
+/**
  * Returns Ollama server version (and implicitly connectivity).
  */
 export const getVersion = async (baseUrl?: string): Promise<string> => {
@@ -505,6 +525,7 @@ export const generateCompletion = async (
 export const ollamaService = {
   listModels,
   getModelCatalog,
+  updateModelCatalog,
   getVersion,
   getPullTasks,
   deleteModel,
