@@ -36,7 +36,7 @@ class StoredAgent(BaseModel):
 class StoredTaskItem(BaseModel):
     """Task item as stored in JSON files."""
     task: str
-    answer: str
+    answer: Optional[str] = None
 
 
 class StoredTask(BaseModel):
@@ -46,7 +46,6 @@ class StoredTask(BaseModel):
     id: str
     prompt: str
     datasetItems: Optional[List[StoredTaskItem]] = Field(None, alias='dataset_items')
-    expectedSolutionRegex: Optional[str] = Field(None, alias='expected_solution_regex')
 
 
 class StoredExperiment(BaseModel):

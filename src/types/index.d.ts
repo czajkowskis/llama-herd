@@ -21,8 +21,7 @@ export interface Agent {
 export interface Task {
   id: string;
   prompt: string;
-  datasetItems?: { task: string; answer: string }[];
-  expectedSolutionRegex?: string;
+  datasetItems?: { task: string; answer?: string }[];
   iterations?: number;
 }
 
