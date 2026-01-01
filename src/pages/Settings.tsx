@@ -4,8 +4,6 @@ import { OLLAMA_BASE_URL as DEFAULT_OLLAMA_BASE } from '../config';
 import { useUIPreferences } from '../hooks/useUIPreferences';
 import { getTimeFormatPreference, setTimeFormatPreference, TimeFormatPreference } from '../services/uiPreferencesService';
 import { ConnectionStatusType } from '../components/ui/ConnectionStatus';
-import { usePullTasks } from '../hooks/usePullTasks';
-import { PullNotification } from '../components/ui/PullNotification';
 import { ConnectionSettings } from './settings/components/ConnectionSettings';
 import { UIPreferencesPanel } from './settings/components/UIPreferencesPanel';
 
@@ -24,7 +22,6 @@ export const Settings: React.FC = () => {
   const [testError, setTestError] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatusType>('disconnected');
   const [timeFormat, setTimeFormat] = useState<TimeFormatPreference>(getTimeFormatPreference);
-  const { activePulls } = usePullTasks();
 
   const validateUrl = (value: string): string | null => {
     try {
@@ -96,7 +93,6 @@ export const Settings: React.FC = () => {
 
   return (
     <div className="p-8 text-center animate-fade-in" style={{ color: 'var(--color-text-tertiary)' }}>
-      <PullNotification activePulls={activePulls} />
       <h2 className="text-2xl font-semibold mb-4" style={{ color: 'var(--color-text-primary)' }}>Settings</h2>
       <p>Configure your Ollama connection and other preferences.</p>
       

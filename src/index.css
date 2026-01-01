@@ -260,26 +260,43 @@ code {
 }
 
 /* Alternating message backgrounds */
-/* Support both explicit .message-container wrappers and the current LiveExperimentView structure */
-.message-container:nth-child(odd) .message-content,
-.message-list > div:nth-child(odd) .message-content {
+/* Target message-container divs directly, using nth-child which counts all children */
+/* Date separators (wrapped in div.w-full) will affect counting, but this ensures consistency between views */
+/* Container uses var(--color-bg-tertiary), so messages need distinct backgrounds */
+/* Odd messages: darker (secondary), Even messages: slightly lighter but still distinct from container */
+.message-list > .message-container:nth-child(odd) .message-content {
   background-color: var(--color-bg-secondary);
 }
 
-.message-container:nth-child(even) .message-content,
-.message-list > div:nth-child(even) .message-content {
-  background-color: var(--color-bg-tertiary);
+.message-list > .message-container:nth-child(even) .message-content {
+  background-color: #2d3748; /* Custom color between secondary and tertiary for better contrast */
+}
+
+/* Fallback for any message-container not directly in message-list */
+.message-container:nth-child(odd) .message-content {
+  background-color: var(--color-bg-secondary);
+}
+
+.message-container:nth-child(even) .message-content {
+  background-color: #2d3748; /* Custom color between secondary and tertiary for better contrast */
 }
 
 /* Light theme adjustments for alternating backgrounds */
-:root.light .message-container:nth-child(odd) .message-content,
-:root.light .message-list > div:nth-child(odd) .message-content {
+/* Container uses var(--color-bg-tertiary) = #e8e8e7, so messages need distinct backgrounds */
+:root.light .message-list > .message-container:nth-child(odd) .message-content {
   background-color: #f5f5f4;
 }
 
-:root.light .message-container:nth-child(even) .message-content,
-:root.light .message-list > div:nth-child(even) .message-content {
-  background-color: #e7e5e4;
+:root.light .message-list > .message-container:nth-child(even) .message-content {
+  background-color: #f0f0ef; /* Slightly lighter than container for better contrast */
+}
+
+:root.light .message-container:nth-child(odd) .message-content {
+  background-color: #f5f5f4;
+}
+
+:root.light .message-container:nth-child(even) .message-content {
+  background-color: #f0f0ef; /* Slightly lighter than container for better contrast */
 }
 
 /* Code block enhancements */
