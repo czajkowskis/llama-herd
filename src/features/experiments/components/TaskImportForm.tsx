@@ -27,6 +27,58 @@ export const TaskImportForm: React.FC<TaskImportFormProps> = ({ onTaskImport }) 
     }
   };
 
+  const validateAndNormalizeTaskItems = (items: any[]): { task: string; answer?: string }[] => {
+    const normalized: { task: string; answer?: string }[] = [];
+    const errors: string[] = [];
+
+    items.forEach((item, index) => {
+      // Validate task field exists and is a string
+      if (!item || typeof item !== 'object') {
+        errors.push(`Item ${index + 1}: Must be an object`);
+        return;
+      }
+
+      if (!('task' in item)) {
+        errors.push(`Item ${index + 1}: Missing required "task" property`);
+        return;
+      }
+
+      // Validate task is a string and not empty after trimming
+      const taskValue = item.task;
+      if (typeof taskValue !== 'string') {
+        errors.push(`Item ${index + 1}: "task" must be a string, got ${typeof taskValue}`);
+        return;
+      }
+
+      const trimmedTask = taskValue.trim();
+      if (!trimmedTask) {
+        errors.push(`Item ${index + 1}: "task" cannot be empty`);
+        return;
+      }
+
+      // Validate answer field if present
+      let normalizedAnswer: string | undefined = undefined;
+      if ('answer' in item && item.answer !== null && item.answer !== undefined) {
+        if (typeof item.answer !== 'string') {
+          errors.push(`Item ${index + 1}: "answer" must be a string if provided, got ${typeof item.answer}`);
+          return;
+        }
+        normalizedAnswer = item.answer.trim() || undefined;
+      }
+
+      normalized.push({
+        task: trimmedTask,
+        answer: normalizedAnswer,
+      });
+    });
+
+    if (errors.length > 0) {
+      throw new Error(`Validation errors:\n${errors.join('\n')}`);
+    }
+
+    return normalized;
+  };
+
   const handleImportTask = async () => {
     if (importedTaskFile) {
       try {
@@ -34,24 +86,48 @@ export const TaskImportForm: React.FC<TaskImportFormProps> = ({ onTaskImport }) 
         reader.onload = (e) => {
           try {
             const content = e.target?.result as string;
-            const parsedTask = JSON.parse(content);
-            if (Array.isArray(parsedTask) && parsedTask.every(t => t.task)) {
-              const taskId = `imported-task-${Date.now()}`;
-              const newTask: Task = {
-                id: taskId,
-                prompt: `Imported dataset with ${parsedTask.length} tasks.`,
-                datasetItems: parsedTask,
-              };
-              
-              // Show confirmation popup instead of window.confirm
-              setPendingTask(newTask);
-              setShowConfirmPopup(true);
-            } else {
+            const parsedData = JSON.parse(content);
+            
+            // Validate it's an array
+            if (!Array.isArray(parsedData)) {
               setErrorPopupMessage('Invalid file format. The file should contain an array of objects with "task" property.');
               setShowErrorPopup(true);
+              return;
             }
+
+            // Validate array is not empty
+            if (parsedData.length === 0) {
+              setErrorPopupMessage('The file contains an empty array. Please provide at least one task item.');
+              setShowErrorPopup(true);
+              return;
+            }
+
+            // Validate and normalize all items
+            const normalizedItems = validateAndNormalizeTaskItems(parsedData);
+
+            // Check if any items were filtered out (shouldn't happen with strict validation, but just in case)
+            if (normalizedItems.length === 0) {
+              setErrorPopupMessage('No valid task items found after validation. Please check your file format.');
+              setShowErrorPopup(true);
+              return;
+            }
+
+            const taskId = `imported-task-${Date.now()}`;
+            const newTask: Task = {
+              id: taskId,
+              prompt: `Imported dataset with ${normalizedItems.length} task${normalizedItems.length !== 1 ? 's' : ''}.`,
+              datasetItems: normalizedItems,
+            };
+            
+            // Show confirmation popup instead of window.confirm
+            setPendingTask(newTask);
+            setShowConfirmPopup(true);
           } catch (error) {
-            setErrorPopupMessage('Failed to parse the JSON file. Please check the file format.');
+            if (error instanceof Error) {
+              setErrorPopupMessage(error.message);
+            } else {
+              setErrorPopupMessage('Failed to parse the JSON file. Please check the file format.');
+            }
             setShowErrorPopup(true);
           }
         };

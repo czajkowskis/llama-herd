@@ -100,7 +100,14 @@ export const NewExperiment: React.FC<NewExperimentProps> = ({ onExperimentStart 
       setExperimentError(null);
       
       try {
-        const iterations = currentTask.iterations || 1;
+        // Calculate iterations: use datasetItems length if present, otherwise use task.iterations or default to 1
+        let iterations: number;
+        if (currentTask.datasetItems && Array.isArray(currentTask.datasetItems) && currentTask.datasetItems.length > 0) {
+          iterations = currentTask.datasetItems.length;
+        } else {
+          iterations = currentTask.iterations || 1;
+        }
+
         const response = await experimentService.startExperiment(currentTask, agents, iterations, chatRules);
         
         // Only update the title if user provided a custom experiment name
@@ -117,7 +124,7 @@ export const NewExperiment: React.FC<NewExperimentProps> = ({ onExperimentStart 
                 agents: agents,
                 status: 'running',
                 createdAt: new Date().toISOString(),
-                iterations: currentTask.iterations || 1,
+                iterations: iterations,
                 currentIteration: 0
               };
               await backendStorageService.saveExperiment(storedExperiment);
