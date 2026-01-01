@@ -64,17 +64,6 @@ export const AppRoutes: React.FC = () => {
           {/* About */}
           <Route path="/about" element={<About />} />
           
-          {/* Explore (placeholder) */}
-          <Route 
-            path="/explore" 
-            element={
-              <div className="p-8 text-center text-gray-400 animate-fade-in">
-                <h2 className="text-2xl font-semibold mb-4">Explore Community Experiments</h2>
-                <p>Discover and share experiments from the community.</p>
-              </div>
-            } 
-          />
-          
           {/* Catch-all route for 404 */}
           <Route 
             path="*" 
@@ -109,7 +98,6 @@ export const ROUTES = {
   MODELS: '/models',
   SETTINGS: '/settings',
   ABOUT: '/about',
-  EXPLORE: '/explore',
 } as const;
 
 /**

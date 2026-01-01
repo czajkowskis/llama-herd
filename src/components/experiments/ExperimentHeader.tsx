@@ -78,7 +78,7 @@ export const ExperimentHeader: React.FC<ExperimentHeaderProps> = ({
             Export
           </Button>
         )}
-        <Button onClick={onBack} style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }} className="hover:opacity-80">
+        <Button onClick={onBack} className="bg-gray-600 hover:bg-gray-700">
           Back
         </Button>
       </div>

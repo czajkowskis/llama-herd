@@ -81,10 +81,7 @@ export const HistoricalChatView: React.FC<HistoricalChatViewProps> = ({
         {(() => {
           const displayMessages = conversation.messages.filter((m) => {
             const a = getAgentById(m.agentId);
-            if (!a) return false;
-            const name = (a.name || '').toLowerCase();
-            const model = (a.model || '').toLowerCase();
-            return !(name === 'system' || model === 'system');
+            return a !== undefined;
           });
           return displayMessages.map((message, index) => {
             const agent = getAgentById(message.agentId);

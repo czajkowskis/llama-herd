@@ -61,13 +61,10 @@ export const MessageList: React.FC<MessageListProps> = ({
     return () => container.removeEventListener('scroll', handleScroll);
   }, [onFollowChange, isFollowing]);
 
-  // Filter out System messages from display
+  // Filter out messages without valid agents
   const displayMessages = messages.filter((m) => {
     const agent = agents.find(a => a.id === m.agentId);
-    if (!agent) return false;
-    const name = (agent.name || '').toLowerCase();
-    const model = (agent.model || '').toLowerCase();
-    return !(name === 'system' || model === 'system');
+    return agent !== undefined;
   });
 
   const getAgentById = (agentId: string): ConversationAgent | undefined => {

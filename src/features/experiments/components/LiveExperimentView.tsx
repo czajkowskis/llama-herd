@@ -12,8 +12,6 @@ import { RawJSONModal } from '../../history/components/RawJSONModal';
 import { ConnectionStatusType } from '../../../components/ui/ConnectionStatus';
 import { DebugPanel, DebugMessage } from '../../../components/ui/DebugPanel';
 import { HistoricalViewBanner } from './ViewModeIndicator';
-import { usePullTasks } from '../../../hooks/usePullTasks';
-import { PullNotification } from '../../../components/ui/PullNotification';
 import { ExperimentHeader } from '../../../components/experiments/ExperimentHeader';
 import { MessageList } from '../../../components/messages/MessageList';
 import { formatTimestamp } from '../../../utils/messageUtils';
@@ -60,8 +58,6 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
   const liveConversationRef = useRef(liveConversation);
   useEffect(() => { liveConversationRef.current = liveConversation; }, [liveConversation]);
 
-  // Track active model pulls
-  const { activePulls } = usePullTasks();
   const pendingMessagesRef = useRef<Message[]>([]);
   const previousMessageCountRef = useRef<number>(0);
 
@@ -376,7 +372,6 @@ export const LiveExperimentView: React.FC<LiveExperimentViewProps> = ({
 
   return (
     <div className="p-8 space-y-6 animate-fade-in">
-      <PullNotification activePulls={activePulls} />
       <div className="p-6 rounded-2xl shadow-xl" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
         <ExperimentHeader
           conversation={viewConversation}
