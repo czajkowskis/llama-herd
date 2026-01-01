@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Icon } from '../../../components/ui/Icon';
 import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
@@ -12,11 +12,20 @@ interface TaskImportFormProps {
 
 export const TaskImportForm: React.FC<TaskImportFormProps> = ({ onTaskImport }) => {
   const [importedTaskFile, setImportedTaskFile] = useState<File | null>(null);
-  const [expectedSolutionRegex, setExpectedSolutionRegex] = useState<string>('');
   const [showErrorPopup, setShowErrorPopup] = useState<boolean>(false);
   const [errorPopupMessage, setErrorPopupMessage] = useState<string>('');
   const [showConfirmPopup, setShowConfirmPopup] = useState<boolean>(false);
   const [pendingTask, setPendingTask] = useState<Task | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleChangeFile = () => {
+    setImportedTaskFile(null);
+    setPendingTask(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+      fileInputRef.current.click();
+    }
+  };
 
   const handleImportTask = async () => {
     if (importedTaskFile) {
@@ -26,20 +35,19 @@ export const TaskImportForm: React.FC<TaskImportFormProps> = ({ onTaskImport }) 
           try {
             const content = e.target?.result as string;
             const parsedTask = JSON.parse(content);
-            if (Array.isArray(parsedTask) && parsedTask.every(t => t.task && t.answer)) {
+            if (Array.isArray(parsedTask) && parsedTask.every(t => t.task)) {
               const taskId = `imported-task-${Date.now()}`;
               const newTask: Task = {
                 id: taskId,
-                prompt: `Imported task with ${parsedTask.length} items.`,
+                prompt: `Imported dataset with ${parsedTask.length} tasks.`,
                 datasetItems: parsedTask,
-                expectedSolutionRegex: expectedSolutionRegex || undefined,
               };
               
               // Show confirmation popup instead of window.confirm
               setPendingTask(newTask);
               setShowConfirmPopup(true);
             } else {
-              setErrorPopupMessage('Invalid file format. The file should contain an array of objects with "task" and "answer" properties.');
+              setErrorPopupMessage('Invalid file format. The file should contain an array of objects with "task" property.');
               setShowErrorPopup(true);
             }
           } catch (error) {
@@ -62,7 +70,6 @@ export const TaskImportForm: React.FC<TaskImportFormProps> = ({ onTaskImport }) 
     if (pendingTask) {
       onTaskImport(pendingTask);
       setImportedTaskFile(null);
-      setExpectedSolutionRegex('');
       setPendingTask(null);
       setShowConfirmPopup(false);
     }
@@ -71,10 +78,7 @@ export const TaskImportForm: React.FC<TaskImportFormProps> = ({ onTaskImport }) 
   return (
     <div className="space-y-8 animate-fade-in-up p-6 mb-8">
       <p className="mb-6 leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-        You can import the dataset as a json file. It should include the list of objects with two properties -
-        task and answer. If you want the results to be automatically computed enter the expected format of
-        the solution (as a regex) that could be found in the last message in the conversation. Make sure too
-        specify the output format for your agents so it can be retrived automatically.
+        You can import the dataset as a JSON file. It should include the list of objects with a "task" property (as shown below).
       </p>
       <div className="flex items-center space-x-6">
         <div className="flex-1 p-12 border-2 border-dashed border-gray-600 rounded-xl text-center cursor-pointer hover:border-purple-500 transition-all duration-200">
@@ -89,26 +93,27 @@ export const TaskImportForm: React.FC<TaskImportFormProps> = ({ onTaskImport }) 
             </Icon>
             <input
               id="file-upload"
+              ref={fileInputRef}
               type="file"
               className="hidden"
               accept=".json"
               onChange={(e) => setImportedTaskFile(e.target.files ? e.target.files[0] : null)}
             />
           </label>
-          {importedTaskFile && <p className="text-sm mt-2" style={{ color: 'var(--color-text-secondary)' }}>Selected: {importedTaskFile.name}</p>}
-        </div>
-        <div className="flex-1 p-4">
-          <label htmlFor="regex-input" className="block text-sm mb-3 font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-            Expected solution format (regex)
-          </label>
-          <Input
-            id="regex-input"
-            placeholder="e.g., ^FINAL SOLUTION:.*$"
-            value={expectedSolutionRegex}
-            onChange={(e) => setExpectedSolutionRegex(e.target.value)}
-          />
-          
-
+          {importedTaskFile && (
+            <div className="flex items-center justify-center gap-2 mt-2">
+              <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                Selected: {importedTaskFile.name}
+              </p>
+              <button
+                onClick={handleChangeFile}
+                className="text-sm text-purple-400 hover:text-purple-300 underline"
+                type="button"
+              >
+                Change
+              </button>
+            </div>
+          )}
         </div>
       </div>
       <div className="flex justify-end">
@@ -118,6 +123,29 @@ export const TaskImportForm: React.FC<TaskImportFormProps> = ({ onTaskImport }) 
         >
           Import Task
         </Button>
+      </div>
+
+      <div className="mt-8 text-sm text-gray-400 text-left max-w-4xl mx-auto">
+        <h4 className="text-lg font-semibold mb-4 text-white text-center">Expected JSON format:</h4>
+        <div className="bg-gray-900 p-6 rounded-lg text-sm overflow-x-auto text-left font-mono">
+          <div className="text-gray-300">
+            <span className="text-purple-400">[</span>
+            <br />
+            <span className="text-gray-400 ml-4"><span className="text-purple-400">{`{`}</span></span>
+            <br />
+            <span className="text-gray-400 ml-8">"task": <span className="text-green-400">"Task description or question"</span></span>
+            <br />
+            <span className="text-gray-400 ml-4"><span className="text-purple-400">{`}`}</span>,</span>
+            <br />
+            <span className="text-gray-400 ml-4"><span className="text-purple-400">{`{`}</span></span>
+            <br />
+            <span className="text-gray-400 ml-8">"task": <span className="text-green-400">"Another task description"</span></span>
+            <br />
+            <span className="text-gray-400 ml-4"><span className="text-purple-400">{`}`}</span></span>
+            <br />
+            <span className="text-purple-400">]</span>
+          </div>
+        </div>
       </div>
       
       <ErrorPopup
@@ -131,7 +159,7 @@ export const TaskImportForm: React.FC<TaskImportFormProps> = ({ onTaskImport }) 
       <ConfirmationPopup
         isOpen={showConfirmPopup}
         title="Confirm Task Import"
-        message={`Confirm task import?\n\nFile: ${pendingTask ? pendingTask.prompt : ''}\nItems: ${pendingTask?.datasetItems?.length || 0}\nIterations: ${pendingTask?.datasetItems?.length || 1} (auto-set from dataset)\n\nClick Confirm to import or Cancel to abort.`}
+        message={`Import ${pendingTask?.datasetItems?.length || 0} task${(pendingTask?.datasetItems?.length || 0) !== 1 ? 's' : ''} from "${importedTaskFile?.name || 'file'}"?`}
         onConfirm={handleConfirmImport}
         onCancel={() => {
           setShowConfirmPopup(false);
