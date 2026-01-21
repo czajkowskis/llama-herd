@@ -219,36 +219,6 @@ export const AgentList: React.FC<AgentListProps> = ({
             </span>
           </div>
           
-          {/* Max Consecutive Replies - only show if allowRepeatSpeaker is enabled */}
-          {chatRules.allowRepeatSpeaker && (
-            <div className="ml-8">
-              <label className="block text-base font-medium mb-2" style={{ color: 'var(--color-text-tertiary)' }}>
-                Max Consecutive Replies
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="10"
-                value={chatRules.maxConsecutiveAutoReply || ''}
-                onChange={(e) => {
-                  const value = e.target.value ? parseInt(e.target.value) : undefined;
-                  onChatRulesChange({ ...chatRules, maxConsecutiveAutoReply: value });
-                }}
-                placeholder="Unlimited"
-                className="w-full p-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200"
-                style={{
-                  backgroundColor: 'var(--color-bg-tertiary)',
-                  color: 'var(--color-text-primary)',
-                  borderColor: 'var(--color-border)',
-                  fontSize: '1rem'
-                }}
-              />
-              <p className="text-sm mt-1" style={{ color: 'var(--color-text-tertiary)' }}>
-                Maximum consecutive replies from the same agent (leave empty for unlimited)
-              </p>
-            </div>
-          )}
-          
           {/* Termination Condition */}
           <div>
             <label className="block text-base font-medium mb-2" style={{ color: 'var(--color-text-tertiary)' }}>
@@ -268,7 +238,7 @@ export const AgentList: React.FC<AgentListProps> = ({
               }}
             />
             <p className="text-sm mt-1" style={{ color: 'var(--color-text-tertiary)' }}>
-              Stop the conversation when this phrase appears in a message (case-insensitive)
+              Stop the conversation when this phrase appears in a message (sensitive)
             </p>
           </div>
               </div>
