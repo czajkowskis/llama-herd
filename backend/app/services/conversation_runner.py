@@ -6,6 +6,8 @@ import asyncio
 from typing import List
 from autogen_agentchat.teams import RoundRobinGroupChat, SelectorGroupChat
 from autogen_agentchat.conditions import TextMentionTermination
+from autogen_agentchat.messages import TextMessage
+from autogen_agentchat.base import TaskResult
 from ..schemas.agent import AgentModel
 from ..schemas.chat_rules import ChatRulesModel
 from ..core.config import settings
@@ -22,6 +24,131 @@ class ConversationRunner:
 
     def __init__(self):
         self.agent_factory = AgentFactory()
+
+    def _extract_agent_name_from_message(self, msg, agent_name_mapping: dict):
+        """Extract agent name from a message using the agent name mapping."""
+        agent_name = "Unknown"
+        model_name = "Unknown"
+
+        # Get source if available
+        if hasattr(msg, "source") and msg.source:
+            source = msg.source
+            # Try direct key lookup
+            if source in agent_name_mapping:
+                agent_name = agent_name_mapping[source]
+            # Try string representation
+            elif str(source) in agent_name_mapping:
+                agent_name = agent_name_mapping[str(source)]
+            # Try ID representation
+            elif str(id(source)) in agent_name_mapping:
+                agent_name = agent_name_mapping[str(id(source))]
+            # Try to get name from source if it's an agent
+            elif hasattr(source, "name"):
+                agent_name = source.name
+            else:
+                # Use string representation as fallback
+                agent_name = str(source)
+
+            model_name = agent_name
+
+        return agent_name, model_name
+
+    async def _process_stream_event(
+        self, event, message_handler, agent_name_mapping: dict, sent_messages: set
+    ):
+        """Process a single event from the stream."""
+        # Check if this is a TextMessage
+        if isinstance(event, TextMessage):
+            if hasattr(event, "content") and event.content:
+                agent_name, model_name = self._extract_agent_name_from_message(
+                    event, agent_name_mapping
+                )
+                content = str(event.content)
+
+                # Create a unique key for this message to prevent duplicates
+                message_key = (agent_name, content)
+
+                # Only send if we haven't sent this message already
+                if message_key not in sent_messages:
+                    # Send message immediately for real-time display
+                    message_handler.add_message(
+                        agent_name=agent_name, content=content, model=model_name
+                    )
+                    sent_messages.add(message_key)
+                    logger.debug(
+                        f"Sent real-time message from {agent_name}: {content[:50]}..."
+                    )
+                else:
+                    logger.debug(
+                        f"Skipped duplicate message from {agent_name}: {content[:50]}..."
+                    )
+
+        # Check if this is the final TaskResult
+        elif isinstance(event, TaskResult):
+            # Process any remaining messages in the result that weren't already sent via streaming
+            # This ensures we capture all messages even if some weren't streamed
+            self._process_task_result_without_duplicates(
+                event, message_handler, agent_name_mapping, sent_messages
+            )
+            logger.debug("Processed final TaskResult from stream")
+            return event
+
+        return None
+
+    def _process_task_result_without_duplicates(
+        self,
+        result: TaskResult,
+        message_handler,
+        agent_name_mapping: dict,
+        sent_messages: set,
+    ):
+        """Process TaskResult, skipping messages that were already sent during streaming."""
+        # Extract messages from the task result
+        messages = result.messages
+
+        for msg in messages:
+            # Check if this is a message with content field
+            if hasattr(msg, "content") and msg.content:
+                # Extract agent name
+                agent_name = "Unknown"
+                model_name = "Unknown"
+
+                # Get source if available
+                if hasattr(msg, "source") and msg.source:
+                    source = msg.source
+                    # Try to find the agent name in the mapping
+                    if source in agent_name_mapping:
+                        agent_name = agent_name_mapping[source]
+                    elif str(source) in agent_name_mapping:
+                        agent_name = agent_name_mapping[str(source)]
+                    elif str(id(source)) in agent_name_mapping:
+                        agent_name = agent_name_mapping[str(id(source))]
+                    elif hasattr(source, "name"):
+                        agent_name = source.name
+                    else:
+                        agent_name = str(source)
+
+                    model_name = agent_name
+
+                # Get content as string
+                content = str(msg.content)
+
+                # Create a unique key for this message
+                message_key = (agent_name, content)
+
+                # Only process if we haven't sent this message already
+                if message_key not in sent_messages:
+                    message_handler.add_message(
+                        agent_name=agent_name, content=content, model=model_name
+                    )
+                    sent_messages.add(message_key)
+                    logger.debug(
+                        f"Processed message from TaskResult: {agent_name}: {content[:50]}..."
+                    )
+                else:
+                    logger.debug(
+                        f"Skipped duplicate message from TaskResult: {agent_name}: {content[:50]}..."
+                    )
 
     def run_conversation(
         self,
@@ -80,17 +207,24 @@ class ConversationRunner:
                 # Also store by the agent object itself (if the message.source is the agent object)
                 agent_name_mapping[agent] = agents[i].name
 
+            # Track sent messages to prevent duplicates
+            sent_messages = set()
+
             # Handle conversation based on number of agents
             if len(agents) == 1:
                 # Single agent: use direct communication
                 logger.info("Single agent detected, using direct communication")
                 single_agent = autogen_agents[0]
 
-                # Run the conversation using new async API
-                result = await single_agent.run(task=prompt)
-
-                # Process the result to extract and log messages
-                message_handler.process_task_result(result, agent_name_mapping)
+                # Run the conversation using streaming API for real-time messages
+                # Messages will appear one-by-one as they're generated
+                result = None
+                async for event in single_agent.run_stream(task=prompt):
+                    processed_result = await self._process_stream_event(
+                        event, message_handler, agent_name_mapping, sent_messages
+                    )
+                    if processed_result:
+                        result = processed_result
 
                 # Get message count from state manager
                 from ..core.state import state_manager
@@ -159,11 +293,16 @@ class ConversationRunner:
 
                     group_chat = RoundRobinGroupChat(**group_chat_params)
 
-                # Run the conversation using new async API
-                result = await group_chat.run(task=prompt)
-
-                # Process the result to extract and log messages
-                message_handler.process_task_result(result, agent_name_mapping)
+                # Run the conversation using streaming API for real-time messages
+                # max_turns constraint is enforced by AutoGen via the group chat constructor
+                # Messages will appear one-by-one as they're generated, respecting max_turns limit
+                result = None
+                async for event in group_chat.run_stream(task=prompt):
+                    processed_result = await self._process_stream_event(
+                        event, message_handler, agent_name_mapping, sent_messages
+                    )
+                    if processed_result:
+                        result = processed_result
 
                 # Get message count from state manager
                 from ..core.state import state_manager
