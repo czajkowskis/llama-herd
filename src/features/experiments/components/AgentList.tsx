@@ -238,7 +238,7 @@ export const AgentList: React.FC<AgentListProps> = ({
               }}
             />
             <p className="text-sm mt-1" style={{ color: 'var(--color-text-tertiary)' }}>
-              Stop the conversation when this phrase appears in a message (sensitive)
+              Stop the conversation when this phrase appears in a message (case-sensitive)
             </p>
           </div>
               </div>
