@@ -173,14 +173,31 @@ export const AgentForm: React.FC<AgentFormProps> = ({
   const handleNameChange = (name: string) => {
     setAgentName(name);
     
-    // Real-time validation
-    if (isNameUsed(name, editingAgent?.id)) {
-      const existingAgent = agents.find(agent => 
-        agent.name.toLowerCase() === name.toLowerCase() && agent.id !== editingAgent?.id
-      );
-      setNameError(`An agent named "${existingAgent?.name}" already exists. Please choose a different name.`);
+    // Real-time validation - first check format
+    const nameValidation = validateAgentName(name);
+    if (!nameValidation.isValid) {
+      const errorMessage = nameValidation.error || 'Invalid agent name';
+      // Only set error if it's different from current error
+      if (nameError !== errorMessage) {
+        setNameError(errorMessage);
+      }
     } else {
-      setNameError('');
+      // Format is valid, check uniqueness
+      if (isNameUsed(name, editingAgent?.id)) {
+        const existingAgent = agents.find(agent => 
+          agent.name.toLowerCase() === name.toLowerCase() && agent.id !== editingAgent?.id
+        );
+        const errorMessage = `An agent named "${existingAgent?.name}" already exists. Please choose a different name.`;
+        // Only set error if it's different from current error
+        if (nameError !== errorMessage) {
+          setNameError(errorMessage);
+        }
+      } else {
+        // Clear error only if there was one
+        if (nameError) {
+          setNameError('');
+        }
+      }
     }
   };
 
@@ -231,9 +248,6 @@ export const AgentForm: React.FC<AgentFormProps> = ({
             placeholder="Agent name"
             className={nameError ? 'border-red-500' : ''}
           />
-          {nameError && (
-            <p className="text-red-400 text-sm mt-1">{nameError}</p>
-          )}
         </div>
         
         <div className="flex-1">

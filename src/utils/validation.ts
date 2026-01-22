@@ -36,8 +36,21 @@ export const validateAgentName = (name: string): ValidationResult => {
     return { isValid: false, error: 'Agent name cannot be empty' };
   }
   
-  if (name.trim().length > 100) {
+  const trimmedName = name.trim();
+  
+  if (trimmedName.length > 100) {
     return { isValid: false, error: 'Agent name must be 100 characters or less' };
+  }
+  
+  // Check for spaces
+  if (trimmedName.includes(' ')) {
+    return { isValid: false, error: 'Agent name cannot contain spaces' };
+  }
+  
+  // Validate Python variable name format: must start with letter or underscore, followed by letters, digits, or underscores
+  const pythonVariableNameRegex = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+  if (!pythonVariableNameRegex.test(trimmedName)) {
+    return { isValid: false, error: 'Agent name must be a valid Python variable name (letters, digits, underscores; must start with letter or underscore)' };
   }
   
   return { isValid: true };

@@ -5,6 +5,7 @@ import {
   isNameUsed, 
   getAvailableColorsCount 
 } from '../utils/agentColorUtils';
+import { validateAgentName } from '../../../utils/validation';
 
 export interface UseAgentConfigurationReturn {
   agents: ConversationAgent[];
@@ -69,13 +70,33 @@ export const useAgentConfiguration = (initialAgents: ConversationAgent[] = []): 
       }
     }
 
-    // Validate name uniqueness
+    // Validate name format and uniqueness
     if (updates.name) {
-      if (isNameUsed(agents, updates.name, agentId)) {
-        const existingAgent = agents.find(agent => 
-          agent.name.toLowerCase() === updates.name?.toLowerCase() && agent.id !== agentId
-        );
-        setNameError(`This name is already used by agent "${existingAgent?.name}". Please choose a different name.`);
+      // First validate format (spaces, Python variable name)
+      const nameValidation = validateAgentName(updates.name);
+      if (!nameValidation.isValid) {
+        const errorMessage = nameValidation.error || 'Invalid agent name';
+        // Only set error if it's different from current error
+        if (nameError !== errorMessage) {
+          setNameError(errorMessage);
+        }
+      } else {
+        // Then validate uniqueness only if format is valid
+        if (isNameUsed(agents, updates.name, agentId)) {
+          const existingAgent = agents.find(agent => 
+            agent.name.toLowerCase() === updates.name?.toLowerCase() && agent.id !== agentId
+          );
+          const errorMessage = `This name is already used by agent "${existingAgent?.name}". Please choose a different name.`;
+          // Only set error if it's different from current error
+          if (nameError !== errorMessage) {
+            setNameError(errorMessage);
+          }
+        } else {
+          // Clear error only if there was one
+          if (nameError) {
+            setNameError('');
+          }
+        }
       }
     }
   };

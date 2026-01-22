@@ -19,6 +19,16 @@ class AgentService:
         if not agent.name or len(agent.name.strip()) == 0:
             raise AgentError("Agent name cannot be empty")
         
+        trimmed_name = agent.name.strip()
+        
+        # Check for spaces
+        if ' ' in trimmed_name:
+            raise AgentError("Agent name cannot contain spaces")
+        
+        # Validate Python variable name format
+        if not trimmed_name.isidentifier():
+            raise AgentError("Agent name must be a valid Python variable name (letters, digits, underscores; must start with letter or underscore)")
+        
         if not agent.model or len(agent.model.strip()) == 0:
             raise AgentError("Agent model cannot be empty")
         
